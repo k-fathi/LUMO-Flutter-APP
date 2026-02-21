@@ -46,7 +46,7 @@ class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: Colors.transparent,
       foregroundColor: Colors.white,
       elevation: 4,
-      shadowColor: Colors.black.withOpacity(0.15),
+      shadowColor: Colors.black.withValues(alpha: 0.15),
       leading: leading ??
           (showBackButton
               ? IconButton(

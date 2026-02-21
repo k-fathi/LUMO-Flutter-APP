@@ -132,8 +132,8 @@ class _EditAnalysisDialogState extends State<EditAnalysisDialog> {
                       ),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? state.color.withOpacity(0.2)
-                            : AppColors.muted.withOpacity(0.3),
+                            ? state.color.withValues(alpha: 0.2)
+                            : AppColors.muted.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: isSelected ? state.color : Colors.transparent,

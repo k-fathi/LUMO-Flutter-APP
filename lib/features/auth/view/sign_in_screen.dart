@@ -82,10 +82,10 @@ class _SignInScreenState extends State<SignInScreen> {
                     width: 100,
                     height: 100,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
+                    child: const Icon(
                       Icons.lock_open_rounded,
                       size: 48,
                       color: AppColors.primary,
@@ -112,9 +112,9 @@ class _SignInScreenState extends State<SignInScreen> {
                 // Email Field
                 TextFormField(
                   controller: _emailController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'البريد الإلكتروني',
-                    prefixIcon: const Icon(Icons.email_outlined),
+                    prefixIcon: Icon(Icons.email_outlined),
                   ),
                   keyboardType: TextInputType.emailAddress,
                   validator: (v) =>

@@ -433,7 +433,7 @@ class _PostCardState extends State<PostCard> {
             onPressed: () => Navigator.pop(ctx),
             child: Text(
               l10n.cancel,
-              style: TextStyle(color: AppColors.mutedForeground),
+              style: const TextStyle(color: AppColors.mutedForeground),
             ),
           ),
           ElevatedButton(

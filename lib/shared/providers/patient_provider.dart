@@ -200,7 +200,7 @@ class MockPatient {
         'age': age,
         'parentName': parentName,
         'lastUpdate': lastUpdate,
-        'avatarColor': avatarColor.value,
+        'avatarColor': avatarColor.toARGB32(),
         'childPhotoUrl': childPhotoUrl,
         'sessionsCompleted': sessionsCompleted,
         'previousSessions': previousSessions,

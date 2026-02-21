@@ -162,7 +162,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 const SnackBar(content: Text('المكالمات الصوتية — قريباً')),
               );
             },
-            icon: Icon(
+            icon: const Icon(
               Icons.phone_outlined,
               color: AppColors.primary,
               size: 22,
@@ -175,7 +175,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 const SnackBar(content: Text('مكالمات الفيديو — قريباً')),
               );
             },
-            icon: Icon(
+            icon: const Icon(
               Icons.videocam_outlined,
               color: AppColors.primary,
               size: 22,

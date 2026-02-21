@@ -207,7 +207,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     color: AppColors.destructive.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.logout_rounded,
                     color: AppColors.destructive,
                     size: 20,
@@ -255,7 +255,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         title: Row(
           children: [
-            Icon(Icons.shield_outlined, color: AppColors.primary, size: 24),
+            const Icon(Icons.shield_outlined, color: AppColors.primary, size: 24),
             const SizedBox(width: 8),
             Text(
               l10n.privacy,
@@ -422,7 +422,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         value: value,
         onChanged: onChanged,
         activeTrackColor: AppColors.primary,
-        activeColor: Colors.white,
+        activeThumbColor: Colors.white,
       ),
     );
   }

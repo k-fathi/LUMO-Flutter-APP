@@ -127,6 +127,7 @@ class _DoctorRequestScreenState extends State<DoctorRequestScreen> {
     );
   }
 
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -330,7 +331,7 @@ class _DoctorRequestScreenState extends State<DoctorRequestScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.info_outline_rounded,
                     color: AppColors.primary,
                     size: 20,

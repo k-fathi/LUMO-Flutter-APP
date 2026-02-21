@@ -142,7 +142,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                       Text(
                         'نشط الآن',
                         style: AppTextStyles.caption.copyWith(
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                         ),
                       ),
                     ],

@@ -123,7 +123,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
           margin: const EdgeInsets.only(bottom: 16),
           height: 180,
           decoration: BoxDecoration(
-            color: Theme.of(context).cardColor.withOpacity(0.5),
+            color: Theme.of(context).cardColor.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(16),
           ),
           child: const Center(

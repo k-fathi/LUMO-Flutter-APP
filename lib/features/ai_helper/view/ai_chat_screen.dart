@@ -63,6 +63,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
     _scrollToBottom();
   }
 
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
@@ -127,7 +128,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                           'Your AI Assistant.',
                           style: TextStyle(
                             fontSize: 16,
-                            color: const Color(0xFF2196F3).withOpacity(0.8),
+                            color: const Color(0xFF2196F3).withValues(alpha: 0.8),
                           ),
                         ),
                       ],
@@ -171,7 +172,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),

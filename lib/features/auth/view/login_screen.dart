@@ -65,157 +65,154 @@ class _LoginScreenState extends State<LoginScreen> with FormValidationMixin {
     }
   }
 
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Container(
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 24.0, vertical: 48.0),
-            child: Form(
-              key: formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 40),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 48.0),
+          child: Form(
+            key: formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 40),
 
-                  // Logo
-                  Center(
-                    child: Hero(
-                      tag: 'app_logo',
-                      child: Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).cardColor,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Theme.of(context).dividerColor,
-                            width: 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Theme.of(context).brightness ==
-                                      Brightness.light
-                                  ? AppColors.primary.withValues(alpha: 0.15)
-                                  : Colors.black.withValues(alpha: 0.3),
-                              blurRadius: 20,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
+                // Logo
+                Center(
+                  child: Hero(
+                    tag: 'app_logo',
+                    child: Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).cardColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Theme.of(context).dividerColor,
+                          width: 1,
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(18.0),
-                          child: Image.asset(
-                            'assets/images_from_web/web_splash.png',
-                            fit: BoxFit.contain,
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                Theme.of(context).brightness == Brightness.light
+                                    ? AppColors.primary.withValues(alpha: 0.15)
+                                    : Colors.black.withValues(alpha: 0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
                           ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(18.0),
+                        child: Image.asset(
+                          'assets/images_from_web/web_splash.png',
+                          fit: BoxFit.contain,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                ),
+                const SizedBox(height: 24),
 
-                  // Title - React: text-3xl text-[#1a1a2e] mb-2
-                  Text(
-                    'مرحباً بعودتك',
-                    style: AppTextStyles.h1.copyWith(
-                      color: Theme.of(context).textTheme.displayLarge?.color,
-                      fontSize: 30, // text-3xl
+                // Title - React: text-3xl text-[#1a1a2e] mb-2
+                Text(
+                  'مرحباً بعودتك',
+                  style: AppTextStyles.h1.copyWith(
+                    color: Theme.of(context).textTheme.displayLarge?.color,
+                    fontSize: 30, // text-3xl
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'سجل الدخول لمتابعة رحلتك الصحية',
+                  style: AppTextStyles.body.copyWith(
+                    color: Theme.of(context).hintColor,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 48),
+
+                // Email field
+                AppTextField(
+                  controller: _emailController,
+                  label: 'البريد الإلكتروني',
+                  hint: 'أدخل بريدك الإلكتروني',
+                  prefixIcon: Icons.mail_outline,
+                  keyboardType: TextInputType.emailAddress,
+                  validator: validateEmail,
+                ),
+                const SizedBox(height: 20),
+
+                // Password field
+                AppTextField(
+                  controller: _passwordController,
+                  label: 'كلمة المرور',
+                  hint: 'أدخل كلمة المرور',
+                  prefixIcon: Icons.lock_outline,
+                  obscureText: true,
+                  validator: validatePassword,
+                ),
+                const SizedBox(height: 12),
+
+                // Forgot password
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.pushNamed(context, RouteNames.forgotPassword);
+                    },
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'سجل الدخول لمتابعة رحلتك الصحية',
-                    style: AppTextStyles.body.copyWith(
-                      color: Theme.of(context).hintColor,
+                    child: Text(
+                      'نسيت كلمة المرور؟',
+                      style: AppTextStyles.body.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 48),
+                ),
+                const SizedBox(height: 32),
 
-                  // Email field
-                  AppTextField(
-                    controller: _emailController,
-                    label: 'البريد الإلكتروني',
-                    hint: 'أدخل بريدك الإلكتروني',
-                    prefixIcon: Icons.mail_outline,
-                    keyboardType: TextInputType.emailAddress,
-                    validator: validateEmail,
-                  ),
-                  const SizedBox(height: 20),
+                // Login button
+                AppButton(
+                  text: 'تسجيل الدخول',
+                  onPressed: _handleLogin,
+                  isLoading: _isLoading,
+                ),
+                const SizedBox(height: 24),
 
-                  // Password field
-                  AppTextField(
-                    controller: _passwordController,
-                    label: 'كلمة المرور',
-                    hint: 'أدخل كلمة المرور',
-                    prefixIcon: Icons.lock_outline,
-                    obscureText: true,
-                    validator: validatePassword,
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Forgot password
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {
-                        Navigator.pushNamed(context, RouteNames.forgotPassword);
+                // Sign up link
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'ليس لديك حساب؟ ',
+                      style: AppTextStyles.body.copyWith(
+                        color: Theme.of(context).hintColor,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pushNamed(context, RouteNames.roleSelection);
                       },
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
                       child: Text(
-                        'نسيت كلمة المرور؟',
+                        'إنشاء حساب',
                         style: AppTextStyles.body.copyWith(
                           color: AppColors.primary,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Login button
-                  AppButton(
-                    text: 'تسجيل الدخول',
-                    onPressed: _handleLogin,
-                    isLoading: _isLoading,
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Sign up link
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'ليس لديك حساب؟ ',
-                        style: AppTextStyles.body.copyWith(
-                          color: Theme.of(context).hintColor,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pushNamed(
-                              context, RouteNames.roleSelection);
-                        },
-                        child: Text(
-                          'إنشاء حساب',
-                          style: AppTextStyles.body.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),

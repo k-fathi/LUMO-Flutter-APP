@@ -27,6 +27,7 @@ class DoctorPatientDetail extends StatefulWidget {
 }
 
 class _DoctorPatientDetailState extends State<DoctorPatientDetail> {
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -51,14 +52,13 @@ class _DoctorPatientDetailState extends State<DoctorPatientDetail> {
                     notes: notes.isEmpty ? null : notes,
                   );
 
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('تم إنشاء التحليل بنجاح'),
-                    backgroundColor: AppColors.success,
-                  ),
-                );
-              }
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('تم إنشاء التحليل بنجاح'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
             },
           );
         },
@@ -95,14 +95,13 @@ class _DoctorPatientDetailState extends State<DoctorPatientDetail> {
                         notes: notes.isEmpty ? null : notes,
                       );
 
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('تم تحديث التحليل بنجاح'),
-                            backgroundColor: AppColors.success,
-                          ),
-                        );
-                      }
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('تم تحديث التحليل بنجاح'),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
                     },
                   );
                 },

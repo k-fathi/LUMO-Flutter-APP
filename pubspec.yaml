@@ -67,6 +67,7 @@ dependencies:
   fl_chart: ^1.1.1
   iconly: ^1.0.1
 
+  path: any
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -88,5 +89,5 @@ flutter:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/images_from_web/web_splash.png"
+  image_path: "assets/images/lumo-logo.png"
   min_sdk_android: 21

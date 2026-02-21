@@ -30,6 +30,7 @@ class _DoctorCodeGeneratorScreenState extends State<DoctorCodeGeneratorScreen> {
     return code;
   }
 
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,

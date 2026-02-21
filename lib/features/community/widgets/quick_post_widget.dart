@@ -13,6 +13,7 @@ class QuickPostWidget extends StatelessWidget {
 
   const QuickPostWidget({super.key, this.onTap});
 
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return GestureDetector(
@@ -35,7 +36,7 @@ class QuickPostWidget extends StatelessWidget {
         child: Row(
           children: [
             // Current User Avatar
-            CircleAvatar(
+            const CircleAvatar(
               radius: 20,
               backgroundColor: AppColors.secondary,
               child: Icon(

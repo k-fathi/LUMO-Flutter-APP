@@ -53,7 +53,7 @@ class AuthProvider extends ChangeNotifier {
       _errorMessage = e.toString();
       _isLoading = false;
       notifyListeners();
-      throw e; // Re-throw to handle in UI
+      rethrow; // Re-throw to handle in UI
     }
   }
 
@@ -109,6 +109,25 @@ class AuthProvider extends ChangeNotifier {
     await _authRepository.signOut();
     _currentUser = null;
     notifyListeners();
+  }
+
+  // Delete account
+  Future<void> deleteAccount() async {
+    if (_currentUser == null) return;
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _authRepository.deleteAccount(_currentUser!.id);
+      _currentUser = null;
+    } catch (e) {
+      _errorMessage = e.toString();
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   // Clear error

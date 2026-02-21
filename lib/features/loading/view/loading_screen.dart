@@ -11,6 +11,7 @@ class LoadingScreen extends StatelessWidget {
 
   const LoadingScreen({super.key, this.message});
 
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -30,7 +31,7 @@ class LoadingScreen extends StatelessWidget {
                     width: 100,
                     height: 100,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(24),
                     ),
                     child: const Icon(

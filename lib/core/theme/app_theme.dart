@@ -21,10 +21,8 @@ class AppTheme {
         onSecondary: AppColors.secondaryForeground,
         error: AppColors.destructive,
         onError: AppColors.destructiveForeground,
-        background: AppColors.background,
-        onBackground: AppColors.foreground,
-        surface: AppColors.card,
-        onSurface: AppColors.cardForeground,
+        surface: AppColors.background,
+        onSurface: AppColors.foreground,
         outline: AppColors.border,
       ),
       scaffoldBackgroundColor: AppColors.background,
@@ -89,7 +87,7 @@ class AppTheme {
               borderRadius: BorderRadius.circular(16)), // Figma: rounded-2xl
           elevation:
               0, // Figma often uses flat or minimal shadow, adjusting to match modern flat look
-          shadowColor: AppColors.primary.withOpacity(0.3),
+          shadowColor: AppColors.primary.withValues(alpha: 0.3),
           minimumSize: const Size(double.infinity, 56),
         ),
       ),
@@ -209,7 +207,7 @@ class AppTheme {
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return AppColors.primary.withOpacity(0.5);
+            return AppColors.primary.withValues(alpha: 0.5);
           }
           return AppColors.muted;
         }),
@@ -253,7 +251,7 @@ class AppTheme {
       scaffoldBackgroundColor: background,
 
       // AppBar theme
-      appBarTheme: AppBarTheme(
+      appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         foregroundColor: onBackground,
         elevation: 0,

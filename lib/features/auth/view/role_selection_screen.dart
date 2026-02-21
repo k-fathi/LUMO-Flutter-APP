@@ -75,7 +75,7 @@ class RoleSelectionScreen extends StatelessWidget {
                           Text(
                             'يرجى اختيار دورك للمتابعة',
                             style: AppTextStyles.body.copyWith(
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                               fontSize: 18,
                             ),
                             textAlign: TextAlign.center,
@@ -103,7 +103,7 @@ class RoleSelectionScreen extends StatelessWidget {
                           Text(
                             'صحتك، أولويتنا.',
                             style: AppTextStyles.body.copyWith(
-                              color: Colors.white.withOpacity(0.7),
+                              color: Colors.white.withValues(alpha: 0.7),
                               fontSize: 14,
                             ),
                             textAlign: TextAlign.center,
@@ -147,7 +147,7 @@ class _RoleButton extends StatelessWidget {
       color: Colors.white,
       borderRadius: BorderRadius.circular(16), // Rounded-2xl
       elevation: 4, // Moderate shadow
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),

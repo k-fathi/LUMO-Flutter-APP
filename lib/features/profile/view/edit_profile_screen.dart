@@ -16,6 +16,7 @@ import '../../../shared/providers/community_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../chat/view_model/chat_view_model.dart';
 import '../../../shared/providers/auth_provider.dart';
+import '../../../core/router/route_names.dart';
 
 /// Edit Profile Screen - Matches React EditProfileScreen
 ///
@@ -479,9 +480,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             child: SizedBox(
               height: 44,
               child: TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  // TODO: Delete account
+                onPressed: () async {
+                  try {
+                    await context.read<AuthProvider>().deleteAccount();
+                    if (!context.mounted) return;
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      RouteNames.login,
+                      (route) => false,
+                    );
+                  } catch (e) {
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('خطأ أثناء حذف الحساب: $e'),
+                        backgroundColor: AppColors.destructive,
+                      ),
+                    );
+                  }
                 },
                 style: TextButton.styleFrom(
                   backgroundColor: AppColors.destructive,

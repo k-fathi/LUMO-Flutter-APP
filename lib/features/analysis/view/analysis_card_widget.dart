@@ -42,7 +42,7 @@ class AnalysisCardWidget extends StatelessWidget {
           border: Border.all(color: const Color(0xFFE3F2FD)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -249,7 +249,7 @@ class _PieChartPainter extends CustomPainter {
       final isActive = states[i].isCurrent;
 
       final paint = Paint()
-        ..color = isActive ? color : color.withOpacity(0.25)
+        ..color = isActive ? color : color.withValues(alpha: 0.25)
         ..style = PaintingStyle.fill;
 
       // Draw donut segment

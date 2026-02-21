@@ -57,7 +57,7 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
               end: Alignment.centerRight,
               colors: [
                 AppColors.muted,
-                AppColors.muted.withOpacity(0.5),
+                AppColors.muted.withValues(alpha: 0.5),
                 AppColors.muted,
               ],
               stops: [

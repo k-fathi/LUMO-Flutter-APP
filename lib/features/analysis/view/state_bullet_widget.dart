@@ -21,11 +21,11 @@ class StateBulletWidget extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: isActive
-            ? state.color.withOpacity(0.2)
-            : Colors.grey.withOpacity(0.1),
+            ? state.color.withValues(alpha: 0.2)
+            : Colors.grey.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isActive ? state.color : Colors.grey.withOpacity(0.3),
+          color: isActive ? state.color : Colors.grey.withValues(alpha: 0.3),
           width: isActive ? 2 : 1,
         ),
       ),

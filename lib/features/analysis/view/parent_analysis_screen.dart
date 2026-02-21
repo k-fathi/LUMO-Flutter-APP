@@ -29,7 +29,7 @@ class ParentAnalysisScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.analysisTitle),
       ),
-      body: PatientAnalysisView(),
+      body: const PatientAnalysisView(),
     );
   }
 }
@@ -210,11 +210,11 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: theme.dividerColor.withOpacity(0.5)),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
             color: AppColors.primary
-                .withOpacity(theme.brightness == Brightness.light ? 0.08 : 0.2),
+                .withValues(alpha: theme.brightness == Brightness.light ? 0.08 : 0.2),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -247,7 +247,7 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(
+                        color: AppColors.primary.withValues(alpha: 
                             theme.brightness == Brightness.light ? 0.1 : 0.2),
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -264,7 +264,7 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(
+                        color: Colors.green.withValues(alpha: 
                             theme.brightness == Brightness.light ? 0.1 : 0.2),
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -346,7 +346,7 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF2563EB).withOpacity(0.3),
+            color: const Color(0xFF2563EB).withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -360,7 +360,7 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.auto_awesome_rounded,
@@ -381,7 +381,7 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
           Text(
             l10n.aiReportContent,
             style: AppTextStyles.body.copyWith(
-              color: Colors.white.withOpacity(0.95),
+              color: Colors.white.withValues(alpha: 0.95),
               height: 1.6,
               fontSize: 15,
             ),
@@ -462,12 +462,12 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: theme.dividerColor.withOpacity(0.5)),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
             color: theme.brightness == Brightness.light
-                ? Colors.black.withOpacity(0.03)
-                : Colors.white.withOpacity(0.02),
+                ? Colors.black.withValues(alpha: 0.03)
+                : Colors.white.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -482,7 +482,7 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(
+                  color: color.withValues(alpha: 
                       theme.brightness == Brightness.light ? 0.1 : 0.2),
                   shape: BoxShape.circle,
                 ),
@@ -491,7 +491,7 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
+                  color: Colors.green.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Row(

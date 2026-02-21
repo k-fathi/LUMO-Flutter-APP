@@ -82,6 +82,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
     _controller.clear();
   }
 
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
@@ -168,7 +169,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                   Container(
                     width: 40,
                     height: 40,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: AppColors.primary,
                       shape: BoxShape.circle,
                     ),

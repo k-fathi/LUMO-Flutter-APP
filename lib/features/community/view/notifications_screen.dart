@@ -28,7 +28,7 @@ class NotificationsScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.notifications_none_rounded,
+            const Icon(Icons.notifications_none_rounded,
                 size: 64, color: AppColors.mutedForeground),
             const SizedBox(height: 16),
             Text(

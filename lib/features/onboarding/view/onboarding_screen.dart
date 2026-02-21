@@ -86,6 +86,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _completeOnboarding();
   }
 
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
@@ -169,7 +170,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
                           elevation: 6,
-                          shadowColor: AppColors.primary.withOpacity(0.3),
+                          shadowColor: AppColors.primary.withValues(alpha: 0.3),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),

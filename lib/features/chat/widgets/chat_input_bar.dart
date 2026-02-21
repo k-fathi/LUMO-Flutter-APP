@@ -82,7 +82,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                   const SnackBar(content: Text('إرفاق ملف — قريباً')),
                 );
               },
-              icon: Icon(
+              icon: const Icon(
                 Icons.attach_file_rounded,
                 color: AppColors.mutedForeground,
                 size: 22,

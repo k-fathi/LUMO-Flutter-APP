@@ -99,58 +99,57 @@ class _SplashScreenState extends State<SplashScreen>
     super.dispose();
   }
 
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Container(
-        child: SafeArea(
-          child: Center(
-            child: AnimatedBuilder(
-              animation: _controller,
-              builder: (context, child) {
-                // Smooth sinusoidal floating effect
-                // _controller.value goes 0->1->0 (due to repeat reverse)
-                // We want a subtle float
-                final double floatY = 10 *
-                    (0.5 -
-                        (0.5 -
-                                CurvedAnimation(
-                                        parent: _controller,
-                                        curve: Curves.easeInOut)
-                                    .value)
-                            .abs());
+      body: SafeArea(
+        child: Center(
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              // Smooth sinusoidal floating effect
+              // _controller.value goes 0->1->0 (due to repeat reverse)
+              // We want a subtle float
+              final double floatY = 10 *
+                  (0.5 -
+                      (0.5 -
+                              CurvedAnimation(
+                                      parent: _controller,
+                                      curve: Curves.easeInOut)
+                                  .value)
+                          .abs());
 
-                return Transform.translate(
-                  offset: Offset(0, floatY),
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: ScaleTransition(
-                      scale: _scaleAnimation,
-                      child: child,
-                    ),
+              return Transform.translate(
+                offset: Offset(0, floatY),
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: child,
                   ),
-                );
-              },
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Image.asset(
-                    'assets/images_from_web/web_splash.png',
-                    width: 180,
-                    height: 180,
-                    fit: BoxFit.contain,
+                ),
+              );
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(
+                  'assets/images_from_web/web_splash.png',
+                  width: 180,
+                  height: 180,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'LUMO',
+                  style: GoogleFonts.pacifico(
+                    fontSize: 48,
+                    color: AppColors.primary,
+                    letterSpacing: 2,
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'LUMO',
-                    style: GoogleFonts.pacifico(
-                      fontSize: 48,
-                      color: AppColors.primary,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

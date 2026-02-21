@@ -36,7 +36,7 @@ class StateBadge extends StatelessWidget {
         vertical: 6,
       ),
       decoration: BoxDecoration(
-        color: state.color.withOpacity(0.1),
+        color: state.color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: state.color,

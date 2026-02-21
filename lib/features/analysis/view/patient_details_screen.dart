@@ -145,7 +145,7 @@ class _OverviewTabState extends State<_OverviewTab> {
     );
   }
 
-  void _addVisit() async {
+  void _addVisit(BuildContext context) async {
     final nameController = TextEditingController(text: 'جلسة متابعة');
 
     final bool? confirmed = await showDialog<bool>(
@@ -180,15 +180,16 @@ class _OverviewTabState extends State<_OverviewTab> {
     );
 
     if (confirmed != true) return;
+    if (!context.mounted) return;
 
     final DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 90)),
-      builder: (context, child) {
+      builder: (ctx, child) {
         return Theme(
-          data: Theme.of(context).copyWith(
+          data: Theme.of(ctx).copyWith(
             colorScheme: ColorScheme.fromSeed(
               seedColor: AppColors.primary,
               primary: AppColors.primary,
@@ -200,12 +201,14 @@ class _OverviewTabState extends State<_OverviewTab> {
     );
 
     if (pickedDate != null) {
+      if (!context.mounted) return;
       final TimeOfDay? pickedTime = await showTimePicker(
         context: context,
         initialTime: const TimeOfDay(hour: 16, minute: 0),
       );
 
       if (pickedTime != null) {
+        if (!context.mounted) return;
         setState(() {
           _visits.insert(0, {
             'date': '${pickedDate.year}-${pickedDate.month}-${pickedDate.day}',
@@ -302,7 +305,7 @@ class _OverviewTabState extends State<_OverviewTab> {
             children: [
               Text('سجل الزيارات', style: AppTextStyles.h3),
               IconButton(
-                onPressed: _addVisit,
+                onPressed: () => _addVisit(context),
                 icon: const Icon(Icons.add_circle, color: AppColors.primary),
               ),
             ],

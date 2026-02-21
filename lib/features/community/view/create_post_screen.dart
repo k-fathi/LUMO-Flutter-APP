@@ -50,6 +50,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     }
   }
 
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
@@ -152,7 +153,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                       child: Row(
                         children: [
                           Icon(Icons.public, size: 12, color: theme.hintColor),
-                          SizedBox(width: 4),
+                          const SizedBox(width: 4),
                           Text('الجميع',
                               style: TextStyle(
                                   fontSize: 10, color: theme.hintColor)),
