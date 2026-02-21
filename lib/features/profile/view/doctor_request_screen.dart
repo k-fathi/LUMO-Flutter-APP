@@ -237,20 +237,6 @@ class _DoctorRequestScreenState extends State<DoctorRequestScreen> {
                     vertical: 20,
                   ),
                   border: InputBorder.none,
-                  prefixIcon: Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Icon(
-                      Icons.qr_code_rounded,
-                      color: _errorText != null
-                          ? AppColors.destructive
-                          : AppColors.primary.withValues(alpha: 0.5),
-                      size: 24,
-                    ),
-                  ),
-                  prefixIconConstraints: const BoxConstraints(
-                    minWidth: 48,
-                    minHeight: 48,
-                  ),
                 ),
               ),
             ),

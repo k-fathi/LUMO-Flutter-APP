@@ -348,7 +348,7 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.qr_code_scanner_rounded,
+                Icons.person_add_rounded,
                 color: Colors.white,
                 size: 28,
               ),
