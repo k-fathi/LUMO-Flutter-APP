@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "783937682466",
+    "project_id": "lumo-flutter-app",
+    "storage_bucket": "lumo-flutter-app.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:783937682466:android:4fceee502e78ca916a5e7b",
+        "android_client_info": {
+          "package_name": "com.example.kareem_final"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC_FxWDNbaK6NLe-WYRAu7c7GKyGD4cO20"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
