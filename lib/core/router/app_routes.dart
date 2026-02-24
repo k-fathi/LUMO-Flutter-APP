@@ -22,6 +22,7 @@ import '../../features/profile/view/followers_screen.dart';
 import '../../features/profile/view/following_screen.dart';
 import '../../features/profile/view/doctor_request_screen.dart';
 import '../../features/profile/view/doctor_code_generator.dart';
+import '../../features/profile/view/change_password_screen.dart';
 import '../../features/settings/view/settings_screen.dart';
 import 'route_names.dart';
 import 'route_transitions.dart';
@@ -140,6 +141,9 @@ class AppRoutes {
 
       case RouteNames.doctorCodeGenerator:
         return RouteTransitions.slideRight(const DoctorCodeGeneratorScreen());
+
+      case RouteNames.changePassword:
+        return RouteTransitions.fade(const ChangePasswordScreen());
 
       // ==================== SETTINGS ====================
       case RouteNames.settings:

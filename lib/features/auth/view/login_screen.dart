@@ -54,7 +54,11 @@ class _LoginScreenState extends State<LoginScreen> with FormValidationMixin {
     setState(() => _isLoading = false);
 
     if (success) {
-      Navigator.pushReplacementNamed(context, RouteNames.mainLayout);
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        RouteNames.mainLayout,
+        (route) => false,
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

@@ -123,7 +123,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get password => 'كلمة المرور';
 
   @override
+  String get oldPassword => 'كلمة المرور الحالية';
+
+  @override
+  String get newPassword => 'كلمة المرور الجديدة';
+
+  @override
   String get confirmPassword => 'تأكيد كلمة المرور';
+
+  @override
+  String get passwordChangedSuccessfully => 'تم تغيير كلمة المرور بنجاح';
 
   @override
   String get name => 'الاسم';
@@ -387,6 +396,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get about => 'حول التطبيق';
 
   @override
+  String get licenses => 'التراخيص';
+
+  @override
   String get accountSection => 'الحساب';
 
   @override
@@ -414,7 +426,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get privacyPolicyContent => 'خصوصية المستخدم هي أولويتنا القصوى.\\n\\n• نحن لا نشارك بياناتك الشخصية مع أطراف خارجية.\\n• يتم تخزين البيانات الصحية بشكل مشفر وآمن.\\n• يمكنك حذف حسابك وجميع بياناتك في أي وقت.\\n• نستخدم البيانات فقط لتحسين تجربة الاستخدام.\\n• التواصل مع الأطباء يتم بشكل سري وآمن.\\n\\nلمزيد من المعلومات، تواصل معنا عبر البريد الإلكتروني.';
 
   @override
-  String get aboutAppContent => 'مشروع تخرج 2026\\nتطوير طلاب هندسة\\n\\nتطبيق LUMO يهدف لمساعدة أولياء الأمور والأطباء في متابعة صحة وتطور الأطفال من ذوي الاحتياجات الخاصة.';
+  String get aboutAppContent => 'مشروع تخرج طلاب هندسة اتصالات بني سويف الدفعة الثانية سنة ٢٠٢٦.\\nالتطبيق لا يمتلك تراخيص طبية.';
 
   @override
   String get version => 'الإصدار';

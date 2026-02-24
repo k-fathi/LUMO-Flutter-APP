@@ -78,13 +78,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: Icons.lock_outline_rounded,
               iconColor: const Color(0xFF8B5CF6),
               title: l10n.changePassword,
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content:
-                          Text('${l10n.changePassword} - ${l10n.pending}')),
-                );
-              },
+              onTap: () =>
+                  Navigator.pushNamed(context, RouteNames.changePassword),
             ),
           ]),
           const SizedBox(height: 20),
@@ -160,10 +155,76 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             _buildDivider(),
             _buildListTile(
+              icon: Icons.description_outlined,
+              iconColor: const Color(0xFFF59E0B),
+              title: l10n.licenses,
+              onTap: () => _showLicensesDialog(),
+            ),
+            _buildDivider(),
+            _buildListTile(
               icon: Icons.info_outline_rounded,
               iconColor: AppColors.primary,
               title: l10n.about,
-              onTap: () => _showAboutAppDialog(),
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    title: Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            gradient: AppColors.primaryGradient,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.favorite,
+                              color: Colors.white, size: 24),
+                        ),
+                        const SizedBox(width: 16),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'LUMO',
+                              style: AppTextStyles.h2
+                                  .copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              'v1.0.0',
+                              style: AppTextStyles.caption
+                                  .copyWith(color: AppColors.mutedForeground),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    content: Text(
+                      l10n.aboutAppContent.replaceAll('\\n', '\n'),
+                      style: AppTextStyles.body.copyWith(
+                        color: Theme.of(context).textTheme.bodyMedium?.color,
+                        height: 1.5,
+                      ),
+                      textAlign: TextAlign.right,
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(
+                          l10n.ok,
+                          style: AppTextStyles.label.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ]),
           const SizedBox(height: 20),
@@ -255,7 +316,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         title: Row(
           children: [
-            const Icon(Icons.shield_outlined, color: AppColors.primary, size: 24),
+            const Icon(Icons.shield_outlined,
+                color: AppColors.primary, size: 24),
             const SizedBox(width: 8),
             Text(
               l10n.privacy,
@@ -288,32 +350,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ── About App Dialog ──────────────────────────────────────
-  void _showAboutAppDialog() {
+  // ── Licenses Dialog ──────────────────────────────────────
+  void _showLicensesDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showAboutDialog(
+    showDialog(
       context: context,
-      applicationName: 'LUMO',
-      applicationVersion: '1.0.0',
-      applicationIcon: Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient,
-          borderRadius: BorderRadius.circular(12),
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
         ),
-        child: const Icon(Icons.favorite, color: Colors.white, size: 24),
-      ),
-      children: [
-        Text(
-          l10n.aboutAppContent.replaceAll('\\n', '\n'),
+        title: Row(
+          children: [
+            const Icon(Icons.description_outlined,
+                color: Color(0xFFF59E0B), size: 24),
+            const SizedBox(width: 8),
+            Text(
+              l10n.licenses,
+              style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Text(
+          'البرنامج لا يحتوي علي تراخيص حتي الان',
           style: AppTextStyles.body.copyWith(
             color: Theme.of(context).textTheme.bodyMedium?.color,
-            height: 1.5,
           ),
-          textAlign: TextAlign.right,
+          textAlign: TextAlign.center,
         ),
-      ],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              l10n.ok,
+              style: AppTextStyles.label.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

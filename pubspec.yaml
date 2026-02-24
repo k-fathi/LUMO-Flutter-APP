@@ -78,10 +78,15 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/images/first-onboarding-img.png
+    - assets/images/second-onboarding-img.png
+    - assets/images/third-onboarding-img.png
+    - assets/images/lumo-logo.png
+    - assets/images/app_logo.png
     - assets/images_from_web/
 
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/images/lumo-logo.png"
+  image_path: "assets/images/app_logo.png"
   min_sdk_android: 21

@@ -84,7 +84,7 @@ class _SplashScreenState extends State<SplashScreen>
     if (authProvider.isAuthenticated) {
       _navigateTo(RouteNames.mainLayout);
     } else {
-      _navigateTo(RouteNames.roleSelection);
+      _navigateTo(RouteNames.login);
     }
   }
 

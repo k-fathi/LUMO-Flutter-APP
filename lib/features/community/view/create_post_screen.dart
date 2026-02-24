@@ -85,17 +85,30 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                         }
 
                         if (context.mounted) {
-                          context.read<CommunityProvider>().addPost(
-                                authorName: userName,
-                                authorRole: userRole,
-                                content: _controller.text,
-                                imageUrl:
-                                    uploadedImageUrl ?? _selectedImage?.path,
-                              );
+                          if (widget.initialPost != null) {
+                            final postId = widget.initialPost!['id'];
+                            context.read<CommunityProvider>().updatePost(
+                                  postId: postId,
+                                  content: _controller.text,
+                                  imageUrl:
+                                      uploadedImageUrl ?? _selectedImage?.path,
+                                );
+                          } else {
+                            context.read<CommunityProvider>().addPost(
+                                  authorName: userName,
+                                  authorRole: userRole,
+                                  content: _controller.text,
+                                  imageUrl:
+                                      uploadedImageUrl ?? _selectedImage?.path,
+                                );
+                          }
 
-                          Navigator.pop(context);
+                          Navigator.pop(context, true);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('تم النشر بنجاح!')),
+                            SnackBar(
+                                content: Text(widget.initialPost != null
+                                    ? 'تم تعديل المنشور بنجاح!'
+                                    : 'تم النشر بنجاح!')),
                           );
                         }
                       } catch (e) {

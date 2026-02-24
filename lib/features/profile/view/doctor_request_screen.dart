@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/widgets/gradient_app_bar.dart';
 
 /// DoctorRequestScreen — Parent enters code from doctor to connect
 ///
@@ -131,23 +132,9 @@ class _DoctorRequestScreenState extends State<DoctorRequestScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        elevation: 0,
-        scrolledUnderElevation: 1,
-        surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
-        ),
-        title: Text(
-          'الانضمام لطبيب',
-          style: AppTextStyles.h2.copyWith(fontWeight: FontWeight.w600),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: AppColors.border),
-        ),
+      appBar: GradientAppBar(
+        title: 'الانضمام لطبيب',
+        onBackPressed: () => Navigator.pop(context),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),

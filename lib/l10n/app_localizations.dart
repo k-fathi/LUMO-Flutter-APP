@@ -323,11 +323,29 @@ abstract class AppLocalizations {
   /// **'Password'**
   String get password;
 
+  /// No description provided for @oldPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Old Password'**
+  String get oldPassword;
+
+  /// No description provided for @newPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'New Password'**
+  String get newPassword;
+
   /// No description provided for @confirmPassword.
   ///
   /// In en, this message translates to:
   /// **'Confirm Password'**
   String get confirmPassword;
+
+  /// No description provided for @passwordChangedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Password changed successfully'**
+  String get passwordChangedSuccessfully;
 
   /// No description provided for @name.
   ///
@@ -851,6 +869,12 @@ abstract class AppLocalizations {
   /// **'About App'**
   String get about;
 
+  /// No description provided for @licenses.
+  ///
+  /// In en, this message translates to:
+  /// **'Licenses'**
+  String get licenses;
+
   /// No description provided for @accountSection.
   ///
   /// In en, this message translates to:
@@ -908,7 +932,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutAppContent.
   ///
   /// In en, this message translates to:
-  /// **'Graduation Project 2026\\nEngineering Students Development\\n\\nLUMO app aims to help parents and doctors monitor the health and development of children with special needs.'**
+  /// **'Graduation project by Beni Suef Communications Engineering students, 2nd batch, 2026.\\nThis application does not hold medical licenses.'**
   String get aboutAppContent;
 
   /// No description provided for @version.

@@ -327,7 +327,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     );
                   },
                   icon: const Icon(Icons.logout, size: 20),
-                  label: const Text('تسجيل الخروج'),
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('تسجيل الخروج'),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: isDark
                         ? theme.colorScheme.primary.withValues(alpha: 0.1)
@@ -349,7 +352,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 child: ElevatedButton.icon(
                   onPressed: () => _showDeleteAccountDialog(context),
                   icon: const Icon(Icons.delete_outline, size: 20),
-                  label: const Text('حذف الحساب'),
+                  label: const FittedBox(
+                      fit: BoxFit.scaleDown, child: Text('حذف الحساب')),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: isDark
                         ? AppColors.destructive.withValues(alpha: 0.1)
@@ -470,7 +474,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text('إلغاء'),
+                child: const FittedBox(
+                    fit: BoxFit.scaleDown, child: Text('إلغاء')),
               ),
             ),
           ),
@@ -506,7 +511,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text('نعم، احذف الحساب'),
+                child: const FittedBox(
+                    fit: BoxFit.scaleDown, child: Text('نعم، احذف الحساب')),
               ),
             ),
           ),

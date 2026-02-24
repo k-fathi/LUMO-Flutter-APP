@@ -106,7 +106,10 @@ class GenerateCodeDialog extends StatelessWidget {
                   );
                 },
                 icon: const Icon(Icons.copy_rounded, size: 18),
-                label: const Text('نسخ الرمز'),
+                label: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('نسخ الرمز'),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,

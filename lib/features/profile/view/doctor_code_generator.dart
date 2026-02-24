@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '/core/theme/app_colors.dart';
-import '../../../shared/widgets/custom_app_bar.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../shared/widgets/gradient_app_bar.dart';
 
 /// Doctor Code Generator Screen - doctor generates patient connection codes
 class DoctorCodeGeneratorScreen extends StatefulWidget {
@@ -34,10 +34,10 @@ class _DoctorCodeGeneratorScreenState extends State<DoctorCodeGeneratorScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: CustomAppBar(
+      appBar: GradientAppBar(
         title: 'كود الدخول',
         onBackPressed: () => Navigator.pop(context),
-      ) as PreferredSizeWidget?,
+      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),

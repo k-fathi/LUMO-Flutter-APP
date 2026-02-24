@@ -123,7 +123,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get password => 'Password';
 
   @override
+  String get oldPassword => 'Old Password';
+
+  @override
+  String get newPassword => 'New Password';
+
+  @override
   String get confirmPassword => 'Confirm Password';
+
+  @override
+  String get passwordChangedSuccessfully => 'Password changed successfully';
 
   @override
   String get name => 'Name';
@@ -387,6 +396,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get about => 'About App';
 
   @override
+  String get licenses => 'Licenses';
+
+  @override
   String get accountSection => 'Account';
 
   @override
@@ -414,7 +426,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get privacyPolicyContent => 'User privacy is our top priority.\\n\\n• We do not share your personal data with third parties.\\n• Health data is stored securely and encrypted.\\n• You can delete your account and all data at any time.\\n• We use data only to improve the user experience.\\n• Communication with doctors is confidential and secure.\\n\\nFor more information, contact us via email.';
 
   @override
-  String get aboutAppContent => 'Graduation Project 2026\\nEngineering Students Development\\n\\nLUMO app aims to help parents and doctors monitor the health and development of children with special needs.';
+  String get aboutAppContent => 'Graduation project by Beni Suef Communications Engineering students, 2nd batch, 2026.\\nThis application does not hold medical licenses.';
 
   @override
   String get version => 'Version';

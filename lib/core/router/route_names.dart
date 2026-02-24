@@ -44,4 +44,5 @@ class RouteNames {
 
   // Utility
   static const String settings = '/settings';
+  static const String changePassword = '/change-password';
 }

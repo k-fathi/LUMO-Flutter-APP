@@ -99,4 +99,20 @@ class CommunityProvider with ChangeNotifier {
     _posts.insert(0, newPost);
     notifyListeners();
   }
+
+  void updatePost({
+    required String postId,
+    required String content,
+    String? imageUrl,
+  }) {
+    final index = _posts.indexWhere((p) => p.id == postId);
+    if (index != -1) {
+      final post = _posts[index];
+      _posts[index] = post.copyWith(
+        content: content,
+        imageUrl: imageUrl ?? post.imageUrl,
+      );
+      notifyListeners();
+    }
+  }
 }

@@ -161,8 +161,12 @@ class _PostCardState extends State<PostCard> {
                     if (value == 'edit') {
                       Navigator.pushNamed(
                         context,
-                        RouteNames.createPost,
-                        arguments: {'content': post.content},
+                        RouteNames.editPost,
+                        arguments: {
+                          'id': post.id,
+                          'content': post.content,
+                          'imageUrl': post.imageUrl,
+                        },
                       );
                     } else if (value == 'delete') {
                       _showDeleteConfirmation(context);
