@@ -33,14 +33,15 @@ class RouteNames {
   static const String parentAnalysis = '/parent-analysis';
   static const String doctorPatients = '/doctor-patients';
   static const String doctorPatientDetail = '/doctor-patient-detail';
+  static const String sessionDetailPlaceholder = '/session-detail-placeholder';
 
   // Profile
   static const String profile = '/profile';
   static const String editProfile = '/edit-profile';
   static const String followers = '/followers';
   static const String following = '/following';
-  static const String doctorRequest = '/doctor-request';
-  static const String doctorCodeGenerator = '/doctor-code-generator';
+  static const String childProfile = '/child-profile';
+  static const String editChildProfile = '/edit-child-profile';
 
   // Utility
   static const String settings = '/settings';

@@ -162,14 +162,19 @@ class AppTheme {
 
       // Chip theme
       chipTheme: ChipThemeData(
-        backgroundColor: AppColors.secondary,
+        backgroundColor: Colors.grey.shade300,
         disabledColor: AppColors.muted,
         selectedColor: AppColors.primary,
         secondarySelectedColor: AppColors.primary,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        labelStyle: AppTextStyles.label,
-        secondaryLabelStyle:
-            AppTextStyles.label.copyWith(color: AppColors.primaryForeground),
+        labelStyle: AppTextStyles.label.copyWith(
+          color: Colors.grey.shade800, // Better contrast for unselected
+          fontWeight: FontWeight.w600,
+        ),
+        secondaryLabelStyle: AppTextStyles.label.copyWith(
+          color: Colors.white, // Ensure white on primary blue
+          fontWeight: FontWeight.bold,
+        ),
         brightness: Brightness.light,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),

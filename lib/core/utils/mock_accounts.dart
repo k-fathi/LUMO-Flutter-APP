@@ -1,15 +1,16 @@
 /// Fixed Mock Accounts for Testing
-/// 
+///
 /// Use these hardcoded accounts to test the app without backend
 /// Email credentials that trigger these accounts:
-/// 
+///
 /// Doctor Account:
 ///   Email: doctor@test.com
 ///   Password: doctor123 (any password works)
-/// 
+///
 /// User/Parent Account:
 ///   Email: user@test.com
 ///   Password: user123 (any password works)
+library;
 
 import '../../data/models/doctor_model.dart';
 import '../../data/models/parent_model.dart';
@@ -90,13 +91,13 @@ class MockAccounts {
   /// Check if credentials match fixed accounts
   static String? validateFixedAccount(String email, String password) {
     final lowerEmail = email.toLowerCase().trim();
-    
+
     if (lowerEmail == 'doctor@test.com') {
       return 'doctor';
     } else if (lowerEmail == 'user@test.com') {
       return 'parent';
     }
-    
+
     return null;
   }
 }

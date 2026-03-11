@@ -5,6 +5,7 @@ import '../widgets/post_card.dart';
 import '../widgets/quick_post_widget.dart';
 import '../../../shared/providers/community_provider.dart';
 import 'package:provider/provider.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// CommunityScreen (Home) - Figma Screen 6
 ///
@@ -21,15 +22,12 @@ class CommunityScreen extends StatefulWidget {
 }
 
 class _CommunityScreenState extends State<CommunityScreen> {
-  late ScrollController _scrollController;
   bool _isLoadingMore = false;
   bool _isInitialLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController();
-    _scrollController.addListener(_onScroll);
 
     // Simulate initial loading
     _isInitialLoading = true;
@@ -42,30 +40,26 @@ class _CommunityScreenState extends State<CommunityScreen> {
     });
   }
 
-  void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      if (!_isLoadingMore) {
-        // Trigger load more
-        setState(() {
-          _isLoadingMore = true;
-        });
-        // Simulate network delay
-        Future.delayed(const Duration(milliseconds: 1500), () {
-          if (mounted) {
-            setState(() {
-              _isLoadingMore = false;
-              // Append more items to list here in real implementation
-            });
-          }
-        });
-      }
+  void _onScrollThresholdReached() {
+    if (!_isLoadingMore) {
+      // Trigger load more
+      setState(() {
+        _isLoadingMore = true;
+      });
+      // Simulate network delay
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        if (mounted) {
+          setState(() {
+            _isLoadingMore = false;
+            // Append more items to list here in real implementation
+          });
+        }
+      });
     }
   }
 
   @override
   void dispose() {
-    _scrollController.dispose();
     super.dispose();
   }
 
@@ -73,43 +67,75 @@ class _CommunityScreenState extends State<CommunityScreen> {
   Widget build(BuildContext context) {
     final communityProvider = context.watch<CommunityProvider>();
     final posts = communityProvider.posts;
+    final l10n = AppLocalizations.of(context)!;
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // ── Sticky Header ─────────────────────────────────
-            const CommunityHeader(),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: SafeArea(
+          child: Column(
+            children: [
+              // ── Sticky Header ─────────────────────────────────
+              const CommunityHeader(),
 
-            // ── Scrollable Feed ───────────────────────────────
-            Expanded(
-              child: _isInitialLoading
-                  ? _buildShimmerLoading(context)
-                  : posts.isEmpty
-                      ? _buildEmptyState(context)
-                      : ListView.builder(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.only(bottom: 16),
-                          itemCount:
-                              posts.length + 1 + (_isLoadingMore ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            if (index == 0) {
-                              return const QuickPostWidget();
-                            }
-                            if (index == posts.length + 1 && _isLoadingMore) {
-                              return const Padding(
-                                padding: EdgeInsets.all(16.0),
-                                child:
-                                    Center(child: CircularProgressIndicator()),
-                              );
-                            }
-                            return PostCard(post: posts[index - 1]);
-                          },
-                        ),
-            ),
-          ],
+              // ── Tab Bar ───────────────────────────────────────
+              TabBar(
+                labelColor: Theme.of(context).colorScheme.primary,
+                unselectedLabelColor:
+                    Theme.of(context).textTheme.bodySmall?.color,
+                indicatorColor: Theme.of(context).colorScheme.primary,
+                tabs: [
+                  Tab(text: l10n.explore),
+                  Tab(text: l10n.following),
+                ],
+              ),
+
+              // ── Scrollable Feed ───────────────────────────────
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    _buildFeedTab(posts),
+                    _buildFeedTab(posts.reversed
+                        .toList()), // Mock sorting for Following tab
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildFeedTab(List posts) {
+    if (_isInitialLoading) return _buildShimmerLoading(context);
+    if (posts.isEmpty) return _buildEmptyState(context);
+
+    return NotificationListener<ScrollNotification>(
+      onNotification: (ScrollNotification scrollInfo) {
+        if (!scrollInfo.metrics.outOfRange &&
+            scrollInfo.metrics.pixels >=
+                scrollInfo.metrics.maxScrollExtent - 200) {
+          _onScrollThresholdReached();
+        }
+        return false;
+      },
+      child: ListView.builder(
+        padding: const EdgeInsets.only(bottom: 16),
+        itemCount: posts.length + 1 + (_isLoadingMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return const QuickPostWidget();
+          }
+          if (index == posts.length + 1 && _isLoadingMore) {
+            return const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          return PostCard(post: posts[index - 1]);
+        },
       ),
     );
   }

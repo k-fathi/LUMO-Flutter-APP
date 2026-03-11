@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/router/route_names.dart';
+import '../../../data/models/doctor_model.dart';
+import '../../../core/utils/mock_accounts.dart';
 import '../../../l10n/app_localizations.dart';
 import 'chat_screen.dart';
 
@@ -91,7 +94,7 @@ class ChatsListScreen extends StatelessWidget {
       // FAB: Start new conversation (RTL: bottom-left)
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Navigate to followers screen to pick a user
+          _showNewChatBottomSheet(context, theme, l10n);
         },
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -144,6 +147,138 @@ class ChatsListScreen extends StatelessWidget {
       ),
     );
   }
+
+  void _showNewChatBottomSheet(
+      BuildContext context, ThemeData theme, AppLocalizations l10n) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        final mockContacts = [
+          MockAccounts.getDoctorAccount(),
+          MockAccounts.getParentAccount(),
+        ];
+
+        return SafeArea(
+          child: Directionality(
+            textDirection: TextDirection.rtl,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Premium UI Drag Handle
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    width: 40,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                  child: Text(
+                    'بدء محادثة جديدة',
+                    style:
+                        AppTextStyles.h2.copyWith(fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Divider(height: 1, color: theme.dividerColor),
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: mockContacts.length,
+                    itemBuilder: (context, index) {
+                      final contact = mockContacts[index];
+                      return _buildDoctorContactTile(
+                        ctx,
+                        contact,
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDoctorContactTile(
+      BuildContext context, Map<String, dynamic> contact) {
+    final theme = Theme.of(context);
+    final name = contact['name'] ?? 'مستخدم';
+    final role = contact['role'] == 'doctor' ? 'طبيب' : 'ولي أمر';
+    final isOnline = true; // Hardcoded mock
+    final id = contact['id'];
+
+    void navigateToProfile() {
+      Navigator.pop(context); // Close BottomSheet
+      Navigator.pushNamed(
+        context,
+        '/profile',
+        arguments: {'userId': id},
+      );
+    }
+
+    return Directionality(
+        textDirection: TextDirection.rtl,
+        child: ListTile(
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          leading: GestureDetector(
+            onTap: navigateToProfile,
+            child: Stack(
+              children: [
+                CircleAvatar(
+                  backgroundColor: AppColors.secondary,
+                  child: Text(
+                    name.isNotEmpty ? name[0] : '?',
+                    style: AppTextStyles.h3.copyWith(color: AppColors.primary),
+                  ),
+                ),
+                if (isOnline)
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: AppColors.online,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                            color: theme.scaffoldBackgroundColor, width: 2),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          title: GestureDetector(
+            onTap: navigateToProfile,
+            child: Text(name,
+                style:
+                    AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
+          ),
+          subtitle:
+              Text(role, style: AppTextStyles.caption.copyWith(fontSize: 12)),
+          onTap: () {
+            Navigator.pop(context); // Close sheet
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('جاري فتح محادثة مع $name...')),
+            );
+          },
+        ));
+  }
 }
 
 /// Individual Chat List Tile
@@ -169,40 +304,61 @@ class _ChatListTile extends StatelessWidget {
         child: Row(
           children: [
             // ── Avatar + Online Dot ─────────────────────────
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: 26,
-                  backgroundColor:
-                      conv.isAI ? AppColors.primary : AppColors.secondary,
-                  child: conv.isAI
-                      ? const Icon(Icons.smart_toy_rounded,
-                          color: Colors.white, size: 26)
-                      : Text(
-                          conv.userName.isNotEmpty ? conv.userName[0] : '?',
-                          style: AppTextStyles.h3.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
+            GestureDetector(
+              onTap: () {
+                if (!conv.isAI) {
+                  final mockUser = DoctorModel(
+                    id: conv.id,
+                    email: 'doctor@demo.com',
+                    name: conv.userName,
+                    createdAt: DateTime.now(),
+                    updatedAt: DateTime.now(),
+                    specialization: 'استشاري النفسية',
+                    licenseNumber: '12345',
+                    yearsOfExperience: 5,
+                  );
+                  Navigator.pushNamed(
+                    context,
+                    RouteNames.profile,
+                    arguments: {'user': mockUser},
+                  );
+                }
+              },
+              child: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 26,
+                    backgroundColor:
+                        conv.isAI ? AppColors.primary : AppColors.secondary,
+                    child: conv.isAI
+                        ? const Icon(Icons.smart_toy_rounded,
+                            color: Colors.white, size: 26)
+                        : Text(
+                            conv.userName.isNotEmpty ? conv.userName[0] : '?',
+                            style: AppTextStyles.h3.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
+                  ),
+                  // Green dot online indicator
+                  if (conv.isOnline)
+                    Positioned(
+                      bottom: 1,
+                      right: 1,
+                      child: Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: AppColors.online,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: theme.scaffoldBackgroundColor, width: 2),
                         ),
-                ),
-                // Green dot online indicator
-                if (conv.isOnline)
-                  Positioned(
-                    bottom: 1,
-                    right: 1,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: AppColors.online,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                            color: theme.scaffoldBackgroundColor, width: 2),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(width: 14),
 

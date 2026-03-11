@@ -22,8 +22,16 @@ import '../../../shared/widgets/avatar_widget.dart';
 class PostCard extends StatefulWidget {
   final MockPost post;
   final VoidCallback? onDelete;
+  final bool isOwnProfile;
+  final bool hideFollowButton;
 
-  const PostCard({super.key, required this.post, this.onDelete});
+  const PostCard({
+    super.key,
+    required this.post,
+    this.onDelete,
+    this.isOwnProfile = false,
+    this.hideFollowButton = false,
+  });
 
   @override
   State<PostCard> createState() => _PostCardState();
@@ -31,6 +39,7 @@ class PostCard extends StatefulWidget {
 
 class _PostCardState extends State<PostCard> {
   bool _isExpanded = false;
+  bool _isFollowing = false;
 
   @override
   void initState() {
@@ -110,6 +119,34 @@ class _PostCardState extends State<PostCard> {
                           fallbackIcon: post.authorRole == 'doctor'
                               ? Icons.medical_services_rounded
                               : Icons.person_rounded,
+                          onTap: () {
+                            final isDoc = post.authorRole == 'doctor';
+                            final mockUser = isDoc
+                                ? DoctorModel(
+                                    id: 'mock_author_${post.id}',
+                                    email: 'author@demo.com',
+                                    name: post.authorName,
+                                    createdAt: DateTime.now(),
+                                    updatedAt: DateTime.now(),
+                                    specialization: 'استشاري',
+                                    licenseNumber: '12345',
+                                    yearsOfExperience: 5,
+                                  )
+                                : ParentModel(
+                                    id: 'mock_author_${post.id}',
+                                    email: 'author@demo.com',
+                                    name: post.authorName,
+                                    createdAt: DateTime.now(),
+                                    updatedAt: DateTime.now(),
+                                    childName: 'طفل',
+                                    childAge: 5,
+                                  );
+                            Navigator.pushNamed(
+                              context,
+                              RouteNames.profile,
+                              arguments: {'user': mockUser},
+                            );
+                          },
                         ),
                         const SizedBox(width: 12),
 
@@ -133,6 +170,48 @@ class _PostCardState extends State<PostCard> {
                                   const SizedBox(width: 8),
                                   // Role Badge
                                   _RoleBadge(isDoctor: isDoctor),
+
+                                  // Follow Button (Hidden if looking at own profile or explicitly hidden)
+                                  if (!widget.hideFollowButton &&
+                                      !widget.isOwnProfile) ...[
+                                    const SizedBox(width: 6),
+                                    GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          _isFollowing = !_isFollowing;
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: _isFollowing
+                                              ? Colors.transparent
+                                              : AppColors.primary,
+                                          border: Border.all(
+                                            color: _isFollowing
+                                                ? theme.dividerColor
+                                                : AppColors.primary,
+                                          ),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          _isFollowing
+                                              ? l10n.following
+                                              : l10n.follow,
+                                          style: AppTextStyles.caption.copyWith(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: _isFollowing
+                                                ? theme
+                                                    .textTheme.bodySmall?.color
+                                                : Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                               const SizedBox(height: 2),

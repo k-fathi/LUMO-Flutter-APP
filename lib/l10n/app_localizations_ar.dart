@@ -192,6 +192,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get community => 'المجتمع';
 
   @override
+  String get explore => 'استكشف';
+
+  @override
   String get chats => 'المحادثات';
 
   @override
@@ -477,7 +480,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get profileUpdated => 'تم تحديث الملف الشخصي';
 
   @override
-  String get requestSent => 'تم إرسال الطلب';
+  String get requestSent => 'تم إرسال الطلب بنجاح!';
 
   @override
   String requestAccepted(Object name) {
@@ -682,6 +685,41 @@ class AppLocalizationsAr extends AppLocalizations {
   String get angry => 'غاضب';
 
   @override
+  String get fear => 'خائف';
+
+  @override
+  String get surprise => 'متفاجئ';
+
+  @override
+  String get neutral => 'طبيعي';
+
+  @override
+  String get focusAnalysis => 'تحليل التركيز';
+
+  @override
+  String get focused => 'مركز';
+
+  @override
+  String get notFocused => 'غير مركز';
+
+  @override
+  String get searchPatient => 'البحث عن مريض';
+
+  @override
+  String get searchByEmailOrName => 'ابحث باسم أو بريد ولي الأمر...';
+
+  @override
+  String get sendRequest => 'إرسال طلب';
+
+  @override
+  String get doctorRequests => 'طلبات الأطباء';
+
+  @override
+  String doctorRequestMessage(Object doctorName) {
+    return 'د. $doctorName يريد إضافة طفلك إلى عيادته';
+  }
+
+  @override
   String get dailyHistory => 'السجل اليومي';
 
   @override
@@ -710,4 +748,63 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get improvementStatus => 'مستوى التحسن';
+
+  @override
+  String get childCondition => 'الحالة';
+
+  @override
+  String get conditionAutism => 'طيف التوحد';
+
+  @override
+  String childAgeValue(Object age) {
+    return '$age سنوات';
+  }
+
+  @override
+  String get bloodType => 'فصيلة الدم';
+
+  @override
+  String get weight => 'الوزن';
+
+  @override
+  String get height => 'الطول';
+
+  @override
+  String get kg => 'كجم';
+
+  @override
+  String get cm => 'سم';
+
+  @override
+  String get medicalHistory => 'السجل الطبي';
+
+  @override
+  String get emergencyContact => 'طوارئ';
+
+  @override
+  String get notLinkedToDoctor => 'غير مرتبط بطبيب';
+
+  @override
+  String get submitCode => 'تأكيد الكود';
+
+  @override
+  String get treatingDoctor => 'الطبيب المعالج';
+
+  @override
+  String get nextSession => 'الجلسة القادمة';
+
+  @override
+  String get sendMessage => 'إرسال رسالة';
+
+  @override
+  String get sessionHistory => 'سجل الجلسات';
+
+  @override
+  String get allSessions => 'كل الجلسات';
+
+  @override
+  String get overview => 'نظرة عامة';
+
+  @override
+  String get clinicLocation => 'موقع العيادة';
 }

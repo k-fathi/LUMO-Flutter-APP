@@ -11,6 +11,43 @@ import '../../../l10n/app_localizations.dart';
 import '../widgets/emotion_bar.dart';
 import '../../../shared/widgets/avatar_widget.dart';
 import '../../../shared/providers/patient_provider.dart';
+import '../../../core/router/route_names.dart';
+
+// --- (NEW) Dynamic Data Models for UI ---
+class EmotionData {
+  final String id;
+  final String emoji;
+  final String label;
+  final double percentage; // 0.0 to 1.0
+  final Color color;
+
+  EmotionData(this.id, this.emoji, this.label, this.percentage, this.color);
+}
+
+class SessionAnalysisData {
+  final String id;
+  final String title;
+  final String summary;
+  final String duration;
+  final String engagementLevel;
+  final List<String> recommendations;
+  final List<EmotionData> emotionDistribution;
+  final double focusedPercentage;
+  final double notFocusedPercentage;
+
+  SessionAnalysisData({
+    required this.id,
+    required this.title,
+    required this.summary,
+    required this.duration,
+    required this.engagementLevel,
+    required this.recommendations,
+    required this.emotionDistribution,
+    required this.focusedPercentage,
+    required this.notFocusedPercentage,
+  });
+}
+// ----------------------------------------
 
 /// AnalysisScreen (Parent View) — Figma Screen 11
 ///
@@ -53,9 +90,131 @@ class PatientAnalysisView extends StatefulWidget {
 }
 
 class _PatientAnalysisViewState extends State<PatientAnalysisView> {
+  // Task 2 Toggle
+  bool isLinked = true;
+
   int _selectedSessionIndex = 0;
   DateTimeRange? _selectedDateRange;
   int _chartType = 0; // 0 = Bars, 1 = Pie, 2 = Line
+
+  // --- Dynamic Mock Data ---
+  late final SessionAnalysisData _overallData;
+  late final List<SessionAnalysisData> _sessionsData;
+
+  @override
+  void initState() {
+    super.initState();
+    _initMockData();
+  }
+
+  void _initMockData() {
+    _overallData = SessionAnalysisData(
+      id: 'overall',
+      title: 'كل الجلسات',
+      summary:
+          'تقدم عام ملحوظ على مدار جميع الجلسات. تحسن في التواصل البصري بنسبة كبيرة وانخفاض في مستويات التوتر.',
+      duration: 'إجمالي الساعات: ١٠',
+      engagementLevel: 'جيد جداً',
+      recommendations: [
+        'الاستمرار في تمارين التحدث لمدة ٣٠ دقيقة يومياً',
+        'تشجيع الطفل على التعبير عن غضبه بالرسم',
+        'زيادة فترات اللعب الاجتماعي مع أقرانه',
+      ],
+      emotionDistribution: [
+        EmotionData('happy', '😊', 'سعيد', 0.25, const Color(0xFF22C55E)),
+        EmotionData('calm', '😌', 'هادئ', 0.20, AppColors.primary),
+        EmotionData('sad', '😢', 'حزين', 0.15, AppColors.destructive),
+        EmotionData('angry', '😠', 'غاضب', 0.10, const Color(0xFFF97316)),
+        EmotionData(
+            'fear', '😨', 'خائف', 0.15, const Color(0xFF6366F1)), // Indigo
+        EmotionData('surprise', '😲', 'متفاجئ', 0.15,
+            const Color(0xFFA855F7)), // Purple
+      ],
+      focusedPercentage: 0.70,
+      notFocusedPercentage: 0.30,
+    );
+
+    _sessionsData = [
+      SessionAnalysisData(
+        id: 'session_1',
+        title: 'جلسة #1',
+        summary:
+            'خلال هذه الجلسة، أظهر الطفل تقدماً ملحوظاً في حل الألغاز التعاونية مع الروبوت. وتواصل بصري بنسبة ٧٥٪.',
+        duration: '٢٥ دقيقة',
+        engagementLevel: 'ممتاز',
+        recommendations: [
+          'التركيز على مهارات تبادل الأدوار',
+          'استخدام الروبوت كمحفز للنطق الوجداني',
+        ],
+        emotionDistribution: [
+          EmotionData('happy', '😊', 'سعيد', 0.35, const Color(0xFF22C55E)),
+          EmotionData('calm', '😌', 'هادئ', 0.15, AppColors.primary),
+          EmotionData('sad', '😢', 'حزين', 0.15, AppColors.destructive),
+          EmotionData('angry', '😠', 'غاضب', 0.05, const Color(0xFFF97316)),
+          EmotionData('fear', '😨', 'خائف', 0.10, const Color(0xFF6366F1)),
+          EmotionData(
+              'surprise', '😲', 'متفاجئ', 0.20, const Color(0xFFA855F7)),
+        ],
+        focusedPercentage: 0.85,
+        notFocusedPercentage: 0.15,
+      ),
+      SessionAnalysisData(
+        id: 'session_2',
+        title: 'جلسة #2',
+        summary:
+            'جلسة تعارف قوية، كان هناك بعض التوتر في البداية ولكن سرعان ما انسجم الطفل مع الألعاب التفاعلية.',
+        duration: '٣٠ دقيقة',
+        engagementLevel: 'جيد',
+        recommendations: [
+          'تكثيف ألعاب المطابقة البصرية',
+          'تقليل وقت الشاشات غير التفاعلية',
+        ],
+        emotionDistribution: [
+          EmotionData('happy', '😊', 'سعيد', 0.15, const Color(0xFF22C55E)),
+          EmotionData('calm', '😌', 'هادئ', 0.25, AppColors.primary),
+          EmotionData('sad', '😢', 'حزين', 0.20, AppColors.destructive),
+          EmotionData('angry', '😠', 'غاضب', 0.10, const Color(0xFFF97316)),
+          EmotionData('fear', '😨', 'خائف', 0.20, const Color(0xFF6366F1)),
+          EmotionData(
+              'surprise', '😲', 'متفاجئ', 0.10, const Color(0xFFA855F7)),
+        ],
+        focusedPercentage: 0.60,
+        notFocusedPercentage: 0.40,
+      ),
+      SessionAnalysisData(
+        id: 'session_3',
+        title: 'جلسة #3',
+        summary:
+            'تركزت هذه الجلسة على التعبير العاطفي. تفاعل الطفل بشكل جيد مع المؤثرات الصوتية للروبوت.',
+        duration: '٢٠ دقيقة',
+        engagementLevel: 'مرتفع',
+        recommendations: [
+          'استخدام كروت المشاعر في المنزل',
+          'ممارسة تمارين التنفس عند الغضب',
+        ],
+        emotionDistribution: [
+          EmotionData('happy', '😊', 'سعيد', 0.30, const Color(0xFF22C55E)),
+          EmotionData('calm', '😌', 'هادئ', 0.20, AppColors.primary),
+          EmotionData('sad', '😢', 'حزين', 0.10, AppColors.destructive),
+          EmotionData('angry', '😠', 'غاضب', 0.05, const Color(0xFFF97316)),
+          EmotionData('fear', '😨', 'خائف', 0.15, const Color(0xFF6366F1)),
+          EmotionData(
+              'surprise', '😲', 'متفاجئ', 0.20, const Color(0xFFA855F7)),
+        ],
+        focusedPercentage: 0.75,
+        notFocusedPercentage: 0.25,
+      ),
+    ];
+  }
+
+  SessionAnalysisData get currentData {
+    if (_selectedSessionIndex == 0) return _overallData;
+    if (_selectedSessionIndex > 0 &&
+        _selectedSessionIndex <= _sessionsData.length) {
+      return _sessionsData[_selectedSessionIndex - 1];
+    }
+    return _overallData;
+  }
 
   void _shiftDateRange(int days) {
     setState(() {
@@ -135,49 +294,199 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
       physics: const BouncingScrollPhysics(),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildPatientMiniProfile(theme, l10n),
-            const SizedBox(height: 24),
-            Text(
-              'اختر الجلسة',
-              style: AppTextStyles.h2.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 12),
-            _buildSessionSelector(theme, l10n),
-            const SizedBox(height: 24),
+        child: !isLinked
+            ? _buildNotLinkedState(theme, l10n)
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildTreatingDoctorCard(theme, l10n),
+                  const SizedBox(height: 24),
+                  _buildPatientMiniProfile(theme, l10n),
+                  const SizedBox(height: 24),
+                  _buildOverviewContent(theme, l10n, currentPatient),
+                ],
+              ),
+      ),
+    );
+  }
 
-            // Filterable Content
-            if (_selectedSessionIndex == 0) ...[
-              _buildAIProgressReport(l10n, theme),
-              const SizedBox(height: 24),
-              _buildAnalysisHeader(theme, l10n),
-              const SizedBox(height: 16),
-              _buildMetricGrid(l10n, theme, currentPatient),
-              const SizedBox(height: 32),
-              _buildSectionTitle('توصيات المساعد الذكي'),
-              const SizedBox(height: 16),
-              _buildRecommendationsList(l10n, theme),
-              const SizedBox(height: 24),
-              _buildEmotionChart(l10n, theme),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Daily History'),
-              const SizedBox(height: 16),
-              ..._dailySummaries.map((s) => _buildDaySummaryCard(s, theme)),
-            ] else ...[
-              // Session Specific View
-              _buildSessionSummary(theme, l10n, _selectedSessionIndex),
-              const SizedBox(height: 24),
-              _buildEmotionChart(l10n, theme),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Session Recommendations'),
-              const SizedBox(height: 16),
-              _buildRecommendationsList(l10n, theme),
-            ],
-            const SizedBox(height: 48),
-          ],
+  // ── Overview Content ────────────────────────────────────────
+  Widget _buildOverviewContent(
+      ThemeData theme, AppLocalizations l10n, MockPatient? currentPatient) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'اختر الجلسة',
+          style: AppTextStyles.h2.copyWith(fontWeight: FontWeight.w700),
         ),
+        const SizedBox(height: 12),
+        _buildSessionSelector(theme, l10n),
+        const SizedBox(height: 24),
+        if (_selectedSessionIndex == 0) ...[
+          _buildAIProgressReport(l10n, theme),
+          const SizedBox(height: 24),
+          _buildAnalysisHeader(theme, l10n),
+          const SizedBox(height: 16),
+          _buildMetricGrid(l10n, theme, currentPatient),
+          const SizedBox(height: 32),
+          _buildFocusAnalysisBar(l10n, theme),
+          const SizedBox(height: 24),
+          _buildEmotionChart(l10n, theme),
+          const SizedBox(height: 32),
+          _buildSectionTitle('توصيات المساعد الذكي'),
+          const SizedBox(height: 16),
+          _buildRecommendationsList(l10n, theme),
+        ] else ...[
+          _buildSessionSummary(theme, l10n, _selectedSessionIndex),
+          const SizedBox(height: 24),
+          _buildFocusAnalysisBar(l10n, theme),
+          const SizedBox(height: 24),
+          _buildEmotionChart(l10n, theme),
+          const SizedBox(height: 24),
+          _buildSectionTitle('Session Recommendations'),
+          const SizedBox(height: 16),
+          _buildRecommendationsList(l10n, theme),
+        ],
+      ],
+    );
+  }
+
+  // ── State A: Not Linked ─────────────────────────────────────
+  Widget _buildNotLinkedState(ThemeData theme, AppLocalizations l10n) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const SizedBox(height: 48),
+        Icon(Icons.link_off_rounded, size: 80, color: theme.disabledColor),
+        const SizedBox(height: 24),
+        Text(
+          l10n.notLinkedToDoctor,
+          style: AppTextStyles.h2.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'حسابك غير مرتبط بطبيب حالياً. يرجى الانتظار حتى يرسل لك طبيبك المعالج طلب إضافة من خلال العيادة.',
+          textAlign: TextAlign.center,
+          style: AppTextStyles.body.copyWith(
+            color: AppColors.mutedForeground,
+            height: 1.5,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── State B: Linked Doctor Card ─────────────────────────────
+  Widget _buildTreatingDoctorCard(ThemeData theme, AppLocalizations l10n) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const CircleAvatar(
+                radius: 30,
+                backgroundImage:
+                    NetworkImage('https://i.pravatar.cc/150?img=11'),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.treatingDoctor,
+                      style: AppTextStyles.caption.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'د. أحمد مجدي',
+                      style: AppTextStyles.h3
+                          .copyWith(fontWeight: FontWeight.w800),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    isLinked = true; // Toggle back for testing
+                  });
+                },
+                icon: const Icon(Icons.logout, color: Colors.redAccent),
+                tooltip: 'Unlink',
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              const Icon(Icons.location_on_outlined,
+                  size: 18, color: AppColors.mutedForeground),
+              const SizedBox(width: 8),
+              Text(
+                '${l10n.clinicLocation}: عيادة الأمل، القاهرة',
+                style: AppTextStyles.bodySmall
+                    .copyWith(color: AppColors.mutedForeground),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(Icons.event_outlined,
+                  size: 18, color: AppColors.mutedForeground),
+              const SizedBox(width: 8),
+              Text(
+                '${l10n.nextSession}: الأربعاء، ٤:٠٠ م',
+                style: AppTextStyles.bodySmall
+                    .copyWith(color: AppColors.mutedForeground),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pushNamed(
+                  context,
+                  RouteNames.chatRoom,
+                  arguments: {
+                    'chatRoomId': 'doc_chat_${widget.patientId ?? '1'}',
+                    'otherUserName': 'د. أحمد مجدي',
+                    'otherUserAvatar': 'https://i.pravatar.cc/150?img=11',
+                  },
+                );
+              },
+              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+              label: Text(l10n.sendMessage),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                foregroundColor: AppColors.primary,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -213,8 +522,8 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
         border: Border.all(color: theme.dividerColor.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary
-                .withValues(alpha: theme.brightness == Brightness.light ? 0.08 : 0.2),
+            color: AppColors.primary.withValues(
+                alpha: theme.brightness == Brightness.light ? 0.08 : 0.2),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -247,8 +556,10 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 
-                            theme.brightness == Brightness.light ? 0.1 : 0.2),
+                        color: AppColors.primary.withValues(
+                            alpha: theme.brightness == Brightness.light
+                                ? 0.1
+                                : 0.2),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -264,8 +575,10 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 
-                            theme.brightness == Brightness.light ? 0.1 : 0.2),
+                        color: Colors.green.withValues(
+                            alpha: theme.brightness == Brightness.light
+                                ? 0.1
+                                : 0.2),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -295,11 +608,9 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
 
   // ── Session Selector ─────────────────────────────────────
   Widget _buildSessionSelector(ThemeData theme, AppLocalizations l10n) {
-    final sessions = [
-      'كل الجلسات',
-      'جلسة #1',
-      'جلسة #2',
-      'جلسة #3',
+    final List<String> sessions = [
+      _overallData.title,
+      ..._sessionsData.map((e) => e.title)
     ];
 
     return SizedBox(
@@ -482,8 +793,8 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 
-                      theme.brightness == Brightness.light ? 0.1 : 0.2),
+                  color: color.withValues(
+                      alpha: theme.brightness == Brightness.light ? 0.1 : 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: color, size: 20),
@@ -546,16 +857,7 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
 
   // ── Recommendations ────────────────────────────────────────
   Widget _buildRecommendationsList(AppLocalizations l10n, ThemeData theme) {
-    final suggestions = _selectedSessionIndex == 0
-        ? [
-            'الاستمرار في تمارين التحدث لمدة ٣٠ دقيقة يومياً',
-            'تشجيع الطفل على التعبير عن غضبه بالرسم',
-            'زيادة فترات اللعب الاجتماعي مع أقرانه',
-          ]
-        : [
-            'التركيز على مهارات تبادل الأدوار',
-            'استخدام الروبوت كمحفز للنطق الوجداني',
-          ];
+    final suggestions = currentData.recommendations;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -710,7 +1012,7 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
                     color: Colors.white),
               ),
               Text(
-                'جلسة #$sessionIndex',
+                currentData.title,
                 style: AppTextStyles.h3
                     .copyWith(color: Colors.white, fontWeight: FontWeight.bold),
               ),
@@ -725,16 +1027,16 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
           ),
           const SizedBox(height: 8),
           Text(
-            'خلال هذه الجلسة، أظهر الطفل تقدماً ملحوظاً في حل الألغاز التعاونية مع الروبوت. كان التواصل البصري مستقراً بنسبة ٧٥٪.',
+            currentData.summary,
             style:
                 AppTextStyles.body.copyWith(color: Colors.white, height: 1.5),
           ),
           const SizedBox(height: 20),
           Row(
             children: [
-              _buildSessionStat('مدة الجلسة', '٢٥ دقيقة'),
+              _buildSessionStat('مدة الجلسة', currentData.duration),
               const SizedBox(width: 24),
-              _buildSessionStat('مستوى التفاعل', 'ممتاز'),
+              _buildSessionStat('مستوى التفاعل', currentData.engagementLevel),
             ],
           ),
         ],
@@ -821,10 +1123,6 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
                     value: 1,
                     icon: Icon(Icons.pie_chart_rounded),
                     label: Text('دائري')),
-                ButtonSegment(
-                    value: 2,
-                    icon: Icon(Icons.show_chart_rounded),
-                    label: Text('خطوط')),
               ],
               selected: {_chartType},
               onSelectionChanged: (Set<int> newSelection) {
@@ -846,7 +1144,155 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
           // Render selected chart type
           if (_chartType == 0) _buildBarChart(l10n),
           if (_chartType == 1) _buildPieChart(l10n),
-          if (_chartType == 2) _buildLineChart(l10n, theme),
+        ],
+      ),
+    );
+  }
+
+  String _getLocalizedEmotion(String id, AppLocalizations l10n) {
+    switch (id) {
+      case 'happy':
+        return l10n.happy;
+      case 'calm':
+        return l10n.calm;
+      case 'sad':
+        return l10n.sad;
+      case 'angry':
+        return l10n.angry;
+      case 'fear':
+        return l10n.fear;
+      case 'surprise':
+        return l10n.surprise;
+      case 'neutral':
+        return l10n.neutral;
+      default:
+        return id;
+    }
+  }
+
+  // ── Focus Analysis Chart Card ──────────────────────────────────────
+  Widget _buildFocusAnalysisBar(AppLocalizations l10n, ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.dividerColor),
+        boxShadow: [
+          BoxShadow(
+            color: theme.brightness == Brightness.light
+                ? Colors.black.withValues(alpha: 0.04)
+                : Colors.white.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFF10B981),
+                      Color(0xFF059669)
+                    ], // Medical Green Gradient
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.remove_red_eye_rounded,
+                    color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                l10n.focusAnalysis,
+                style: AppTextStyles.h3.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: theme.textTheme.headlineSmall?.color,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // Custom Brain Focus Indicator
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              // Left: Focused Percentage text
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${(currentData.focusedPercentage * 100).toInt()}%',
+                    style: AppTextStyles.h1.copyWith(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 32,
+                      color: const Color(0xFF10B981), // Teal/Green
+                    ),
+                  ),
+                  Text(
+                    l10n.focused,
+                    style: AppTextStyles.body.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF10B981),
+                    ),
+                  ),
+                ],
+              ),
+
+              // Center: ShaderMask Brain Graphic
+              ShaderMask(
+                shaderCallback: (Rect bounds) {
+                  return LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: const [
+                      Color(0xFF10B981), // Filled Teal
+                      Color(0xFF94A3B8), // Unfilled Slate Gray
+                    ],
+                    stops: [
+                      currentData.focusedPercentage,
+                      currentData.focusedPercentage,
+                    ],
+                  ).createShader(bounds);
+                },
+                blendMode: BlendMode.srcATop,
+                child: const Icon(
+                  Icons.psychology_rounded,
+                  size: 100,
+                  color: Colors.white,
+                ),
+              ),
+
+              // Right: Not Focused Percentage text
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${(currentData.notFocusedPercentage * 100).toInt()}%',
+                    style: AppTextStyles.h1.copyWith(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 32,
+                      color: const Color(0xFF94A3B8), // Slate Gray
+                    ),
+                  ),
+                  Text(
+                    l10n.notFocused,
+                    style: AppTextStyles.body.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF94A3B8),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -854,37 +1300,27 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
 
   Widget _buildBarChart(AppLocalizations l10n) {
     return Column(
-      children: [
-        EmotionBar(
-          emoji: '😊',
-          label: l10n.happy,
-          percentage: 0.60,
-          color: const Color(0xFF22C55E), // Green
-        ),
-        EmotionBar(
-          emoji: '😌',
-          label: l10n.calm,
-          percentage: 0.20,
-          color: AppColors.primary, // Blue
-        ),
-        EmotionBar(
-          emoji: '😢',
-          label: l10n.sad,
-          percentage: 0.12,
-          color: AppColors.destructive, // Red
-        ),
-        EmotionBar(
-          emoji: '😠',
-          label: l10n.angry,
-          percentage: 0.08,
-          color: const Color(0xFFF97316), // Orange
-        ),
-      ],
+      children: currentData.emotionDistribution
+          .map((e) => EmotionBar(
+                emoji: e.emoji,
+                label: _getLocalizedEmotion(e.id, l10n),
+                percentage: e.percentage,
+                color: e.color,
+              ))
+          .toList(),
     );
   }
 
   Widget _buildPieChart(AppLocalizations l10n) {
     final theme = Theme.of(context);
+    final emotions = currentData.emotionDistribution;
+
+    EmotionData? topEmotion;
+    if (emotions.isNotEmpty) {
+      topEmotion =
+          emotions.reduce((a, b) => a.percentage > b.percentage ? a : b);
+    }
+
     return Column(
       children: [
         SizedBox(
@@ -896,15 +1332,19 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '٨٥٪',
+                    topEmotion != null
+                        ? '${(topEmotion.percentage * 100).toInt()}٪'
+                        : '--٪',
                     style: AppTextStyles.h1.copyWith(
-                      color: AppColors.primary,
+                      color: topEmotion?.color ?? AppColors.primary,
                       fontWeight: FontWeight.w800,
                       fontSize: 28,
                     ),
                   ),
                   Text(
-                    'تفاعل إيجابي',
+                    topEmotion != null
+                        ? _getLocalizedEmotion(topEmotion.id, l10n)
+                        : 'تفاعل',
                     style: AppTextStyles.caption.copyWith(
                       fontWeight: FontWeight.bold,
                       color: theme.colorScheme.onSurfaceVariant,
@@ -916,59 +1356,38 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
                 PieChartData(
                   sectionsSpace: 4,
                   centerSpaceRadius: 60,
-                  sections: [
-                    PieChartSectionData(
-                      color:
-                          const Color(0xFF3B82F6), // Professional High-End Blue
-                      value: 60,
+                  sections: emotions.map((e) {
+                    final isTop = e == topEmotion;
+                    return PieChartSectionData(
+                      color: e.color,
+                      value: e.percentage * 100,
                       title: '',
-                      radius: 25,
-                      badgeWidget: _buildPieBadge('😊', theme),
+                      radius: isTop ? 25.0 : 20.0,
+                      badgeWidget:
+                          isTop ? _buildPieBadge(e.emoji, theme) : null,
                       badgePositionPercentageOffset: 0.9,
-                    ),
-                    PieChartSectionData(
-                      color: const Color(0xFF10B981), // Medical Green
-                      value: 20,
-                      title: '',
-                      radius: 22,
-                    ),
-                    PieChartSectionData(
-                      color: const Color(0xFFFACC15), // Insightful Yellow
-                      value: 12,
-                      title: '',
-                      radius: 19,
-                    ),
-                    PieChartSectionData(
-                      color: const Color(0xFFEF4444).withValues(
-                          alpha:
-                              theme.brightness == Brightness.light ? 0.6 : 0.8),
-                      value: 8,
-                      title: '',
-                      radius: 16,
-                    ),
-                  ],
+                    );
+                  }).toList(),
                 ),
               ),
             ],
           ),
         ),
         const SizedBox(height: 16),
-        _buildChartLegend(theme),
+        _buildChartLegend(theme, l10n),
       ],
     );
   }
 
-  Widget _buildChartLegend(ThemeData theme) {
+  Widget _buildChartLegend(ThemeData theme, AppLocalizations l10n) {
     return Wrap(
       spacing: 16,
       runSpacing: 8,
       alignment: WrapAlignment.center,
-      children: [
-        _buildLegendItem(theme, color: const Color(0xFF3B82F6), label: 'سعيد'),
-        _buildLegendItem(theme, color: const Color(0xFF10B981), label: 'هادئ'),
-        _buildLegendItem(theme, color: const Color(0xFFFACC15), label: 'نشط'),
-        _buildLegendItem(theme, color: const Color(0xFFEF4444), label: 'متوتر'),
-      ],
+      children: currentData.emotionDistribution
+          .map((e) => _buildLegendItem(theme,
+              color: e.color, label: _getLocalizedEmotion(e.id, l10n)))
+          .toList(),
     );
   }
 
@@ -1010,252 +1429,4 @@ class _PatientAnalysisViewState extends State<PatientAnalysisView> {
       child: Text(emoji, style: const TextStyle(fontSize: 16)),
     );
   }
-
-  Widget _buildLineChart(AppLocalizations l10n, ThemeData theme) {
-    return SizedBox(
-      height: 220,
-      child: LineChart(
-        LineChartData(
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            getDrawingHorizontalLine: (value) => FlLine(
-              color: theme.dividerColor.withValues(alpha: 0.3),
-              strokeWidth: 1,
-              dashArray: [5, 5],
-            ),
-          ),
-          titlesData: FlTitlesData(
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (value, meta) => Text(
-                  '${value.toInt()}%',
-                  style: AppTextStyles.caption.copyWith(fontSize: 10),
-                ),
-                reservedSize: 35,
-              ),
-            ),
-            topTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (value, meta) {
-                  const days = [
-                    'سبت',
-                    'أحد',
-                    'اثنين',
-                    'ثلاثاء',
-                    'أربعاء',
-                    'خميس',
-                    'جمعة'
-                  ];
-                  if (value >= 0 && value < 7) {
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(days[value.toInt()],
-                          style: AppTextStyles.caption.copyWith(fontSize: 10)),
-                    );
-                  }
-                  return const SizedBox();
-                },
-                reservedSize: 30,
-                interval: 1,
-              ),
-            ),
-          ),
-          borderData: FlBorderData(show: false),
-          minX: 0,
-          maxX: 6,
-          minY: 0,
-          maxY: 100,
-          lineBarsData: [
-            LineChartBarData(
-              spots: const [
-                FlSpot(0, 45),
-                FlSpot(1, 52),
-                FlSpot(2, 48),
-                FlSpot(3, 75),
-                FlSpot(4, 70),
-                FlSpot(5, 85),
-                FlSpot(6, 80),
-              ],
-              isCurved: true,
-              gradient: const LinearGradient(
-                colors: [Color(0xFF3B82F6), Color(0xFF60A5FA)],
-              ),
-              barWidth: 4,
-              isStrokeCapRound: true,
-              dotData: const FlDotData(show: false),
-              belowBarData: BarAreaData(
-                show: true,
-                gradient: LinearGradient(
-                  colors: [
-                    const Color(0xFF3B82F6).withValues(
-                        alpha:
-                            theme.brightness == Brightness.light ? 0.3 : 0.5),
-                    const Color(0xFF3B82F6).withValues(alpha: 0.0),
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
-
-// ── Daily Summary Card ──────────────────────────────────────
-Widget _buildDaySummaryCard(_DailySummary summary, ThemeData theme) {
-  return Container(
-    margin: const EdgeInsets.only(bottom: 12),
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: theme.cardColor,
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: theme.dividerColor),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(
-              alpha: theme.brightness == Brightness.light ? 0.02 : 0.12),
-          blurRadius: 8,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    ),
-    child: Row(
-      children: [
-        // Emoji
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: summary.color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            summary.emoji,
-            style: const TextStyle(
-              fontSize: 24,
-              fontFamilyFallback: [
-                'Apple Color Emoji',
-                'Segoe UI Emoji',
-                'Noto Color Emoji',
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-
-        // Date + Emotion label
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                summary.day,
-                style: AppTextStyles.label.copyWith(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
-                  color: theme.textTheme.bodyLarge?.color,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                summary.emotionLabel,
-                style: AppTextStyles.caption.copyWith(
-                  color: summary.color,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Score badge
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: summary.color.withValues(
-                alpha: theme.brightness == Brightness.light ? 0.1 : 0.18),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Text(
-                '${summary.score}%',
-                style: AppTextStyles.label.copyWith(
-                  color: summary.color,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-// ── Mock Daily Summaries ────────────────────────────────────────
-class _DailySummary {
-  final String day;
-  final String emoji;
-  final String emotionLabel;
-  final int score;
-  final Color color;
-
-  const _DailySummary({
-    required this.day,
-    required this.emoji,
-    required this.emotionLabel,
-    required this.score,
-    required this.color,
-  });
-}
-
-const List<_DailySummary> _dailySummaries = [
-  _DailySummary(
-    day: 'الإثنين ١٧ فبراير',
-    emoji: '😊',
-    emotionLabel: 'سعيد - يوم ممتاز',
-    score: 90,
-    color: Color(0xFF22C55E),
-  ),
-  _DailySummary(
-    day: 'الأحد ١٦ فبراير',
-    emoji: '😌',
-    emotionLabel: 'هادئ - يوم جيد',
-    score: 75,
-    color: AppColors.primary,
-  ),
-  _DailySummary(
-    day: 'السبت ١٥ فبراير',
-    emoji: '😊',
-    emotionLabel: 'سعيد - نشاط عالي',
-    score: 85,
-    color: Color(0xFF22C55E),
-  ),
-  _DailySummary(
-    day: 'الجمعة ١٤ فبراير',
-    emoji: '😢',
-    emotionLabel: 'حزين - يوم صعب',
-    score: 35,
-    color: AppColors.destructive,
-  ),
-  _DailySummary(
-    day: 'الخميس ١٣ فبراير',
-    emoji: '😊',
-    emotionLabel: 'سعيد - تحسن ملحوظ',
-    score: 88,
-    color: Color(0xFF22C55E),
-  ),
-];

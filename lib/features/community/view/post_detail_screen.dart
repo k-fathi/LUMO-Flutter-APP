@@ -8,6 +8,9 @@ import '../../../shared/widgets/gradient_app_bar.dart';
 import '../view_model/community_view_model.dart';
 import '../../../shared/widgets/avatar_widget.dart';
 import '../../../shared/providers/auth_provider.dart';
+import '../../../core/router/route_names.dart';
+import '../../../data/models/doctor_model.dart';
+import '../../../data/models/parent_model.dart';
 import 'comment_input_widget.dart';
 
 /// PostDetailScreen (CommentsScreen) - Pixel-perfect match to React CommentsScreen
@@ -95,6 +98,38 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                     imageUrl: post.userAvatarUrl,
                                     name: post.userName,
                                     size: 40, // w-10 h-10
+                                    onTap: () {
+                                      final isDoctor =
+                                          post.userName.startsWith('د.');
+                                      final mockUser = isDoctor
+                                          ? DoctorModel(
+                                              id: post.userId,
+                                              email: 'user@demo.com',
+                                              name: post.userName,
+                                              avatarUrl: post.userAvatarUrl,
+                                              createdAt: DateTime.now(),
+                                              updatedAt: DateTime.now(),
+                                              specialization: 'استشاري',
+                                              licenseNumber: '12345',
+                                              yearsOfExperience: 5,
+                                            )
+                                          : ParentModel(
+                                              id: post.userId,
+                                              email: 'user@demo.com',
+                                              name: post.userName,
+                                              avatarUrl: post.userAvatarUrl,
+                                              createdAt: DateTime.now(),
+                                              updatedAt: DateTime.now(),
+                                              childName: 'طفل',
+                                              childAge: 5,
+                                            );
+
+                                      Navigator.pushNamed(
+                                        context,
+                                        RouteNames.profile,
+                                        arguments: {'user': mockUser},
+                                      );
+                                    },
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(

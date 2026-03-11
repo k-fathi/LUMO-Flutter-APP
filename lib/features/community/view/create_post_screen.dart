@@ -144,18 +144,37 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               children: [
                 CircleAvatar(
                   backgroundColor: AppColors.secondary,
-                  child: Text('م',
-                      style: AppTextStyles.body.copyWith(
+                  child: Builder(
+                    builder: (context) {
+                      final userName =
+                          context.read<UserProvider>().user?.name ?? 'المستخدم';
+                      return Text(
+                        userName.isNotEmpty ? userName[0] : 'م',
+                        style: AppTextStyles.body.copyWith(
                           color: AppColors.primary,
-                          fontWeight: FontWeight.w600)),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      );
+                    },
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('المستخدم',
-                        style: AppTextStyles.body
-                            .copyWith(fontWeight: FontWeight.bold)),
+                    Builder(
+                      builder: (context) {
+                        final userName =
+                            context.read<UserProvider>().user?.name ??
+                                'المستخدم';
+                        return Text(
+                          userName,
+                          style: AppTextStyles.body
+                              .copyWith(fontWeight: FontWeight.bold),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 4),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 2),
@@ -165,11 +184,23 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.public, size: 12, color: theme.hintColor),
+                          Icon(Icons.person, size: 12, color: theme.hintColor),
                           const SizedBox(width: 4),
-                          Text('الجميع',
-                              style: TextStyle(
-                                  fontSize: 10, color: theme.hintColor)),
+                          Builder(
+                            builder: (context) {
+                              final role = context
+                                      .read<UserProvider>()
+                                      .user
+                                      ?.role
+                                      .name ??
+                                  'parent';
+                              return Text(
+                                role == 'doctor' ? 'طبيب' : 'ولي أمر',
+                                style: TextStyle(
+                                    fontSize: 10, color: theme.hintColor),
+                              );
+                            },
+                          ),
                         ],
                       ),
                     ),

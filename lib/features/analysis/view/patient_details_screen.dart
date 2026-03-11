@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import 'parent_analysis_screen.dart';
+import 'doctor_patient_detail.dart';
 
 class PatientDetailsScreen extends StatefulWidget {
   final String? patientId;
@@ -82,11 +82,10 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
         body: TabBarView(
           children: [
             const _OverviewTab(),
-            PatientAnalysisView(
-              patientId: widget.patientId,
-              patientName: widget.patientName,
-              patientAge: widget.patientAge,
-              patientPhotoUrl: widget.patientPhotoUrl,
+            DoctorPatientDetail(
+              parentId: 'dummy_parent', // Need actual data or dummy
+              parentName: 'ولي الأمر',
+              childName: widget.patientName,
             ),
           ],
         ),

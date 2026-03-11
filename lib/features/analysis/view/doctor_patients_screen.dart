@@ -5,9 +5,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/providers/patient_provider.dart';
+import '../../../core/router/route_names.dart';
 import 'package:provider/provider.dart';
-import '../widgets/generate_code_dialog.dart';
-import 'patient_details_screen.dart';
 import '../../../shared/widgets/avatar_widget.dart';
 
 /// DoctorPatientsScreen (Doctor View) — Patient Management
@@ -250,22 +249,26 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
                                   : 0.2),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Row(
-                      children: [
-                        Icon(
-                            trendValue >= 0
-                                ? Icons.trending_up_rounded
-                                : Icons.trending_down_rounded,
-                            color: trendValue >= 0 ? Colors.green : Colors.red,
-                            size: 16),
-                        const SizedBox(width: 4),
-                        Text(
+                    child: IntrinsicWidth(
+                      child: Row(
+                        children: [
+                          Icon(
+                              trendValue >= 0
+                                  ? Icons.trending_up_rounded
+                                  : Icons.trending_down_rounded,
+                              color:
+                                  trendValue >= 0 ? Colors.green : Colors.red,
+                              size: 16),
+                          const SizedBox(width: 4),
+                          Text(
                             '${trendValue >= 0 ? "+" : ""}${trendValue.toStringAsFixed(0)}%',
                             style: AppTextStyles.caption.copyWith(
                                 color:
                                     trendValue >= 0 ? Colors.green : Colors.red,
-                                fontWeight: FontWeight.bold)),
-                      ],
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
               ],
@@ -313,10 +316,7 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
     final theme = Theme.of(context);
     return GestureDetector(
       onTap: () {
-        showDialog(
-          context: context,
-          builder: (_) => GenerateCodeDialog(),
-        );
+        _showSearchPatientDialog(context, l10n, theme);
       },
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -357,7 +357,7 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  l10n.newCode,
+                  l10n.addPatient,
                   style: AppTextStyles.h3.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -369,7 +369,7 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      l10n.addPatient,
+                      l10n.searchPatient,
                       style: AppTextStyles.caption.copyWith(
                         color: Colors.white.withValues(alpha: 0.85),
                         fontWeight: FontWeight.w500,
@@ -387,6 +387,143 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  // ── Search & Request Dialog ─────────────────────────────────
+  void _showSearchPatientDialog(
+      BuildContext context, AppLocalizations l10n, ThemeData theme) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dContext) {
+        return StatefulBuilder(
+          builder: (dContext, setState) {
+            String searchQuery = '';
+            bool isSearching = false;
+            bool requestSent = false;
+
+            return Dialog(
+              backgroundColor: theme.scaffoldBackgroundColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.searchPatient,
+                      style: AppTextStyles.h2
+                          .copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      decoration: InputDecoration(
+                        hintText: l10n.searchByEmailOrName,
+                        hintStyle: AppTextStyles.body
+                            .copyWith(color: AppColors.mutedForeground),
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(color: theme.dividerColor),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: const BorderSide(
+                              color: AppColors.primary, width: 2),
+                        ),
+                      ),
+                      onChanged: (text) {
+                        setState(() {
+                          searchQuery = text;
+                          isSearching =
+                              text.length > 2; // Simulate search triggers
+                          requestSent = false;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    if (isSearching && !requestSent) ...[
+                      // Mock Search Result Card
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: theme.cardColor,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: theme.dividerColor),
+                        ),
+                        child: Row(
+                          children: [
+                            const CircleAvatar(
+                              radius: 20,
+                              backgroundColor: AppColors.secondary,
+                              child: Icon(Icons.person,
+                                  color: AppColors.primary, size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text("محمد أحمد - كريم",
+                                      style: AppTextStyles.body.copyWith(
+                                          fontWeight: FontWeight.bold)),
+                                  Text("mohamed@example.com",
+                                      style: AppTextStyles.caption.copyWith(
+                                          color: AppColors.mutedForeground)),
+                                ],
+                              ),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                setState(() {
+                                  requestSent = true;
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(l10n.requestSent),
+                                    backgroundColor: const Color(0xFF10B981),
+                                  ),
+                                );
+                                Future.delayed(const Duration(seconds: 1), () {
+                                  if (dContext.mounted) {
+                                    Navigator.of(dContext).pop();
+                                  }
+                                });
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                              ),
+                              child: Text(l10n.sendRequest,
+                                  style: AppTextStyles.caption.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else if (searchQuery.isNotEmpty && !isSearching) ...[
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child:
+                              const CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -452,6 +589,7 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
   // ── Patient Card ────────────────────────────────────────────
   Widget _buildPatientCard(BuildContext context, MockPatient patient) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
@@ -504,30 +642,49 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
             ),
           ],
         ),
-        trailing: Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: theme.scaffoldBackgroundColor,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            Icons.chevron_left_rounded,
-            color: theme.iconTheme.color?.withValues(alpha: 0.5),
-            size: 20,
-          ),
-        ),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => PatientDetailsScreen(
-                patientId: patient.id,
-                patientName: patient.childName,
-                patientAge: patient.age,
-                patientPhotoUrl: patient.childPhotoUrl,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              onPressed: () {
+                Navigator.pushNamed(
+                  context,
+                  RouteNames.chatRoom,
+                  arguments: {
+                    'chatRoomId': patient.id,
+                    'otherUserName': 'والد ${patient.childName}',
+                    'otherUserAvatar': patient.childPhotoUrl,
+                  },
+                );
+              },
+              icon: const Icon(Icons.chat_bubble_outline_rounded,
+                  color: AppColors.primary),
+              tooltip: l10n.sendMessage,
+            ),
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: theme.scaffoldBackgroundColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.chevron_left_rounded,
+                color: theme.iconTheme.color?.withValues(alpha: 0.5),
+                size: 20,
               ),
             ),
+          ],
+        ),
+        onTap: () {
+          Navigator.pushNamed(
+            context,
+            RouteNames.doctorPatientDetail,
+            arguments: {
+              'parentId': patient.id,
+              'parentName': 'والد ${patient.childName}',
+              'childName': patient.childName,
+            },
           );
         },
       ),

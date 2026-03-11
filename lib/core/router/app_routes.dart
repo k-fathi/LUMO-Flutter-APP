@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../features/splash/view/splash_screen.dart';
 import '../../features/onboarding/view/onboarding_screen.dart';
+import '../../data/models/user_model.dart';
 import '../../features/loading/view/loading_screen.dart';
 import '../../features/auth/view/role_selection_screen.dart';
 import '../../features/auth/view/login_screen.dart';
@@ -16,13 +17,14 @@ import '../../features/ai_helper/view/ai_chat_screen.dart';
 import '../../features/analysis/view/parent_analysis_screen.dart';
 import '../../features/analysis/view/doctor_patients_screen.dart';
 import '../../features/analysis/view/doctor_patient_detail.dart';
+import '../../features/analysis/view/session_detail_placeholder_screen.dart';
 import '../../features/profile/view/profile_screen.dart';
 import '../../features/profile/view/edit_profile_screen.dart';
 import '../../features/profile/view/followers_screen.dart';
 import '../../features/profile/view/following_screen.dart';
-import '../../features/profile/view/doctor_request_screen.dart';
-import '../../features/profile/view/doctor_code_generator.dart';
 import '../../features/profile/view/change_password_screen.dart';
+import '../../features/profile/view/child_profile_screen.dart';
+import '../../features/profile/view/edit_child_profile_screen.dart';
 import '../../features/settings/view/settings_screen.dart';
 import 'route_names.dart';
 import 'route_transitions.dart';
@@ -30,6 +32,8 @@ import 'route_transitions.dart';
 import 'package:provider/provider.dart';
 import '../../core/di/dependency_injection.dart';
 import '../../features/home/view_model/home_view_model.dart';
+import '../../features/analysis/view_model/analysis_view_model.dart';
+import '../../features/chat/view_model/chat_view_model.dart';
 
 class AppRoutes {
   const AppRoutes._();
@@ -93,12 +97,20 @@ class AppRoutes {
         return RouteTransitions.slideRight(const ChatsListScreen());
 
       case RouteNames.chatRoom:
-        final args = settings.arguments as Map<String, dynamic>;
+        final args =
+            (settings.arguments as Map?)?.cast<String, dynamic>() ?? {};
         return RouteTransitions.slideRight(
-          ChatRoomScreen(
-            chatRoomId: args['chatRoomId'] as String,
-            otherUserName: args['otherUserName'] as String,
-            otherUserAvatar: args['otherUserAvatar'] as String?,
+          ChangeNotifierProvider(
+            create: (_) => getIt<ChatViewModel>(),
+            child: ChatRoomScreen(
+              chatRoomId:
+                  (args['chatRoomId'] ?? args['chatId'] ?? 'unknown_room')
+                      .toString(),
+              otherUserName:
+                  (args['otherUserName'] ?? args['contactName'] ?? 'مستخدم')
+                      .toString(),
+              otherUserAvatar: args['otherUserAvatar'] as String?,
+            ),
           ),
         );
 
@@ -116,16 +128,25 @@ class AppRoutes {
       case RouteNames.doctorPatientDetail:
         final args = settings.arguments as Map<String, dynamic>;
         return RouteTransitions.slideRight(
-          DoctorPatientDetail(
-            parentId: args['parentId'] as String,
-            parentName: args['parentName'] as String,
-            childName: args['childName'] as String,
+          ChangeNotifierProvider(
+            create: (_) => getIt<AnalysisViewModel>(),
+            child: DoctorPatientDetail(
+              parentId: args['parentId'] as String,
+              parentName: args['parentName'] as String,
+              childName: args['childName'] as String,
+            ),
           ),
         );
 
       // ==================== PROFILE ====================
       case RouteNames.profile:
-        return RouteTransitions.slideRight(const ProfileScreen());
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        return RouteTransitions.slideRight(
+          ProfileScreen(
+            userId: args['userId'] as String?,
+            user: args['user'] as UserModel?,
+          ),
+        );
 
       case RouteNames.editProfile:
         return RouteTransitions.slideRight(const EditProfileScreen());
@@ -136,14 +157,25 @@ class AppRoutes {
       case RouteNames.following:
         return RouteTransitions.slideRight(const FollowingScreen());
 
-      case RouteNames.doctorRequest:
-        return RouteTransitions.slideBottom(const DoctorRequestScreen());
-
-      case RouteNames.doctorCodeGenerator:
-        return RouteTransitions.slideRight(const DoctorCodeGeneratorScreen());
+      // Removed legacy doctorRequest and doctorCodeGenerator routes.
 
       case RouteNames.changePassword:
         return RouteTransitions.fade(const ChangePasswordScreen());
+
+      case RouteNames.childProfile:
+        // You can use the mock data here if needed, or pass arguments
+        // ignore: unused_local_variable
+        // Since we import child_profile_screen.dart, we'll just push it.
+        // If we want to strictly type it, we need to import mock_child_data.dart
+        return RouteTransitions.slideRight(const ChildProfileScreen());
+
+      case RouteNames.editChildProfile:
+        return RouteTransitions.slideRight(const EditChildProfileScreen());
+
+      // ==================== SESSION HISTORY ====================
+      case RouteNames.sessionDetailPlaceholder:
+        return RouteTransitions.slideRight(
+            const SessionDetailPlaceholderScreen());
 
       // ==================== SETTINGS ====================
       case RouteNames.settings:

@@ -192,6 +192,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get community => 'Community';
 
   @override
+  String get explore => 'Explore';
+
+  @override
   String get chats => 'Chats';
 
   @override
@@ -477,7 +480,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileUpdated => 'Profile updated';
 
   @override
-  String get requestSent => 'Request sent';
+  String get requestSent => 'Request Sent successfully!';
 
   @override
   String requestAccepted(Object name) {
@@ -682,6 +685,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String get angry => 'Angry';
 
   @override
+  String get fear => 'Fear';
+
+  @override
+  String get surprise => 'Surprise';
+
+  @override
+  String get neutral => 'Neutral';
+
+  @override
+  String get focusAnalysis => 'Focus Analysis';
+
+  @override
+  String get focused => 'Focused';
+
+  @override
+  String get notFocused => 'Not Focused';
+
+  @override
+  String get searchPatient => 'Search for a Patient';
+
+  @override
+  String get searchByEmailOrName => 'Search by Parent Name or Email...';
+
+  @override
+  String get sendRequest => 'Send Request';
+
+  @override
+  String get doctorRequests => 'Doctor Requests';
+
+  @override
+  String doctorRequestMessage(Object doctorName) {
+    return '$doctorName wants to add your child to their clinic';
+  }
+
+  @override
   String get dailyHistory => 'Daily History';
 
   @override
@@ -710,4 +748,63 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get improvementStatus => 'Improvement';
+
+  @override
+  String get childCondition => 'Condition';
+
+  @override
+  String get conditionAutism => 'Autism Spectrum';
+
+  @override
+  String childAgeValue(Object age) {
+    return '$age Years';
+  }
+
+  @override
+  String get bloodType => 'Blood Type';
+
+  @override
+  String get weight => 'Weight';
+
+  @override
+  String get height => 'Height';
+
+  @override
+  String get kg => 'kg';
+
+  @override
+  String get cm => 'cm';
+
+  @override
+  String get medicalHistory => 'Medical History';
+
+  @override
+  String get emergencyContact => 'Emergency';
+
+  @override
+  String get notLinkedToDoctor => 'Not linked to a doctor';
+
+  @override
+  String get submitCode => 'Submit Code';
+
+  @override
+  String get treatingDoctor => 'Treating Doctor';
+
+  @override
+  String get nextSession => 'Next Session';
+
+  @override
+  String get sendMessage => 'Send Message';
+
+  @override
+  String get sessionHistory => 'Session History';
+
+  @override
+  String get allSessions => 'All Sessions';
+
+  @override
+  String get overview => 'Overview';
+
+  @override
+  String get clinicLocation => 'Clinic Location';
 }

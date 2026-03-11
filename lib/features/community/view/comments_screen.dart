@@ -5,6 +5,9 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/avatar_widget.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/providers/community_provider.dart';
+import '../../../core/router/route_names.dart';
+import '../../../data/models/doctor_model.dart';
+import '../../../data/models/parent_model.dart';
 import 'package:provider/provider.dart';
 
 /// CommentsScreen — shows a list of dummy comments + input field.
@@ -21,6 +24,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
   final _controller = TextEditingController();
   final List<_Comment> _comments = [
     _Comment(
+      authorId: 'doc_sarah',
       author: 'د. سارة أحمد',
       text: 'معلومات رائعة ومفيدة جداً، شكراً للمشاركة! 👏',
       timeAgo: 'منذ ساعة',
@@ -28,6 +32,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
       isDoctor: true,
     ),
     _Comment(
+      authorId: 'parent_mohamed',
       author: 'محمد خالد',
       text: 'هل يمكنك مشاركة المزيد من التفاصيل؟',
       timeAgo: 'منذ ساعتين',
@@ -35,6 +40,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
       isDoctor: false,
     ),
     _Comment(
+      authorId: 'parent_fatima',
       author: 'فاطمة علي',
       text: 'تجربة ملهمة، شكراً لك ❤️',
       timeAgo: 'منذ 3 ساعات',
@@ -62,6 +68,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
       _comments.insert(
         0,
         _Comment(
+          authorId: userProvider.user?.id ?? 'mock_id',
           author: userName,
           text: text,
           timeAgo: 'الآن',
@@ -193,6 +200,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
 // ── Comment Data ──────────────────────────────────────────────
 
 class _Comment {
+  final String authorId;
   final String author;
   final String text;
   final String timeAgo;
@@ -200,6 +208,7 @@ class _Comment {
   final bool isDoctor;
 
   const _Comment({
+    required this.authorId,
     required this.author,
     required this.text,
     required this.timeAgo,
@@ -235,6 +244,34 @@ class _CommentTile extends StatelessWidget {
                 fallbackIcon: comment.isDoctor
                     ? Icons.medical_services_rounded
                     : Icons.person_rounded,
+                onTap: () {
+                  final mockUser = comment.isDoctor
+                      ? DoctorModel(
+                          id: comment.authorId,
+                          email: 'doctor@demo.com',
+                          name: comment.author,
+                          createdAt: DateTime.now(),
+                          updatedAt: DateTime.now(),
+                          specialization: 'طب نفسي أطفال',
+                          licenseNumber: '12345',
+                          yearsOfExperience: 5,
+                        )
+                      : ParentModel(
+                          id: comment.authorId,
+                          email: 'parent@demo.com',
+                          name: comment.author,
+                          createdAt: DateTime.now(),
+                          updatedAt: DateTime.now(),
+                          childName: 'طفل',
+                          childAge: 5,
+                        );
+
+                  Navigator.pushNamed(
+                    context,
+                    RouteNames.profile,
+                    arguments: {'user': mockUser},
+                  );
+                },
               ),
               const SizedBox(width: 10),
               Expanded(

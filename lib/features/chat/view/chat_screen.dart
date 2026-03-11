@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../data/models/doctor_model.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/chat_input_bar.dart';
 
@@ -89,45 +90,66 @@ class _ChatScreenState extends State<ChatScreen> {
         scrolledUnderElevation: 1,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
         titleSpacing: 0,
         title: Row(
           children: [
             // Avatar with online dot
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor:
-                      conv.isAI ? AppColors.primary : AppColors.secondary,
-                  child: conv.isAI
-                      ? const Icon(Icons.smart_toy_rounded,
-                          color: Colors.white, size: 20)
-                      : Text(
-                          conv.userName.isNotEmpty ? conv.userName[0] : '?',
-                          style: AppTextStyles.label.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
+            GestureDetector(
+              onTap: () {
+                if (!conv.isAI) {
+                  final mockUser = DoctorModel(
+                    id: conv.id,
+                    email: 'doctor@demo.com',
+                    name: conv.userName,
+                    createdAt: DateTime.now(),
+                    updatedAt: DateTime.now(),
+                    specialization: 'طب نفسي أطفال',
+                    licenseNumber: '12345',
+                    yearsOfExperience: 5,
+                  );
+                  Navigator.pushNamed(
+                    context,
+                    '/profile',
+                    arguments: {'user': mockUser},
+                  );
+                }
+              },
+              child: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor:
+                        conv.isAI ? AppColors.primary : AppColors.secondary,
+                    child: conv.isAI
+                        ? const Icon(Icons.smart_toy_rounded,
+                            color: Colors.white, size: 20)
+                        : Text(
+                            conv.userName.isNotEmpty ? conv.userName[0] : '?',
+                            style: AppTextStyles.label.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
+                  ),
+                  if (conv.isOnline)
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: AppColors.online,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
                         ),
-                ),
-                if (conv.isOnline)
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: AppColors.online,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(width: 10),
             // Name + status
@@ -155,33 +177,7 @@ class _ChatScreenState extends State<ChatScreen> {
           ],
         ),
         actions: [
-          // Call icon
-          IconButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('المكالمات الصوتية — قريباً')),
-              );
-            },
-            icon: const Icon(
-              Icons.phone_outlined,
-              color: AppColors.primary,
-              size: 22,
-            ),
-          ),
-          // Video icon
-          IconButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('مكالمات الفيديو — قريباً')),
-              );
-            },
-            icon: const Icon(
-              Icons.videocam_outlined,
-              color: AppColors.primary,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 16),
         ],
       ),
       body: Column(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_text_styles.dart';
+import '../../../l10n/app_localizations.dart';
 
 import '../view/notifications_screen.dart';
 
@@ -29,7 +30,7 @@ class CommunityHeader extends StatelessWidget {
         children: [
           // Title
           Text(
-            'المجتمع',
+            AppLocalizations.of(context)!.community,
             style: AppTextStyles.h1.copyWith(
               fontWeight: FontWeight.w600,
               color: theme.textTheme.bodyLarge?.color,

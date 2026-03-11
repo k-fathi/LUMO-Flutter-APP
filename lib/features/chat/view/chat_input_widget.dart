@@ -35,16 +35,6 @@ class ChatInputWidget extends StatelessWidget {
       child: SafeArea(
         child: Row(
           children: [
-            // React: Paperclip icon text-[#2196F3]
-            if (onAttach != null)
-              IconButton(
-                onPressed: isLoading ? null : onAttach,
-                icon: const Icon(Icons.attach_file_rounded),
-                color: const Color(0xFF2196F3),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-            if (onAttach != null) const SizedBox(width: 12),
             // React: flex-1 h-12 rounded-full border-[#E3F2FD] bg-[#E3F2FD] px-5
             Expanded(
               child: Container(

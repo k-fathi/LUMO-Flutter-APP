@@ -461,6 +461,12 @@ abstract class AppLocalizations {
   /// **'Community'**
   String get community;
 
+  /// No description provided for @explore.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore'**
+  String get explore;
+
   /// No description provided for @chats.
   ///
   /// In en, this message translates to:
@@ -1034,7 +1040,7 @@ abstract class AppLocalizations {
   /// No description provided for @requestSent.
   ///
   /// In en, this message translates to:
-  /// **'Request sent'**
+  /// **'Request Sent successfully!'**
   String get requestSent;
 
   /// No description provided for @requestAccepted.
@@ -1409,6 +1415,72 @@ abstract class AppLocalizations {
   /// **'Angry'**
   String get angry;
 
+  /// No description provided for @fear.
+  ///
+  /// In en, this message translates to:
+  /// **'Fear'**
+  String get fear;
+
+  /// No description provided for @surprise.
+  ///
+  /// In en, this message translates to:
+  /// **'Surprise'**
+  String get surprise;
+
+  /// No description provided for @neutral.
+  ///
+  /// In en, this message translates to:
+  /// **'Neutral'**
+  String get neutral;
+
+  /// No description provided for @focusAnalysis.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus Analysis'**
+  String get focusAnalysis;
+
+  /// No description provided for @focused.
+  ///
+  /// In en, this message translates to:
+  /// **'Focused'**
+  String get focused;
+
+  /// No description provided for @notFocused.
+  ///
+  /// In en, this message translates to:
+  /// **'Not Focused'**
+  String get notFocused;
+
+  /// No description provided for @searchPatient.
+  ///
+  /// In en, this message translates to:
+  /// **'Search for a Patient'**
+  String get searchPatient;
+
+  /// No description provided for @searchByEmailOrName.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by Parent Name or Email...'**
+  String get searchByEmailOrName;
+
+  /// No description provided for @sendRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Request'**
+  String get sendRequest;
+
+  /// No description provided for @doctorRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Doctor Requests'**
+  String get doctorRequests;
+
+  /// No description provided for @doctorRequestMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'{doctorName} wants to add your child to their clinic'**
+  String doctorRequestMessage(Object doctorName);
+
   /// No description provided for @dailyHistory.
   ///
   /// In en, this message translates to:
@@ -1468,6 +1540,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Improvement'**
   String get improvementStatus;
+
+  /// No description provided for @childCondition.
+  ///
+  /// In en, this message translates to:
+  /// **'Condition'**
+  String get childCondition;
+
+  /// No description provided for @conditionAutism.
+  ///
+  /// In en, this message translates to:
+  /// **'Autism Spectrum'**
+  String get conditionAutism;
+
+  /// No description provided for @childAgeValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{age} Years'**
+  String childAgeValue(Object age);
+
+  /// No description provided for @bloodType.
+  ///
+  /// In en, this message translates to:
+  /// **'Blood Type'**
+  String get bloodType;
+
+  /// No description provided for @weight.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight'**
+  String get weight;
+
+  /// No description provided for @height.
+  ///
+  /// In en, this message translates to:
+  /// **'Height'**
+  String get height;
+
+  /// No description provided for @kg.
+  ///
+  /// In en, this message translates to:
+  /// **'kg'**
+  String get kg;
+
+  /// No description provided for @cm.
+  ///
+  /// In en, this message translates to:
+  /// **'cm'**
+  String get cm;
+
+  /// No description provided for @medicalHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Medical History'**
+  String get medicalHistory;
+
+  /// No description provided for @emergencyContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Emergency'**
+  String get emergencyContact;
+
+  /// No description provided for @notLinkedToDoctor.
+  ///
+  /// In en, this message translates to:
+  /// **'Not linked to a doctor'**
+  String get notLinkedToDoctor;
+
+  /// No description provided for @submitCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit Code'**
+  String get submitCode;
+
+  /// No description provided for @treatingDoctor.
+  ///
+  /// In en, this message translates to:
+  /// **'Treating Doctor'**
+  String get treatingDoctor;
+
+  /// No description provided for @nextSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Next Session'**
+  String get nextSession;
+
+  /// No description provided for @sendMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Message'**
+  String get sendMessage;
+
+  /// No description provided for @sessionHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Session History'**
+  String get sessionHistory;
+
+  /// No description provided for @allSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'All Sessions'**
+  String get allSessions;
+
+  /// No description provided for @overview.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get overview;
+
+  /// No description provided for @clinicLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Clinic Location'**
+  String get clinicLocation;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

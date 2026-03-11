@@ -41,7 +41,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   void initState() {
     super.initState();
     _viewModel = context.read<ChatViewModel>();
-    _viewModel.loadMessages(widget.chatRoomId);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _viewModel.loadMessages(widget.chatRoomId);
+    });
   }
 
   @override
@@ -147,43 +149,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                       ),
                     ],
                   ),
-                ),
-                // React: Phone icon
-                IconButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('المكالمات الصوتية — قريباً')),
-                    );
-                  },
-                  icon: const Icon(Icons.phone, color: Colors.white, size: 24),
-                ),
-                // React: MoreVertical dropdown
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert,
-                      color: Colors.white, size: 24),
-                  onSelected: (value) {
-                    if (value == 'profile') {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('عرض الملف الشخصي')),
-                      );
-                    } else if (value == 'block') {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('تم حظر المستخدم')),
-                      );
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'profile',
-                      child: Text('عرض الملف الشخصي'),
-                    ),
-                    const PopupMenuItem(
-                      value: 'block',
-                      child: Text('حظر المستخدم',
-                          style: TextStyle(color: Color(0xFFEF4444))),
-                    ),
-                  ],
                 ),
               ],
             ),

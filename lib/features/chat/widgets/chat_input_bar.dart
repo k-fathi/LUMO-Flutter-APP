@@ -75,26 +75,6 @@ class _ChatInputBarState extends State<ChatInputBar> {
         ),
         child: Row(
           children: [
-            // Attachment Icon
-            IconButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('إرفاق ملف — قريباً')),
-                );
-              },
-              icon: const Icon(
-                Icons.attach_file_rounded,
-                color: AppColors.mutedForeground,
-                size: 22,
-              ),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(
-                minWidth: 36,
-                minHeight: 36,
-              ),
-            ),
-            const SizedBox(width: 8),
-
             // Text Field - Refined for better prominence
             Expanded(
               child: Container(

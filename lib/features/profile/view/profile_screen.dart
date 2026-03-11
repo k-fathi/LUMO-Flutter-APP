@@ -7,7 +7,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/providers/auth_provider.dart';
 import '../../community/widgets/post_card.dart';
 import '../../community/models/mock_post.dart';
-import '../../analysis/widgets/generate_code_dialog.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/router/route_names.dart';
 import '../../../shared/widgets/avatar_widget.dart';
@@ -112,19 +111,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const SizedBox(height: 8),
                           _buildQuickAction(
-                            icon: Icons.qr_code_rounded,
-                            iconColor: const Color(0xFF8B5CF6),
-                            title: l10n.generateNewCode,
-                            subtitle: l10n.generateCodeSubtitle,
-                            onTap: () {
-                              showDialog(
-                                context: context,
-                                builder: (_) => GenerateCodeDialog(),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 8),
-                          _buildQuickAction(
                             icon: Icons.local_hospital_rounded,
                             iconColor: const Color(0xFF22C55E),
                             title: l10n.clinicInfo,
@@ -173,17 +159,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       : [
                           // ── PARENT Actions ──────────────────
                           _buildQuickAction(
-                            icon: Icons.person_add_alt_1_rounded,
-                            iconColor: AppColors.primary,
-                            title: l10n.joinDoctor,
-                            subtitle: l10n.joinDoctorSubtitle,
-                            onTap: () {
-                              Navigator.pushNamed(
-                                  context, RouteNames.doctorRequest);
-                            },
-                          ),
-                          const SizedBox(height: 8),
-                          _buildQuickAction(
                             icon: Icons.analytics_outlined,
                             iconColor: const Color(0xFFF59E0B),
                             title: l10n.analysisHistory,
@@ -201,7 +176,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             subtitle: l10n.editChildInfo,
                             onTap: () {
                               Navigator.pushNamed(
-                                  context, RouteNames.editProfile);
+                                  context, RouteNames.childProfile);
                             },
                           ),
                         ],
@@ -216,13 +191,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             sliver: SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
-                  // Title for the section
                   if (index == 0) {
                     return Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 8),
                       child: Text(
-                        l10n.myPosts,
+                        isMyProfile ? l10n.myPosts : l10n.posts,
                         style: AppTextStyles.h3.copyWith(
                           fontWeight: FontWeight.bold,
                           color: theme.textTheme.headlineMedium?.color,
@@ -230,7 +204,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     );
                   }
-                  return PostCard(post: _myPosts[index - 1]);
+                  final authenticPost = _myPosts[index - 1].copyWith(
+                    authorName: user?.name ?? 'User',
+                    authorRole: isDoctor ? 'doctor' : 'parent',
+                    authorAvatar: user?.avatarUrl,
+                  );
+                  return PostCard(
+                    post: authenticPost,
+                    isOwnProfile: isMyProfile,
+                    hideFollowButton: true,
+                  );
                 },
                 childCount: _myPosts.length + 1,
               ),
@@ -384,8 +367,10 @@ class _ProfileHeader extends StatelessWidget {
                   ),
                   child: SafeArea(
                     bottom: false,
+                    top: true,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding:
+                          const EdgeInsets.only(left: 16, right: 16, top: 12),
                       child: Row(
                         mainAxisAlignment: isMyProfile
                             ? MainAxisAlignment.spaceBetween

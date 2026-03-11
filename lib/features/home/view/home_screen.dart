@@ -255,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (isDoctor) {
                     Navigator.pushNamed(context, RouteNames.doctorPatients);
                   } else {
-                    Navigator.pushNamed(context, RouteNames.doctorRequest);
+                    _showSearchDoctorDialog(context);
                   }
                 },
               ),
@@ -499,6 +499,141 @@ class _HomeScreenState extends State<HomeScreen> {
           color: AppColors.mutedForeground,
         ),
       ],
+    );
+  }
+
+  // ── Search & Request Dialog (Parent searching for Doctor) ──
+  void _showSearchDoctorDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dContext) {
+        return StatefulBuilder(
+          builder: (dContext, setState) {
+            String searchQuery = '';
+            bool isSearching = false;
+            bool requestSent = false;
+            final theme = Theme.of(context);
+
+            return Dialog(
+              backgroundColor: theme.scaffoldBackgroundColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'بحث عن طبيب',
+                      style: AppTextStyles.h2
+                          .copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      decoration: InputDecoration(
+                        hintText: 'ابحث بالاسم أو الإيميل',
+                        hintStyle: AppTextStyles.body
+                            .copyWith(color: AppColors.mutedForeground),
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(color: theme.dividerColor),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: const BorderSide(
+                              color: AppColors.primary, width: 2),
+                        ),
+                      ),
+                      onChanged: (text) {
+                        setState(() {
+                          searchQuery = text;
+                          isSearching = text.length > 2;
+                          requestSent = false;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    if (isSearching && !requestSent) ...[
+                      // Mock Search Result Card
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: theme.cardColor,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: theme.dividerColor),
+                        ),
+                        child: Row(
+                          children: [
+                            const CircleAvatar(
+                              radius: 20,
+                              backgroundColor: AppColors.secondary,
+                              child: Icon(Icons.medical_services,
+                                  color: AppColors.primary, size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text("د. أحمد محمود",
+                                      style: AppTextStyles.body.copyWith(
+                                          fontWeight: FontWeight.bold)),
+                                  Text("ahmed@example.com",
+                                      style: AppTextStyles.caption.copyWith(
+                                          color: AppColors.mutedForeground)),
+                                ],
+                              ),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                setState(() {
+                                  requestSent = true;
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('تم إرسال الطلب بنجاح'),
+                                    backgroundColor: Color(0xFF10B981),
+                                  ),
+                                );
+                                Future.delayed(const Duration(seconds: 1), () {
+                                  if (dContext.mounted) {
+                                    Navigator.of(dContext).pop();
+                                  }
+                                });
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                              ),
+                              child: Text('إرسال طلب',
+                                  style: AppTextStyles.caption.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else if (searchQuery.isNotEmpty && !isSearching) ...[
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
