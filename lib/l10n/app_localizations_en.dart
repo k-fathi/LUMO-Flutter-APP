@@ -670,6 +670,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String joinRequestMessage(Object parentName, Object childName) {
+    return '$parentName wants to add their child $childName to your clinic';
+  }
+
+  @override
+  String doctorNotificationAccepted(Object childName) {
+    return 'Your request to add $childName has been accepted';
+  }
+
+  @override
   String get emotionDistribution => 'Emotion Distribution';
 
   @override

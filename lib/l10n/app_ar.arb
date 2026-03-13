@@ -236,6 +236,19 @@
   "requestAccepted": "تم قبول طلب {name}",
   "requestRejected": "تم رفض طلب {name}",
   "childParent": "والد الطفل: {childName}",
+  "joinRequestMessage": "{parentName} يطلب إضافة طفله {childName} إلى عيادتك",
+  "doctorNotificationAccepted": "تم قبول طلبك لإضافة الطفل {childName} للعيادة",
+  "@doctorNotificationAccepted": {
+    "placeholders": {
+      "childName": {}
+    }
+  },
+  "@joinRequestMessage": {
+    "placeholders": {
+      "parentName": {},
+      "childName": {}
+    }
+  },
 
   "analysisTitle": "التحليل",
   "thisWeek": "هذا الأسبوع",

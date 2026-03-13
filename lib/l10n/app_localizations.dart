@@ -1385,6 +1385,18 @@ abstract class AppLocalizations {
   /// **'Parent of: {childName}'**
   String childParent(Object childName);
 
+  /// No description provided for @joinRequestMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'{parentName} wants to add their child {childName} to your clinic'**
+  String joinRequestMessage(Object parentName, Object childName);
+
+  /// No description provided for @doctorNotificationAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Your request to add {childName} has been accepted'**
+  String doctorNotificationAccepted(Object childName);
+
   /// No description provided for @emotionDistribution.
   ///
   /// In en, this message translates to:
