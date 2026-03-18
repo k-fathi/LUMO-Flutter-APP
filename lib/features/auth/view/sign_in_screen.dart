@@ -36,8 +36,8 @@ class _SignInScreenState extends State<SignInScreen> {
     try {
       final authProvider = context.read<AuthProvider>();
 
-      await authProvider.signIn(
-        email: _emailController.text.trim(),
+      await authProvider.login(
+        phone: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
@@ -150,8 +150,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   alignment: Alignment.centerLeft,
                   child: TextButton(
                     onPressed: () {
-                      // Navigate to forgot password screen
-                      // Navigator.pushNamed(context, RouteNames.forgotPassword);
+                      Navigator.pushNamed(context, RouteNames.forgotPassword);
                     },
                     child: Text(
                       'نسيت كلمة المرور؟',

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../data/repositories/chat_repository.dart';
 import '../../../data/models/chat_room_model.dart';
 import '../../../data/models/message_model.dart';
+import '../../../core/services/firebase_auth_service.dart';
 
 /// Chat ViewModel
 ///
@@ -15,43 +16,78 @@ import '../../../data/models/message_model.dart';
 /// - Real-time updates
 class ChatViewModel extends ChangeNotifier {
   final ChatRepository _chatRepository;
+  final FirebaseAuthService _firebaseAuthService;
 
-  ChatViewModel(this._chatRepository);
+  ChatViewModel(this._chatRepository, this._firebaseAuthService);
+
+  bool _isDisposed = false;
 
   StreamSubscription<List<MessageModel>>? _messagesSubscription;
+  StreamSubscription<ChatRoomModel?>? _roomSubscription;
 
   @override
   void dispose() {
+    _isDisposed = true;
     _messagesSubscription?.cancel();
+    _roomSubscription?.cancel();
     super.dispose();
+  }
+
+  void _safeNotifyListeners() {
+    if (!_isDisposed) {
+      notifyListeners();
+    }
   }
 
   final List<ChatRoomModel> _chatRooms = [];
   final List<MessageModel> _messages = [];
+  ChatRoomModel? _currentChatRoom;
   bool _isLoading = false;
   bool _isSending = false;
   String? _errorMessage;
 
   List<ChatRoomModel> get chatRooms => _chatRooms;
   List<MessageModel> get messages => _messages;
+  ChatRoomModel? get currentChatRoom => _currentChatRoom;
   bool get isLoading => _isLoading;
   bool get isSending => _isSending;
   String? get errorMessage => _errorMessage;
 
-  /// Load chat rooms for user
-  Future<void> loadChatRooms(String userId) async {
+  /// Authenticate with Firebase using Laravel custom token
+  Future<bool> authenticateFirebase() async {
     _isLoading = true;
-    notifyListeners();
+    _errorMessage = null;
+    _safeNotifyListeners();
 
     try {
-      // TODO: Subscribe to stream from repository
-      _chatRooms.clear();
+      final token = await _chatRepository.getFirebaseToken();
+      await _firebaseAuthService.signInWithCustomToken(token);
       _isLoading = false;
-      notifyListeners();
+      _safeNotifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = "Firebase Auth Failed: ${e.toString()}";
+      _isLoading = false;
+      _safeNotifyListeners();
+      return false;
+    }
+  }
+
+  /// Load chat rooms for user
+  Future<void> loadChatRooms() async {
+    _isLoading = true;
+    _safeNotifyListeners();
+
+    try {
+      final rooms = await _chatRepository.getMyChats();
+      _chatRooms.clear();
+      _chatRooms.addAll(rooms);
+      _isLoading = false;
+      _safeNotifyListeners();
     } catch (e) {
       _errorMessage = e.toString();
       _isLoading = false;
-      notifyListeners();
+      _safeNotifyListeners();
     }
   }
 
@@ -60,43 +96,53 @@ class ChatViewModel extends ChangeNotifier {
     _isLoading = true;
     _errorMessage = null;
 
-    // Load cached messages first for immediate response
+    // Load cached messages first
     _messages.clear();
     _messages.addAll(_chatRepository.getCachedMessages(chatRoomId));
-    notifyListeners();
+    _safeNotifyListeners();
 
     try {
+      // Stream Room Metadata (typing, etc)
+      await _roomSubscription?.cancel();
+      _roomSubscription = _chatRepository.streamChatRoom(chatRoomId).listen(
+        (room) {
+          _currentChatRoom = room;
+          _safeNotifyListeners();
+        },
+      );
+
+      // Stream Messages
       await _messagesSubscription?.cancel();
       _messagesSubscription = _chatRepository.streamMessages(chatRoomId).listen(
         (messagesList) {
           _messages.clear();
           _messages.addAll(messagesList);
           _isLoading = false;
-          notifyListeners();
+          _safeNotifyListeners();
         },
         onError: (e) {
           _errorMessage = e.toString();
           _isLoading = false;
-          notifyListeners();
+          _safeNotifyListeners();
         },
       );
     } catch (e) {
       _errorMessage = e.toString();
       _isLoading = false;
-      notifyListeners();
+      _safeNotifyListeners();
     }
   }
 
   /// Send message
   Future<bool> sendMessage({
     required String chatRoomId,
-    required String senderId,
+    required int senderId,
     required String senderName,
     required String content,
     String? senderAvatarUrl,
   }) async {
     _isSending = true;
-    notifyListeners();
+    _safeNotifyListeners();
 
     try {
       final message = await _chatRepository.sendMessage(
@@ -109,19 +155,19 @@ class ChatViewModel extends ChangeNotifier {
 
       _messages.add(message);
       _isSending = false;
-      notifyListeners();
+      _safeNotifyListeners();
       return true;
     } catch (e) {
       _errorMessage = e.toString();
       _isSending = false;
-      notifyListeners();
+      _safeNotifyListeners();
       return false;
     }
   }
 
   void clearError() {
     _errorMessage = null;
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   void clearState() {
@@ -132,6 +178,6 @@ class ChatViewModel extends ChangeNotifier {
     _errorMessage = null;
     _isLoading = false;
     _isSending = false;
-    notifyListeners();
+    _safeNotifyListeners();
   }
 }

@@ -121,7 +121,7 @@ class ProfileHeaderWidget extends StatelessWidget {
                       fontSize: 24,
                     ),
                   ),
-                  if (user.isVerified) ...[
+                  if (user.isVerified ?? false) ...[
                     const SizedBox(height: 4),
                     const Icon(Icons.verified_rounded,
                         color: Color(0xFF2196F3), size: 20),

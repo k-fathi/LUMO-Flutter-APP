@@ -5,24 +5,40 @@ import '../../../shared/widgets/gradient_app_bar.dart';
 import '../../../shared/widgets/avatar_widget.dart';
 import '../../../l10n/app_localizations.dart';
 import '../models/mock_child_data.dart';
+import '../../../data/models/parent_model.dart';
+import '../../../shared/providers/auth_provider.dart';
+import 'package:provider/provider.dart';
 
 class ChildProfileScreen extends StatelessWidget {
-  final MockChildData childData;
+  final MockChildData? childData;
 
   const ChildProfileScreen({
     super.key,
-    this.childData = defaultMockChild,
+    this.childData,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final user = context.watch<AuthProvider>().currentUser;
 
-    // Translation lookup for condition based on key. We have only 'conditionAutism' right now.
-    String translatedCondition = childData.conditionKey == 'conditionAutism'
-        ? l10n.conditionAutism
-        : childData.conditionKey;
+    String name = childData?.name ?? defaultMockChild.name;
+    int age = childData?.age ?? defaultMockChild.age;
+    String? photoUrl = childData?.photoUrl ?? defaultMockChild.photoUrl;
+    String conditionKey =
+        childData?.conditionKey ?? defaultMockChild.conditionKey;
+
+    if (user is ParentModel) {
+      name = user.childName;
+      age = user.childAge;
+      photoUrl = user.childPhotoUrl;
+      conditionKey = user.childMedicalCondition ?? conditionKey;
+    }
+
+    // Translation lookup for condition based on key.
+    String translatedCondition =
+        conditionKey == 'conditionAutism' ? l10n.conditionAutism : conditionKey;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -36,18 +52,18 @@ class ChildProfileScreen extends StatelessWidget {
           children: [
             Center(
               child: AvatarWidget(
-                imageUrl: childData.photoUrl,
-                name: childData.name,
+                imageUrl: photoUrl,
+                name: name,
                 size: 100,
               ),
             ),
             const SizedBox(height: 16),
             Text(
-              childData.name,
+              name,
               style: AppTextStyles.h2.copyWith(fontWeight: FontWeight.bold),
             ),
             Text(
-              l10n.childAgeValue(childData.age),
+              l10n.childAgeValue(age),
               style:
                   AppTextStyles.body.copyWith(color: AppColors.mutedForeground),
             ),
@@ -74,35 +90,6 @@ class ChildProfileScreen extends StatelessWidget {
                       translatedCondition,
                       Icons.medical_information_outlined,
                       Colors.redAccent),
-                  const Divider(height: 30),
-                  _buildInfoRow(context, l10n.bloodType, childData.bloodType,
-                      Icons.bloodtype_outlined, Colors.red),
-                  const Divider(height: 30),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildInfoRow(
-                            context,
-                            l10n.weight,
-                            '${childData.weight} ${l10n.kg}',
-                            Icons.monitor_weight_outlined,
-                            Colors.blue),
-                      ),
-                      Container(
-                          width: 1, height: 40, color: theme.dividerColor),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: _buildInfoRow(
-                              context,
-                              l10n.height,
-                              '${childData.height} ${l10n.cm}',
-                              Icons.height_outlined,
-                              Colors.green),
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),

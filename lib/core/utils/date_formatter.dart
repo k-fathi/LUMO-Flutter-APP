@@ -9,6 +9,28 @@ class DateFormatter {
     return formatter.format(date);
   }
 
+  /// Parses a date string from the server (Laravel UTC) and converts it to local time.
+  static DateTime parseServerDateTime(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return DateTime.now();
+    try {
+      // If it already has Z or + offset, parse directly then toLocal
+      if (dateStr.endsWith('Z') || dateStr.contains('+')) {
+        return DateTime.parse(dateStr).toLocal();
+      }
+      
+      // Laravel often sends "yyyy-MM-dd HH:mm:ss" or "yyyy-MM-ddTHH:mm:ss.SSSSSSZ"
+      // If it doesn't indicate a timezone, assume it's UTC
+      String isoStr = dateStr.replaceAll(' ', 'T');
+      if (!isoStr.contains('Z') && !isoStr.contains('+')) {
+        isoStr = '${isoStr}Z';
+      }
+      
+      return DateTime.parse(isoStr).toLocal();
+    } catch (e) {
+      return DateTime.now();
+    }
+  }
+
   // Format time to display format (hh:mm a)
   static String formatTime(DateTime date, {bool isArabic = true}) {
     final formatter = DateFormat('hh:mm a');

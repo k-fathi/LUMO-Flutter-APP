@@ -1,6 +1,6 @@
 class AIMessageModel {
   final String id;
-  final String userId;
+  final int userId;
   final String content;
   final bool isUser;
   final DateTime timestamp;
@@ -21,7 +21,7 @@ class AIMessageModel {
   factory AIMessageModel.fromJson(Map<String, dynamic> json) {
     return AIMessageModel(
       id: json['id'] as String,
-      userId: json['user_id'] as String,
+      userId: int.tryParse(json['user_id']?.toString() ?? '0') ?? 0,
       content: json['content'] as String,
       isUser: json['is_user'] as bool,
       timestamp: DateTime.parse(json['timestamp'] as String),
@@ -46,7 +46,7 @@ class AIMessageModel {
   // CopyWith method
   AIMessageModel copyWith({
     String? id,
-    String? userId,
+    int? userId,
     String? content,
     bool? isUser,
     DateTime? timestamp,

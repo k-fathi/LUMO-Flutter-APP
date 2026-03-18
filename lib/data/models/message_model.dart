@@ -3,7 +3,7 @@ import '../../core/enums/message_status.dart';
 class MessageModel {
   final String id;
   final String chatRoomId;
-  final String senderId;
+  final int senderId;
   final String senderName;
   final String? senderAvatarUrl;
   final String content;
@@ -37,23 +37,38 @@ class MessageModel {
 
   // Factory constructor from JSON
   factory MessageModel.fromJson(Map<String, dynamic> json) {
+    // Robust parsing for sender/user info
+    final userMap = json['sender'] is Map<String, dynamic>
+        ? json['sender']
+        : (json['user'] is Map<String, dynamic> ? json['user'] : null);
+
     return MessageModel(
-      id: json['id'] as String,
-      chatRoomId: json['chat_room_id'] as String,
-      senderId: json['sender_id'] as String,
-      senderName: json['sender_name'] as String,
-      senderAvatarUrl: json['sender_avatar_url'] as String?,
-      content: json['content'] as String,
+      id: json['id']?.toString() ?? '',
+      chatRoomId: json['chat_room_id']?.toString() ?? '',
+      senderId: int.tryParse(json['sender_id']?.toString() ?? userMap?['id']?.toString() ?? '0') ?? 0,
+      senderName: json['sender_name']?.toString() ??
+          userMap?['name']?.toString() ??
+          'مستخدم',
+      senderAvatarUrl: json['sender_avatar_url']?.toString() ??
+          userMap?['avatar_url']?.toString() ??
+          userMap?['profile_image']?.toString(),
+      content: (json['content'] ?? json['body'] ?? json['text'])?.toString() ?? '',
       status: MessageStatus.fromString(json['status'] as String? ?? 'sent'),
-      timestamp: DateTime.parse(json['timestamp'] as String),
-      imageUrl: json['image_url'] as String?,
-      fileUrl: json['file_url'] as String?,
-      fileName: json['file_name'] as String?,
-      fileSize: json['file_size'] as int?,
-      isDeleted: json['is_deleted'] as bool? ?? false,
-      readAt: json['read_at'] != null ? DateTime.parse(json['read_at'] as String) : null,
+      timestamp: json['timestamp'] != null
+          ? DateTime.tryParse(json['timestamp'].toString()) ?? DateTime.now()
+          : DateTime.now(),
+      imageUrl: json['image_url']?.toString() ?? json['image']?.toString(),
+      fileUrl: json['file_url']?.toString(),
+      fileName: json['file_name']?.toString(),
+      fileSize: json['file_size'] is int
+          ? json['file_size']
+          : int.tryParse(json['file_size']?.toString() ?? ''),
+      isDeleted: json['is_deleted'] == true || json['is_deleted'] == 1,
+      readAt: json['read_at'] != null
+          ? DateTime.tryParse(json['read_at'].toString())
+          : null,
       deliveredAt: json['delivered_at'] != null
-          ? DateTime.parse(json['delivered_at'] as String)
+          ? DateTime.tryParse(json['delivered_at'].toString())
           : null,
     );
   }
@@ -83,7 +98,7 @@ class MessageModel {
   MessageModel copyWith({
     String? id,
     String? chatRoomId,
-    String? senderId,
+    int? senderId,
     String? senderName,
     String? senderAvatarUrl,
     String? content,
@@ -125,7 +140,7 @@ class MessageModel {
   bool get isSending => status.isSending;
   bool get isFailed => status.isFailed;
 
-  bool isSentBy(String userId) => senderId == userId;
+  bool isSentBy(int userId) => senderId == userId;
 
   @override
   bool operator ==(Object other) {

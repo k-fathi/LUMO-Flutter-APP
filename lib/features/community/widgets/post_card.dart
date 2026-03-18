@@ -5,30 +5,23 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/router/route_names.dart';
 import '../../../l10n/app_localizations.dart';
-import '../view/comments_screen.dart';
-import '../models/mock_post.dart';
-import '../../../shared/providers/community_provider.dart';
-import 'package:timeago/timeago.dart' as timeago;
-import 'package:intl/intl.dart' show Bidi;
-import '../../../data/models/doctor_model.dart';
-import '../../../data/models/parent_model.dart';
+import '../../../core/utils/date_formatter.dart';
+import '../../../data/models/post_model.dart';
+import '../../../shared/providers/notification_provider.dart';
+import '../view_model/community_view_model.dart';
 import '../../../shared/widgets/avatar_widget.dart';
+import '../../../shared/widgets/delete_confirmation_dialog.dart';
+import '../../../data/models/user_model.dart';
+import '../../../core/enums/user_role.dart';
 
-/// PostCard Widget - Matches Figma Screen 6 Spec
-///
-/// - Header: CircleAvatar, Name, Time, Role Badge
-/// - Body: Text content (max 3 lines + Read More), Optional Image
-/// - Footer: Like (Heart), Comment (Message), Share
 class PostCard extends StatefulWidget {
-  final MockPost post;
-  final VoidCallback? onDelete;
+  final PostModel post;
   final bool isOwnProfile;
   final bool hideFollowButton;
 
   const PostCard({
     super.key,
     required this.post,
-    this.onDelete,
     this.isOwnProfile = false,
     this.hideFollowButton = false,
   });
@@ -39,20 +32,16 @@ class PostCard extends StatefulWidget {
 
 class _PostCardState extends State<PostCard> {
   bool _isExpanded = false;
-  bool _isFollowing = false;
-
-  @override
-  void initState() {
-    super.initState();
-  }
 
   @override
   Widget build(BuildContext context) {
     final post = widget.post;
-    final isDoctor = post.authorRole == 'doctor';
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final locale = Localizations.localeOf(context).languageCode;
+    final authProvider = context.watch<AuthProvider>();
+    final currentUserId = authProvider.currentUser?.id ?? 0;
+    final isLiked = post.isLiked;
+    final isOwner = currentUserId != 0 && post.userId == currentUserId;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -62,527 +51,257 @@ class _PostCardState extends State<PostCard> {
         border: Border.all(color: theme.dividerColor),
         boxShadow: [
           BoxShadow(
-            color: theme.brightness == Brightness.light
-                ? Colors.black.withValues(alpha: 0.04)
-                : Colors.black.withValues(alpha: 0.2),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Header ──────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-            child: Row(
-              children: [
-                // Avatar + Name wrapped in InkWell
-                Expanded(
-                  child: InkWell(
-                    onTap: () {
-                      final isDoc = post.authorRole == 'doctor';
-                      final mockUser = isDoc
-                          ? DoctorModel(
-                              id: 'mock_author_${post.id}',
-                              email: 'author@demo.com',
-                              name: post.authorName,
-                              createdAt: DateTime.now(),
-                              updatedAt: DateTime.now(),
-                              specialization: 'استشاري',
-                              licenseNumber: '12345',
-                              yearsOfExperience: 5,
-                            )
-                          : ParentModel(
-                              id: 'mock_author_${post.id}',
-                              email: 'author@demo.com',
-                              name: post.authorName,
-                              createdAt: DateTime.now(),
-                              updatedAt: DateTime.now(),
-                              childName: 'طفل',
-                              childAge: 5,
-                            );
-
-                      Navigator.pushNamed(
-                        context,
-                        RouteNames.profile,
-                        arguments: {'user': mockUser},
-                      );
-                    },
-                    child: Row(
-                      children: [
-                        // Avatar
-                        AvatarWidget(
-                          size: 40,
-                          imageUrl: post.authorAvatar,
-                          fallbackIcon: post.authorRole == 'doctor'
-                              ? Icons.medical_services_rounded
-                              : Icons.person_rounded,
-                          onTap: () {
-                            final isDoc = post.authorRole == 'doctor';
-                            final mockUser = isDoc
-                                ? DoctorModel(
-                                    id: 'mock_author_${post.id}',
-                                    email: 'author@demo.com',
-                                    name: post.authorName,
-                                    createdAt: DateTime.now(),
-                                    updatedAt: DateTime.now(),
-                                    specialization: 'استشاري',
-                                    licenseNumber: '12345',
-                                    yearsOfExperience: 5,
-                                  )
-                                : ParentModel(
-                                    id: 'mock_author_${post.id}',
-                                    email: 'author@demo.com',
-                                    name: post.authorName,
-                                    createdAt: DateTime.now(),
-                                    updatedAt: DateTime.now(),
-                                    childName: 'طفل',
-                                    childAge: 5,
-                                  );
-                            Navigator.pushNamed(
-                              context,
-                              RouteNames.profile,
-                              arguments: {'user': mockUser},
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 12),
-
-                        // Name + Time
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      post.authorName,
-                                      style: AppTextStyles.label.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                        color: theme.textTheme.bodyLarge?.color,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  // Role Badge
-                                  _RoleBadge(isDoctor: isDoctor),
-
-                                  // Follow Button (Hidden if looking at own profile or explicitly hidden)
-                                  if (!widget.hideFollowButton &&
-                                      !widget.isOwnProfile) ...[
-                                    const SizedBox(width: 6),
-                                    GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          _isFollowing = !_isFollowing;
-                                        });
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: _isFollowing
-                                              ? Colors.transparent
-                                              : AppColors.primary,
-                                          border: Border.all(
-                                            color: _isFollowing
-                                                ? theme.dividerColor
-                                                : AppColors.primary,
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        child: Text(
-                                          _isFollowing
-                                              ? l10n.following
-                                              : l10n.follow,
-                                          style: AppTextStyles.caption.copyWith(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w600,
-                                            color: _isFollowing
-                                                ? theme
-                                                    .textTheme.bodySmall?.color
-                                                : Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                timeago.format(post.timestamp, locale: locale),
-                                style: AppTextStyles.caption.copyWith(
-                                  color: theme.textTheme.bodySmall?.color,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            Navigator.pushNamed(
+              context,
+              RouteNames.postDetail,
+              arguments: post,
+            );
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                child: Row(
+                  children: [
+                    AvatarWidget(
+                      size: 40,
+                      imageUrl: post.userAvatarUrl,
+                      onTap: () => _navigateToProfile(context, post),
                     ),
-                  ),
-                ),
-
-                // Options menu
-                PopupMenuButton<String>(
-                  icon: Icon(
-                    Icons.more_horiz_rounded,
-                    color: theme.iconTheme.color?.withValues(alpha: 0.5),
-                    size: 20,
-                  ),
-                  onSelected: (value) {
-                    if (value == 'edit') {
-                      Navigator.pushNamed(
-                        context,
-                        RouteNames.editPost,
-                        arguments: {
-                          'id': post.id,
-                          'content': post.content,
-                          'imageUrl': post.imageUrl,
-                        },
-                      );
-                    } else if (value == 'delete') {
-                      _showDeleteConfirmation(context);
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Selected: $value')),
-                      );
-                    }
-                  },
-                  itemBuilder: (context) {
-                    final authProvider = context.read<AuthProvider>();
-                    // For mock posts, we don't have real IDs to compare with authUser.
-                    // We'll simulate by checking if authorName contains 'المستخدم' (Client-side hack for now)
-                    // or if it's the current user.
-                    final isMe = post.authorName ==
-                            (authProvider.currentUser?.name ?? 'User') ||
-                        post.authorName == 'User' ||
-                        post.authorName == 'المستخدم';
-
-                    return isMe
-                        ? [
-                            PopupMenuItem(
-                              value: 'edit',
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.edit, size: 18),
-                                  const SizedBox(width: 8),
-                                  Text(l10n.edit),
-                                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _navigateToProfile(context, post),
+                        behavior: HitTestBehavior.opaque,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              post.userName,
+                              style: AppTextStyles.label.copyWith(
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                            PopupMenuItem(
-                              value: 'delete',
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.delete,
-                                      size: 18, color: Colors.red),
-                                  const SizedBox(width: 8),
-                                  Text(l10n.delete,
-                                      style:
-                                          const TextStyle(color: Colors.red)),
-                                ],
+                            Text(
+                              DateFormatter.formatRelativeTime(post.createdAt),
+                              style: AppTextStyles.caption.copyWith(
+                                color: theme.textTheme.bodySmall?.color,
                               ),
                             ),
-                          ]
-                        : [
-                            PopupMenuItem(
-                              value: 'report',
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.flag, size: 18),
-                                  const SizedBox(width: 8),
-                                  Text(l10n.report),
-                                ],
-                              ),
-                            ),
-                            PopupMenuItem(
-                              value: 'hide',
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.visibility_off, size: 18),
-                                  const SizedBox(width: 8),
-                                  Text(l10n.hide),
-                                ],
-                              ),
-                            ),
-                          ];
-                  },
-                ),
-              ],
-            ),
-          ),
-
-          // ── Body ────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Text content with Read More
-                _buildTextContent(post.content, l10n),
-
-                // Optional Image
-                if (post.imageUrl != null) ...[
-                  const SizedBox(height: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      width: double.infinity,
-                      height: 200,
-                      color: theme.brightness == Brightness.light
-                          ? AppColors.secondary
-                          : theme.colorScheme.surfaceContainerHighest,
-                      child: Center(
-                        child: Icon(
-                          Icons.image_outlined,
-                          size: 48,
-                          color: AppColors.primary.withValues(alpha: 0.4),
+                          ],
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ],
-            ),
-          ),
+                    if (isOwner)
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_horiz_rounded),
+                        onSelected: (value) async {
+                          if (value == 'edit') {
+                            Navigator.pushNamed(
+                              context,
+                              RouteNames.editPost,
+                              arguments: {
+                                'id': post.id,
+                                'content': post.content,
+                                'imageUrl': post.imageUrl,
+                              },
+                            );
+                          } else if (value == 'delete') {
+                            final confirmed = await DeleteConfirmationDialog.show(
+                              context,
+                              title: 'حذف المنشور',
+                              message: 'هل أنت متأكد من حذف هذا المنشور؟',
+                              onConfirm: () {},
+                            );
+                            if (confirmed == true && mounted) {
+                              context
+                                  .read<CommunityViewModel>()
+                                  .deletePost(post.id);
+                            }
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          PopupMenuItem(value: 'edit', child: Text(l10n.edit)),
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Text(l10n.delete,
+                                style: const TextStyle(color: Colors.red)),
+                          ),
+                        ],
+                      ),
+                    if (!isOwner && !widget.hideFollowButton)
+                      Consumer<CommunityViewModel>(
+                        builder: (context, viewModel, child) {
+                          final isFollowing = viewModel.isFollowing(post.userId);
+                          return TextButton(
+                            onPressed: () {
+                              viewModel.toggleFollow(post.userId);
+                              if (!isFollowing && post.userId != 0) {
+                                Future.microtask(() {
+                                  if (context.mounted) {
+                                    context
+                                        .read<NotificationProvider>()
+                                        .sendFollowNotification(
+                                          targetUserId: post.userId,
+                                          followerName:
+                                              authProvider.currentUser?.name ?? '',
+                                        );
+                                  }
+                                });
+                              }
+                            },
+                            child: Text(
+                              isFollowing ? l10n.following : l10n.follow,
+                              style: TextStyle(
+                                color:
+                                    isFollowing ? Colors.grey : AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                  ],
+                ),
+              ),
 
-          const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildTextContent(post.content, l10n),
+                    if (post.hasImage && post.imageUrl != null) ...[
+                      const SizedBox(height: 12),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          post.imageUrl!,
+                          width: double.infinity,
+                          height: 200,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            height: 200,
+                            color: Colors.grey[200],
+                            child: const Icon(Icons.broken_image),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
 
-          // ── Divider ─────────────────────────────────────────
-          Divider(
-            height: 1,
-            thickness: 1,
-            color: theme.dividerColor,
-          ),
+              const SizedBox(height: 8),
+              const Divider(height: 1),
 
-          // ── Footer ──────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Row(
-              children: [
-                // Like
-                Consumer<CommunityProvider>(
-                  builder: (context, provider, child) {
-                    final currentPost = provider.posts.firstWhere(
-                      (p) => p.id == post.id,
-                      orElse: () => post,
-                    );
-                    final isLiked = currentPost.isLiked;
-
-                    return _ActionButton(
+              // Footer
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Row(
+                  children: [
+                    _ActionButton(
                       icon: isLiked
                           ? Icons.favorite_rounded
                           : Icons.favorite_outline_rounded,
-                      label: '${currentPost.likesCount}',
-                      color: isLiked
-                          ? AppColors.destructive
-                          : theme.textTheme.bodySmall?.color ??
-                              AppColors.mutedForeground,
-                      onTap: () => provider.toggleLike(post.id),
-                    );
-                  },
+                      label: '${post.likesCount}',
+                      color: isLiked ? Colors.red : Colors.grey,
+                      onTap: () {
+                        context
+                            .read<CommunityViewModel>()
+                            .toggleLike(post.id);
+                        if (post.userId != currentUserId && !isLiked && post.userId != 0 && post.id != 0) {
+                          Future.microtask(() {
+                            if (context.mounted) {
+                              context
+                                  .read<NotificationProvider>()
+                                  .sendPostLikeNotification(
+                                    postId: post.id,
+                                    postOwnerId: post.userId,
+                                    likerName: authProvider.currentUser?.name ?? '',
+                                  );
+                            }
+                          });
+                        }
+                      },
+                    ),
+                    _ActionButton(
+                      icon: Icons.chat_bubble_outline_rounded,
+                      label: '${post.commentsCount}',
+                      color: Colors.grey,
+                      onTap: () {
+                        Navigator.pushNamed(
+                          context,
+                          RouteNames.postDetail,
+                          arguments: post,
+                        );
+                      },
+                    ),
+                  ],
                 ),
-
-                // Comment
-                _ActionButton(
-                  icon: Icons.chat_bubble_outline_rounded,
-                  label: '${post.commentsCount}',
-                  color: theme.textTheme.bodySmall?.color ??
-                      AppColors.mutedForeground,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => CommentsScreen(postId: post.id),
-                      ),
-                    );
-                  },
-                ),
-
-                // Share
-                _ActionButton(
-                  icon: Icons.share_outlined,
-                  label: l10n.share,
-                  color: theme.textTheme.bodySmall?.color ??
-                      AppColors.mutedForeground,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(l10n.linkCopied),
-                        behavior: SnackBarBehavior.floating,
-                        backgroundColor: AppColors.primary,
-                        duration: const Duration(seconds: 2),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildTextContent(String content, AppLocalizations l10n) {
-    const maxLines = 3;
-    final isRtl = Bidi.detectRtlDirectionality(content);
-    final textDirection = isRtl ? TextDirection.rtl : TextDirection.ltr;
-    final textAlign = isRtl ? TextAlign.right : TextAlign.left;
+    if (!_isExpanded && content.length > 150) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${content.substring(0, 150)}...',
+            style: AppTextStyles.body,
+          ),
+          InkWell(
+            onTap: () => setState(() => _isExpanded = true),
+            child: Text(
+              l10n.readMore,
+              style: const TextStyle(
+                  color: AppColors.primary, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      );
+    }
+    return Text(content, style: AppTextStyles.body);
+  }
 
-    final textWidget = SizedBox(
-      width: double.infinity,
-      child: Text(
-        content,
-        style: AppTextStyles.body.copyWith(
-          color: Theme.of(context).textTheme.bodyLarge?.color,
+  void _navigateToProfile(BuildContext context, PostModel post) {
+    Navigator.pushNamed(
+      context,
+      RouteNames.profile,
+      arguments: {
+        'userId': post.userId,
+        'user': UserModel(
+          id: post.userId,
+          name: post.userName,
+          avatarUrl: post.userAvatarUrl,
+          email: '',
+          role: UserRole.parent,
         ),
-        textDirection: textDirection,
-        textAlign: textAlign,
-        maxLines: _isExpanded ? null : maxLines,
-        overflow: _isExpanded ? null : TextOverflow.ellipsis,
-      ),
-    );
-
-    // Check if text needs "Read More"
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final textPainter = TextPainter(
-          text: TextSpan(
-              text: content,
-              style: AppTextStyles.body.copyWith(
-                color: Theme.of(context).textTheme.bodyLarge?.color,
-              )),
-          maxLines: maxLines,
-          textDirection: textDirection,
-        )..layout(maxWidth: constraints.maxWidth);
-
-        if (textPainter.didExceedMaxLines && !_isExpanded) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              textWidget,
-              GestureDetector(
-                onTap: () => setState(() => _isExpanded = true),
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    l10n.readMore,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          );
-        }
-        return textWidget;
       },
     );
   }
-
-  void _showDeleteConfirmation(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Text(
-          l10n.deletePostTitle,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: Text(
-          l10n.deletePostConfirm,
-          textAlign: TextAlign.center,
-        ),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              l10n.cancel,
-              style: const TextStyle(color: AppColors.mutedForeground),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              widget.onDelete?.call();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(l10n.postDeleted),
-                  backgroundColor: AppColors.destructive,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.destructive,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(l10n.yesDelete),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-/// Role Badge - Small elegant badge
-class _RoleBadge extends StatelessWidget {
-  final bool isDoctor;
-
-  const _RoleBadge({required this.isDoctor});
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: isDoctor
-            ? AppColors.secondary // #E3F2FD for doctor
-            : theme.colorScheme.surfaceContainerHighest, // Dynamic for parent
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        isDoctor ? l10n.roleDoctor : l10n.roleParent,
-        style: AppTextStyles.caption.copyWith(
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-          color: isDoctor
-              ? AppColors.primary // #2196F3
-              : theme.textTheme.bodySmall?.color ?? AppColors.mutedForeground,
-        ),
-      ),
-    );
-  }
-}
-
-/// Action Button - Footer icon button
 class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -604,17 +323,11 @@ class _ActionButton extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 20, color: color),
             const SizedBox(width: 4),
-            Text(
-              label,
-              style: AppTextStyles.caption.copyWith(
-                color: color,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            Text(label,
+                style: TextStyle(color: color, fontWeight: FontWeight.w500)),
           ],
         ),
       ),

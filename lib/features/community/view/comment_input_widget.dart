@@ -10,6 +10,7 @@ import '../../../shared/widgets/avatar_widget.dart';
 /// Avatar (w-9 h-9) + Input (rounded-full bg-[#E3F2FD]) + Send button (gradient rounded-full)
 class CommentInputWidget extends StatelessWidget {
   final TextEditingController controller;
+  final FocusNode? focusNode;
   final VoidCallback onSend;
   final bool isLoading;
   final String? userAvatar;
@@ -18,6 +19,7 @@ class CommentInputWidget extends StatelessWidget {
   const CommentInputWidget({
     super.key,
     required this.controller,
+    this.focusNode,
     required this.onSend,
     this.isLoading = false,
     this.userAvatar,
@@ -58,6 +60,7 @@ class CommentInputWidget extends StatelessWidget {
                 ),
                 child: TextField(
                   controller: controller,
+                  focusNode: focusNode,
                   textAlign: TextAlign.right,
                   style: AppTextStyles.body
                       .copyWith(color: theme.textTheme.bodyLarge?.color),

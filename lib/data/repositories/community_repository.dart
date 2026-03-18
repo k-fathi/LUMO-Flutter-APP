@@ -1,144 +1,75 @@
-import '../datasources/firebase_data_source.dart';
-import '../datasources/local_data_source.dart';
+import '../datasources/remote/community_remote_data_source.dart';
 import '../models/comment_model.dart';
 import '../models/post_model.dart';
+import '../models/user_model.dart';
 
 class CommunityRepository {
-  final FirebaseDataSource _firebaseDataSource;
-  final LocalDataSource _localDataSource;
+  final CommunityRemoteDataSource _remoteDataSource;
 
-  CommunityRepository(this._firebaseDataSource, this._localDataSource);
+  CommunityRepository(this._remoteDataSource);
 
   // ==================== POST OPERATIONS ====================
 
+  Future<List<PostModel>> getHomeFeed({int page = 1}) async {
+    return await _remoteDataSource.getHomeFeed(page: page);
+  }
+
+  Future<PostModel> getPostById(int postId) async {
+    return await _remoteDataSource.getPostById(postId.toString());
+  }
+
+  Future<List<PostModel>> getMyPosts({int page = 1}) async {
+    return await _remoteDataSource.getMyPosts(page: page);
+  }
+
   Future<PostModel> createPost({
-    required String userId,
-    required String userName,
-    String? userAvatarUrl,
     required String content,
-    String? imageUrl,
+    String? imagePath,
   }) async {
-    final now = DateTime.now();
-
-    final postData = {
-      'user_id': userId,
-      'user_name': userName,
-      'user_avatar_url': userAvatarUrl,
-      'content': content,
-      'image_url': imageUrl,
-      'status': 'published',
-      'created_at': now.toIso8601String(),
-      'updated_at': now.toIso8601String(),
-      'likes_count': 0,
-      'comments_count': 0,
-      'shares_count': 0,
-      'liked_by_user_ids': [],
-      'tags': [],
-      'is_pinned': false,
-    };
-
-    final postId = await _firebaseDataSource.createPost(postData);
-    postData['id'] = postId;
-
-    return PostModel.fromJson(postData);
+    return await _remoteDataSource.createPost(content, imagePath: imagePath);
   }
 
-  Future<PostModel?> getPostById(String postId) async {
-    final postData = await _firebaseDataSource.getPostById(postId);
-    return postData != null ? PostModel.fromJson(postData) : null;
+  Future<PostModel> updatePost(int postId,
+      {required String content, String? imagePath}) async {
+    return await _remoteDataSource.updatePost(postId.toString(), content,
+        imagePath: imagePath);
   }
 
-  Future<void> updatePost(String postId, {String? content, String? imageUrl}) async {
-    final updateData = <String, dynamic>{};
-    if (content != null) updateData['content'] = content;
-    if (imageUrl != null) updateData['image_url'] = imageUrl;
-
-    await _firebaseDataSource.updatePost(postId, updateData);
-  }
-
-  Future<void> deletePost(String postId) async {
-    await _firebaseDataSource.deletePost(postId);
-  }
-
-  Stream<List<PostModel>> streamPosts({int limit = 20}) {
-    return _firebaseDataSource.streamPosts(limit: limit).map(
-          (postsList) => postsList.map((postData) => PostModel.fromJson(postData)).toList(),
-    );
-  }
-
-  Future<List<PostModel>> getUserPosts(String userId) async {
-    // Check cache first
-    final cached = _localDataSource.getCachedUserPosts(
-      userId,
-      maxAge: const Duration(minutes: 5),
-    );
-    if (cached != null) {
-      return cached.map((postData) => PostModel.fromJson(postData)).toList();
-    }
-
-    // Fetch from Firebase
-    final postsList = await _firebaseDataSource.getUserPosts(userId);
-
-    // Cache the results
-    await _localDataSource.cacheUserPosts(userId, postsList);
-
-    return postsList.map((postData) => PostModel.fromJson(postData)).toList();
+  Future<void> deletePost(int postId) async {
+    await _remoteDataSource.deletePost(postId.toString());
   }
 
   // ==================== LIKE OPERATIONS ====================
 
-  Future<void> likePost(String postId, String userId) async {
-    await _firebaseDataSource.likePost(postId, userId);
-  }
-
-  Future<void> unlikePost(String postId, String userId) async {
-    await _firebaseDataSource.unlikePost(postId, userId);
+  Future<void> toggleLike(int postId) async {
+    await _remoteDataSource.toggleLike(postId.toString());
   }
 
   // ==================== COMMENT OPERATIONS ====================
 
-  Future<CommentModel> addComment({
-    required String postId,
-    required String userId,
-    required String userName,
-    String? userAvatarUrl,
-    required String content,
-    String? parentCommentId,
-  }) async {
-    final now = DateTime.now();
-
-    final commentData = {
-      'post_id': postId,
-      'user_id': userId,
-      'user_name': userName,
-      'user_avatar_url': userAvatarUrl,
-      'content': content,
-      'created_at': now.toIso8601String(),
-      'updated_at': now.toIso8601String(),
-      'likes_count': 0,
-      'liked_by_user_ids': [],
-      'parent_comment_id': parentCommentId,
-    };
-
-    final commentId = await _firebaseDataSource.addComment(postId, commentData);
-    commentData['id'] = commentId;
-
-    return CommentModel.fromJson(commentData);
+  Future<void> addComment(int postId, String content, {int? parentId}) async {
+    await _remoteDataSource.addComment(postId.toString(), content, parentId: parentId);
   }
 
-  Stream<List<CommentModel>> streamComments(String postId) {
-    return _firebaseDataSource.streamComments(postId).map(
-          (commentsList) => commentsList.map((commentData) => CommentModel.fromJson(commentData)).toList(),
-    );
+  Future<void> toggleCommentLike(int commentId) async {
+    await _remoteDataSource.toggleCommentLike(commentId.toString());
   }
 
-  Future<void> deleteComment(String postId, String commentId) async {
-    await _firebaseDataSource.deleteComment(postId, commentId);
+  Future<List<CommentModel>> getComments(int postId) async {
+    return await _remoteDataSource.getComments(postId.toString());
   }
 
-  // ==================== IMAGE UPLOAD ====================
+  // ==================== SOCIAL OPERATIONS ====================
 
-  Future<String> uploadPostImage(String userId, String postId, String filePath) async {
-    return await _firebaseDataSource.uploadPostImage(userId, postId, filePath);
+  Future<void> toggleFollow(int userId) async {
+    await _remoteDataSource.toggleFollow(userId.toString());
+  }
+
+  Future<List<UserModel>> getFollowingUsers() async {
+    return await _remoteDataSource.getFollowingUsers();
+  }
+
+  Future<List<UserModel>> searchUsers(String query, {String? role}) async {
+    return await _remoteDataSource.searchUsers(query, role: role);
   }
 }

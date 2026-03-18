@@ -27,13 +27,13 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> with FormValidationMixin {
-  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -44,8 +44,8 @@ class _LoginScreenState extends State<LoginScreen> with FormValidationMixin {
     setState(() => _isLoading = true);
 
     final authProvider = context.read<AuthProvider>();
-    final success = await authProvider.signIn(
-      email: _emailController.text.trim(),
+    final success = await authProvider.login(
+      phone: _phoneController.text.trim(),
       password: _passwordController.text,
     );
 
@@ -139,14 +139,14 @@ class _LoginScreenState extends State<LoginScreen> with FormValidationMixin {
                 ),
                 const SizedBox(height: 48),
 
-                // Email field
+                // Phone field
                 AppTextField(
-                  controller: _emailController,
-                  label: 'البريد الإلكتروني',
-                  hint: 'أدخل بريدك الإلكتروني',
-                  prefixIcon: Icons.mail_outline,
-                  keyboardType: TextInputType.emailAddress,
-                  validator: validateEmail,
+                  controller: _phoneController,
+                  label: 'رقم الجوال',
+                  hint: 'أدخل رقم الجوال',
+                  prefixIcon: Icons.phone_android_outlined,
+                  keyboardType: TextInputType.phone,
+                  validator: validatePhone,
                 ),
                 const SizedBox(height: 20),
 

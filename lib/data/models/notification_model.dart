@@ -57,20 +57,29 @@ class NotificationModel {
 
   // Factory constructor from JSON
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
+    // Robust parsing for creator/sender info
+    final creatorMap = json['creator'] is Map<String, dynamic>
+        ? json['creator']
+        : (json['sender'] is Map<String, dynamic> ? json['sender'] : null);
+
     return NotificationModel(
-      id: json['id'] as String,
-      userId: json['user_id'] as String,
+      id: json['id']?.toString() ?? '',
+      userId: json['user_id']?.toString() ?? '',
       type: NotificationType.values.firstWhere(
-            (e) => e.name == json['type'],
+        (e) => e.name == json['type'] || e.toString().split('.').last == json['type'],
         orElse: () => NotificationType.systemNotification,
       ),
-      title: json['title'] as String,
-      body: json['body'] as String,
-      imageUrl: json['image_url'] as String?,
-      actionId: json['action_id'] as String?,
-      actionType: json['action_type'] as String?,
-      isRead: json['is_read'] as bool? ?? false,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      title: json['title']?.toString() ?? 'إشعار جديد',
+      body: (json['body'] ?? json['content'] ?? json['message'])?.toString() ?? '',
+      imageUrl: json['image_url']?.toString() ??
+          creatorMap?['avatar_url']?.toString() ??
+          creatorMap?['profile_image']?.toString(),
+      actionId: json['action_id']?.toString(),
+      actionType: json['action_type']?.toString(),
+      isRead: json['is_read'] == true || json['is_read'] == 1,
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
+          : DateTime.now(),
     );
   }
 

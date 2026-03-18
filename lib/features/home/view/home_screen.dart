@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../shared/providers/patient_provider.dart';
+import '../../../shared/providers/user_provider.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/router/route_names.dart';
@@ -9,6 +11,7 @@ import '../../../shared/widgets/custom_app_bar.dart';
 import '../../../shared/widgets/elevated_card.dart';
 import '../view_model/home_view_model.dart';
 import '../../community/view/notifications_screen.dart';
+import '../../../shared/providers/notification_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -44,13 +47,21 @@ class _HomeScreenState extends State<HomeScreen> {
         title: 'مرحباً، ${currentUser.name}',
         showBackButton: false,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const NotificationsScreen(),
+          Consumer<NotificationProvider>(
+            builder: (context, notificationProvider, child) {
+              return Badge(
+                label: Text(notificationProvider.unreadCount.toString()),
+                isLabelVisible: notificationProvider.unreadCount > 0,
+                child: IconButton(
+                  icon: const Icon(Icons.notifications_outlined),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationsScreen(),
+                      ),
+                    );
+                  },
                 ),
               );
             },
@@ -588,21 +599,45 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             ElevatedButton(
-                              onPressed: () {
-                                setState(() {
-                                  requestSent = true;
-                                });
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('تم إرسال الطلب بنجاح'),
-                                    backgroundColor: Color(0xFF10B981),
-                                  ),
-                                );
-                                Future.delayed(const Duration(seconds: 1), () {
-                                  if (dContext.mounted) {
-                                    Navigator.of(dContext).pop();
+                              onPressed: () async {
+                                try {
+                                  // Get current user ID to send as patient_id
+                                  final userId =
+                                      context.read<UserProvider>().user?.id;
+                                  if (userId == null) {
+                                    throw Exception('User not logged in');
                                   }
-                                });
+
+                                  await context
+                                      .read<PatientProvider>()
+                                      .sendPatientRequest(userId);
+
+                                  setState(() {
+                                    requestSent = true;
+                                  });
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('تم إرسال الطلب بنجاح'),
+                                        backgroundColor: Color(0xFF10B981),
+                                      ),
+                                    );
+                                  }
+                                  Future.delayed(const Duration(seconds: 1),
+                                      () {
+                                    if (dContext.mounted) {
+                                      Navigator.of(dContext).pop();
+                                    }
+                                  });
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content:
+                                              Text('Error: ${e.toString()}')),
+                                    );
+                                  }
+                                }
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,

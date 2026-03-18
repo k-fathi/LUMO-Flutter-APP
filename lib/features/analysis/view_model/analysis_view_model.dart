@@ -18,7 +18,7 @@ class AnalysisViewModel extends ChangeNotifier {
   List<ChildAnalysisModel> get analyses => _analyses;
 
   // Load parent analyses
-  Future<void> loadParentAnalyses(String parentId) async {
+  Future<void> loadParentAnalyses(int parentId) async {
     _isLoading = true;
     notifyListeners();
 
@@ -34,7 +34,7 @@ class AnalysisViewModel extends ChangeNotifier {
   }
 
   // Load doctor patients analyses
-  Future<void> loadDoctorPatientsAnalyses(String doctorId) async {
+  Future<void> loadDoctorPatientsAnalyses(int doctorId) async {
     _isLoading = true;
     notifyListeners();
 
@@ -51,10 +51,10 @@ class AnalysisViewModel extends ChangeNotifier {
 
   // Create analysis
   Future<bool> createAnalysis({
-    required String parentId,
+    required int parentId,
     required String parentName,
     required String childName,
-    required String doctorId,
+    required int doctorId,
     required String doctorName,
     required ChildState currentState,
     String? notes,

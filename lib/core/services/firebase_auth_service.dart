@@ -60,6 +60,19 @@ class FirebaseAuthService {
     }
   }
 
+  // Sign in with custom token
+  Future<UserCredential> signInWithCustomToken(String token) async {
+    if (_auth == null) {
+      throw FirebaseAuthException(
+          code: 'app-not-initialized', message: 'Firebase not initialized');
+    }
+    try {
+      return await _auth!.signInWithCustomToken(token);
+    } on FirebaseAuthException catch (e) {
+      throw _handleAuthException(e);
+    }
+  }
+
   // Sign out
   Future<void> signOut() async {
     await _auth?.signOut();

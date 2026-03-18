@@ -1,13 +1,24 @@
+import 'package:dio/dio.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/network/api_constants.dart';
+import '../../../core/enums/user_role.dart';
 import '../../models/user_model.dart';
+import '../../models/parent_model.dart';
 import '../../models/doctor_model.dart';
 
 abstract class ProfileRemoteDataSource {
-  Future<UserModel> getPatientProfile();
-  Future<DoctorModel> getDoctorProfile();
-  Future<void> updatePatientProfile(UserModel user);
-  Future<void> updateDoctorProfile(DoctorModel doctor);
+  Future<UserModel> getProfile();
+  Future<UserModel> updateProfile({
+    required int userId,
+    String? name,
+    String? phone,
+    String? bio,
+    String? avatarFilePath,
+    String? childName,
+    int? childAge,
+    String? childMedicalCondition,
+    String? childPhotoUrl,
+  });
 }
 
 class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
@@ -16,30 +27,83 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   ProfileRemoteDataSourceImpl(this._dioClient);
 
   @override
-  Future<UserModel> getPatientProfile() async {
+  Future<UserModel> getProfile() async {
     final response = await _dioClient.get(ApiConstants.getProfile);
-    return UserModel.fromJson(response.data['user']);
+    // The API may return the user under a 'user' or 'data' key
+    final data = response.data as Map<String, dynamic>;
+    final userData = data['user'] ?? data['data'] ?? data;
+    return _parseUser(userData as Map<String, dynamic>);
   }
 
   @override
-  Future<DoctorModel> getDoctorProfile() async {
-    final response = await _dioClient.get(ApiConstants.getProfile);
-    return DoctorModel.fromJson(response.data['doctor']);
-  }
+  Future<UserModel> updateProfile({
+    required int userId,
+    String? name,
+    String? phone,
+    String? bio,
+    String? avatarFilePath,
+    String? childName,
+    int? childAge,
+    String? childMedicalCondition,
+    String? childPhotoUrl,
+  }) async {
+    final formData = FormData();
 
-  @override
-  Future<void> updatePatientProfile(UserModel user) async {
-    await _dioClient.put(
-      ApiConstants.updateProfile,
-      data: user.toJson(),
+    if (name != null && name.isNotEmpty) {
+      formData.fields.add(MapEntry('name', name));
+    }
+    if (phone != null && phone.isNotEmpty) {
+      formData.fields.add(MapEntry('phone', phone));
+    }
+    if (bio != null && bio.isNotEmpty) {
+      formData.fields.add(MapEntry('bio', bio));
+    }
+    if (avatarFilePath != null && avatarFilePath.isNotEmpty) {
+      formData.files.add(MapEntry(
+        'profile_image',
+        await MultipartFile.fromFile(
+          avatarFilePath,
+          filename: avatarFilePath.split('/').last,
+        ),
+      ));
+    }
+    if (childPhotoUrl != null && childPhotoUrl.isNotEmpty) {
+      formData.files.add(MapEntry(
+        'child_photo',
+        await MultipartFile.fromFile(
+          childPhotoUrl,
+          filename: childPhotoUrl.split('/').last,
+        ),
+      ));
+    }
+    if (childName != null) {
+      formData.fields.add(MapEntry('child_name', childName));
+    }
+    if (childAge != null) {
+      formData.fields.add(MapEntry('child_age', childAge.toString()));
+    }
+    if (childMedicalCondition != null) {
+      formData.fields
+          .add(MapEntry('child_medical_condition', childMedicalCondition));
+    }
+
+    final response = await _dioClient.post(
+      '${ApiConstants.updateProfile}?_method=PUT',
+      data: formData,
     );
+
+    final data = response.data as Map<String, dynamic>;
+    final userData = data['user'] ?? data['data'] ?? data;
+    return _parseUser(userData as Map<String, dynamic>);
   }
 
-  @override
-  Future<void> updateDoctorProfile(DoctorModel doctor) async {
-    await _dioClient.put(
-      ApiConstants.updateProfile,
-      data: doctor.toJson(),
-    );
+  UserModel _parseUser(Map<String, dynamic> json) {
+    final role = UserRole.fromString(json['role']?.toString() ?? 'patient');
+    if (role == UserRole.parent) {
+      return ParentModel.fromJson(json);
+    } else if (role == UserRole.doctor) {
+      return DoctorModel.fromJson(json);
+    }
+    return UserModel.fromJson(json);
   }
 }

@@ -1,52 +1,72 @@
 import '../../core/enums/user_role.dart';
 
 class UserModel {
-  final String id;
+  final int id;
   final String email;
   final String name;
   final UserRole role;
+  final String? phone;
+  final int? doctorNumber;
+  final String? clinicLocation;
+  final String? profileImage;
+  final DateTime? createdAt;
   final String? avatarUrl;
   final String? bio;
-  final String? phone;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-  final int followersCount;
-  final int followingCount;
-  final bool isVerified;
-  final bool isActive;
+  final DateTime? updatedAt;
+  final int? followersCount;
+  final int? followingCount;
+  final bool? isVerified;
+  final bool? isActive;
 
   const UserModel({
     required this.id,
     required this.email,
     required this.name,
     required this.role,
+    this.phone,
+    this.doctorNumber,
+    this.clinicLocation,
+    this.profileImage,
+    this.createdAt,
     this.avatarUrl,
     this.bio,
-    this.phone,
-    required this.createdAt,
-    required this.updatedAt,
-    this.followersCount = 0,
-    this.followingCount = 0,
-    this.isVerified = false,
-    this.isActive = true,
+    this.updatedAt,
+    this.followersCount,
+    this.followingCount,
+    this.isVerified,
+    this.isActive,
   });
 
   // Factory constructor from JSON
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id'] as String,
-      email: json['email'] as String,
-      name: json['name'] as String,
-      role: UserRole.fromString(json['role'] as String),
-      avatarUrl: json['avatar_url'] as String?,
-      bio: json['bio'] as String?,
-      phone: json['phone'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
-      followersCount: json['followers_count'] as int? ?? 0,
-      followingCount: json['following_count'] as int? ?? 0,
-      isVerified: json['is_verified'] as bool? ?? false,
-      isActive: json['is_active'] as bool? ?? true,
+      id: json['id'] is int
+          ? json['id']
+          : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      email: json['email']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      role: UserRole.fromString(json['role']?.toString() ?? 'patient'),
+      phone: json['phone']?.toString(),
+      doctorNumber: json['doctor_number'] is int
+          ? json['doctor_number']
+          : int.tryParse(json['doctor_number']?.toString() ?? ''),
+      clinicLocation: json['clinic_location']?.toString(),
+      profileImage: json['profile_image']?.toString(),
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString())
+          : null,
+      avatarUrl:
+          json['avatar_url']?.toString() ?? json['profile_image']?.toString(),
+      bio: json['bio']?.toString(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'].toString())
+          : null,
+      followersCount: int.tryParse(json['followers_count']?.toString() ?? ''),
+      followingCount: int.tryParse(json['following_count']?.toString() ?? ''),
+      isVerified: json['is_verified'] == true || json['is_verified'] == 1,
+      isActive: json['is_active'] == true ||
+          json['is_active'] == 1 ||
+          json['is_active'] == null,
     );
   }
 
@@ -57,11 +77,14 @@ class UserModel {
       'email': email,
       'name': name,
       'role': role.name,
+      'phone': phone,
+      'doctor_number': doctorNumber,
+      'clinic_location': clinicLocation,
+      'profile_image': profileImage,
+      'created_at': createdAt?.toIso8601String(),
       'avatar_url': avatarUrl,
       'bio': bio,
-      'phone': phone,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
       'followers_count': followersCount,
       'following_count': followingCount,
       'is_verified': isVerified,
@@ -71,7 +94,7 @@ class UserModel {
 
   // CopyWith method
   UserModel copyWith({
-    String? id,
+    int? id,
     String? email,
     String? name,
     UserRole? role,

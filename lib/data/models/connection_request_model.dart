@@ -37,24 +37,30 @@ class ConnectionRequestModel {
 
   // Factory constructor from JSON
   factory ConnectionRequestModel.fromJson(Map<String, dynamic> json) {
+    // Handle nested doctor/patient objects from backend
+    final doctorData = json['doctor'] is Map<String, dynamic> ? json['doctor'] as Map<String, dynamic> : null;
+    final patientData = json['patient'] is Map<String, dynamic> ? json['patient'] as Map<String, dynamic> : null;
+
     return ConnectionRequestModel(
-      id: json['id'] as String,
-      parentId: json['parent_id'] as String,
-      parentName: json['parent_name'] as String,
-      parentAvatarUrl: json['parent_avatar_url'] as String?,
-      childName: json['child_name'] as String,
-      childAge: json['child_age'] as int,
-      doctorId: json['doctor_id'] as String,
-      doctorName: json['doctor_name'] as String,
-      doctorAvatarUrl: json['doctor_avatar_url'] as String?,
-      doctorCode: json['doctor_code'] as String,
-      status: ConnectionStatus.fromString(json['status'] as String? ?? 'pending'),
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      id: json['id']?.toString() ?? '',
+      parentId: json['parent_id']?.toString() ?? patientData?['id']?.toString() ?? json['patient_id']?.toString() ?? '',
+      parentName: json['parent_name']?.toString() ?? patientData?['name']?.toString() ?? json['patient_name']?.toString() ?? '',
+      parentAvatarUrl: json['parent_avatar_url']?.toString() ?? patientData?['profile_image']?.toString() ?? patientData?['avatar_url']?.toString(),
+      childName: json['child_name']?.toString() ?? patientData?['child_name']?.toString() ?? '',
+      childAge: json['child_age'] is int
+          ? json['child_age']
+          : int.tryParse(json['child_age']?.toString() ?? patientData?['child_age']?.toString() ?? '0') ?? 0,
+      doctorId: json['doctor_id']?.toString() ?? doctorData?['id']?.toString() ?? '',
+      doctorName: json['doctor_name']?.toString() ?? doctorData?['name']?.toString() ?? '',
+      doctorAvatarUrl: json['doctor_avatar_url']?.toString() ?? doctorData?['profile_image']?.toString() ?? doctorData?['avatar_url']?.toString(),
+      doctorCode: json['doctor_code']?.toString() ?? doctorData?['doctor_number']?.toString() ?? '',
+      status: ConnectionStatus.fromString(json['status']?.toString() ?? 'pending'),
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updated_at']?.toString() ?? '') ?? DateTime.now(),
       respondedAt: json['responded_at'] != null
-          ? DateTime.parse(json['responded_at'] as String)
+          ? DateTime.tryParse(json['responded_at'].toString())
           : null,
-      rejectionReason: json['rejection_reason'] as String?,
+      rejectionReason: json['rejection_reason']?.toString(),
     );
   }
 

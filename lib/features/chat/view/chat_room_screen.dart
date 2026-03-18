@@ -7,8 +7,11 @@ import '../../../shared/widgets/avatar_widget.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/providers/auth_provider.dart';
 import '../view_model/chat_view_model.dart';
+import '../../session/view_model/session_view_model.dart';
+import '../../analysis/view/session_config_bottom_sheet.dart';
 import 'message_bubble.dart';
 import 'chat_input_widget.dart';
+import '../../../core/router/route_names.dart';
 
 /// ChatRoomScreen - Pixel-perfect match to React ChatScreen
 ///
@@ -20,12 +23,14 @@ class ChatRoomScreen extends StatefulWidget {
   final String chatRoomId;
   final String otherUserName;
   final String? otherUserAvatar;
+  final String? otherUserId;
 
   const ChatRoomScreen({
     super.key,
     required this.chatRoomId,
     required this.otherUserName,
     this.otherUserAvatar,
+    this.otherUserId,
   });
 
   @override
@@ -42,6 +47,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     super.initState();
     _viewModel = context.read<ChatViewModel>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _viewModel.authenticateFirebase();
       _viewModel.loadMessages(widget.chatRoomId);
     });
   }
@@ -86,10 +92,20 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     _scrollToBottom();
   }
 
+  void _navigateToProfile() {
+    if (widget.otherUserId != null) {
+      Navigator.pushNamed(
+        context,
+        RouteNames.profile,
+        arguments: {'userId': int.tryParse(widget.otherUserId!)},
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
-    final currentUserId = authProvider.currentUser?.id ?? '';
+    final currentUserId = authProvider.currentUser?.id.toString() ?? '';
 
     return Scaffold(
       body: Column(
@@ -115,40 +131,96 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 ),
                 const SizedBox(width: 16),
                 // Avatar - React: w-10 h-10 border-2 border-white
-                Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: AvatarWidget(
-                    imageUrl: widget.otherUserAvatar,
-                    name: widget.otherUserName,
-                    size: 40,
+                GestureDetector(
+                  onTap: _navigateToProfile,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: AvatarWidget(
+                      imageUrl: widget.otherUserAvatar,
+                      name: widget.otherUserName,
+                      size: 40,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 // Name + Status
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // React: text-white
-                      Text(
-                        widget.otherUserName,
-                        style: AppTextStyles.body.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
+                  child: GestureDetector(
+                    onTap: _navigateToProfile,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // React: text-white
+                        Text(
+                          widget.otherUserName,
+                          style: AppTextStyles.body.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      // React: text-white/80 text-sm
-                      Text(
-                        'نشط الآن',
-                        style: AppTextStyles.caption.copyWith(
-                          color: Colors.white.withValues(alpha: 0.8),
+                        // Session Timer or Active Status
+                        Consumer2<SessionViewModel, ChatViewModel>(
+                          builder: (context, sessionVM, chatVM, child) {
+                            if (sessionVM.isActive) {
+                              return Text(
+                                'جلسة نشطة: ${sessionVM.formattedTime}',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: Colors.orangeAccent,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              );
+                            }
+
+                            // Real logic: Check typing status
+                            final room = chatVM.currentChatRoom;
+                            final isTyping =
+                                room?.isOtherParticipantTyping(currentUserId) ??
+                                    false;
+
+                            if (isTyping) {
+                              return Text(
+                                'يكتب الآن...',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: Colors.greenAccent,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              );
+                            }
+
+                            return const SizedBox.shrink();
+                          },
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
+                ),
+                // Session Controls
+                Consumer<SessionViewModel>(
+                  builder: (context, sessionVM, child) {
+                    if (sessionVM.isActive) {
+                      return IconButton(
+                        icon: const Icon(Icons.stop_circle_rounded,
+                            color: Colors.redAccent, size: 32),
+                        onPressed: () => sessionVM.endSession(),
+                        tooltip: 'إنهاء الجلسة',
+                      );
+                    } else {
+                      return IconButton(
+                        icon: const Icon(Icons.play_circle_fill_rounded,
+                            color: Colors.white, size: 32),
+                        onPressed: () {
+                          SessionConfigBottomSheet.show(
+                            context,
+                            receiverId: int.tryParse(widget.otherUserId ?? '') ?? 0,
+                          );
+                        },
+                        tooltip: 'بدء جلسة',
+                      );
+                    }
+                  },
                 ),
               ],
             ),

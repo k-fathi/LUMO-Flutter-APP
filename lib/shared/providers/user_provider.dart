@@ -18,7 +18,7 @@ class UserProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   // Load user profile
-  Future<void> loadUserProfile(String userId) async {
+  Future<void> loadUserProfile(int userId) async {
     _isLoading = true;
     notifyListeners();
 
@@ -34,7 +34,7 @@ class UserProvider extends ChangeNotifier {
 
   // Update user profile
   Future<bool> updateProfile({
-    required String userId,
+    required int userId,
     String? name,
     String? bio,
     String? phone,

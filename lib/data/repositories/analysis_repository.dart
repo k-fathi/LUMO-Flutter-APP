@@ -12,10 +12,10 @@ class AnalysisRepository {
   // ==================== ANALYSIS OPERATIONS ====================
 
   Future<ChildAnalysisModel> createAnalysis({
-    required String parentId,
+    required int parentId,
     required String parentName,
     required String childName,
-    required String doctorId,
+    required int doctorId,
     required String doctorName,
     required DateTime date,
     String? notes,
@@ -26,13 +26,14 @@ class AnalysisRepository {
     final now = DateTime.now();
 
     // Default states if not provided
-    final defaultStates = states ?? [
-      const AnalysisStateModel(state: ChildState.critical, label: 'حرج'),
-      const AnalysisStateModel(state: ChildState.bad, label: 'سيء'),
-      const AnalysisStateModel(state: ChildState.moderate, label: 'متوسط'),
-      const AnalysisStateModel(state: ChildState.good, label: 'جيد'),
-      const AnalysisStateModel(state: ChildState.excellent, label: 'ممتاز'),
-    ];
+    final defaultStates = states ??
+        [
+          const AnalysisStateModel(state: ChildState.critical, label: 'حرج'),
+          const AnalysisStateModel(state: ChildState.bad, label: 'سيء'),
+          const AnalysisStateModel(state: ChildState.moderate, label: 'متوسط'),
+          const AnalysisStateModel(state: ChildState.good, label: 'جيد'),
+          const AnalysisStateModel(state: ChildState.excellent, label: 'ممتاز'),
+        ];
 
     // Mark the current state
     final updatedStates = defaultStates.map((state) {
@@ -40,10 +41,10 @@ class AnalysisRepository {
     }).toList();
 
     final analysisData = {
-      'parent_id': parentId,
+      'parent_id': parentId.toString(),
       'parent_name': parentName,
       'child_name': childName,
-      'doctor_id': doctorId,
+      'doctor_id': doctorId.toString(),
       'doctor_name': doctorName,
       'date': date.toIso8601String(),
       'notes': notes,
@@ -80,33 +81,44 @@ class AnalysisRepository {
     await _firebaseDataSource.updateAnalysis(analysisId, updateData);
   }
 
-  Future<List<ChildAnalysisModel>> getParentAnalyses(String parentId) async {
+  Future<List<ChildAnalysisModel>> getParentAnalyses(int parentId) async {
     // Check cache first
     final cached = _localDataSource.getCachedAnalyses(
-      parentId,
+      parentId.toString(),
       maxAge: const Duration(minutes: 10),
     );
     if (cached != null) {
-      return cached.map((analysisData) => ChildAnalysisModel.fromJson(analysisData)).toList();
+      return cached
+          .map((analysisData) => ChildAnalysisModel.fromJson(analysisData))
+          .toList();
     }
 
     // Fetch from Firebase
-    final analysesList = await _firebaseDataSource.getParentAnalyses(parentId);
+    final analysesList =
+        await _firebaseDataSource.getParentAnalyses(parentId.toString());
 
     // Cache the results
-    await _localDataSource.cacheAnalyses(parentId, analysesList);
+    await _localDataSource.cacheAnalyses(parentId.toString(), analysesList);
 
-    return analysesList.map((analysisData) => ChildAnalysisModel.fromJson(analysisData)).toList();
+    return analysesList
+        .map((analysisData) => ChildAnalysisModel.fromJson(analysisData))
+        .toList();
   }
 
-  Future<List<ChildAnalysisModel>> getDoctorPatientAnalyses(String doctorId) async {
-    final analysesList = await _firebaseDataSource.getDoctorPatientAnalyses(doctorId);
-    return analysesList.map((analysisData) => ChildAnalysisModel.fromJson(analysisData)).toList();
+  Future<List<ChildAnalysisModel>> getDoctorPatientAnalyses(
+      int doctorId) async {
+    final analysesList =
+        await _firebaseDataSource.getDoctorPatientAnalyses(doctorId.toString());
+    return analysesList
+        .map((analysisData) => ChildAnalysisModel.fromJson(analysisData))
+        .toList();
   }
 
-  Stream<List<ChildAnalysisModel>> streamParentAnalyses(String parentId) {
-    return _firebaseDataSource.streamParentAnalyses(parentId).map(
-          (analysesList) => analysesList.map((analysisData) => ChildAnalysisModel.fromJson(analysisData)).toList(),
-    );
+  Stream<List<ChildAnalysisModel>> streamParentAnalyses(int parentId) {
+    return _firebaseDataSource.streamParentAnalyses(parentId.toString()).map(
+          (analysesList) => analysesList
+              .map((analysisData) => ChildAnalysisModel.fromJson(analysisData))
+              .toList(),
+        );
   }
 }

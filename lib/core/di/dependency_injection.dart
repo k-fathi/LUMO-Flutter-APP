@@ -1,4 +1,5 @@
 import 'package:get_it/get_it.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../data/datasources/firebase_data_source.dart';
 import '../../data/datasources/local_data_source.dart';
@@ -9,6 +10,9 @@ import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/chat_repository.dart';
 import '../../data/repositories/community_repository.dart';
 import '../../data/repositories/profile_repository.dart';
+import '../../data/repositories/patient_repository.dart';
+import '../../data/repositories/session_repository.dart';
+import '../../data/repositories/notification_repository.dart';
 import '../../shared/providers/auth_provider.dart';
 import '../../shared/providers/notification_provider.dart';
 import '../../shared/providers/user_provider.dart';
@@ -29,6 +33,7 @@ import '../../features/chat/view_model/chat_view_model.dart';
 import '../../features/analysis/view_model/analysis_view_model.dart';
 import '../../features/community/view_model/community_view_model.dart';
 import '../../features/profile/view_model/profile_view_model.dart';
+import '../../features/session/view_model/session_view_model.dart';
 
 import 'package:dio/dio.dart';
 import '../network/dio_client.dart';
@@ -37,11 +42,17 @@ import '../../data/datasources/remote/community_remote_data_source.dart';
 import '../../data/datasources/remote/profile_remote_data_source.dart';
 import '../../data/datasources/remote/chat_remote_data_source.dart';
 import '../../data/datasources/remote/patient_remote_data_source.dart';
+import '../../data/datasources/remote/session_remote_data_source.dart';
+import '../../data/datasources/remote/notification_remote_data_source.dart';
 
 final getIt = GetIt.instance;
 
 class DependencyInjection {
   static Future<void> init() async {
+    // SharedPreferences (async init)
+    final sharedPrefs = await SharedPreferences.getInstance();
+    getIt.registerLazySingleton<SharedPreferences>(() => sharedPrefs);
+
     // Services
     getIt.registerLazySingleton<SharedPreferencesService>(
       () => SharedPreferencesService(),
@@ -90,6 +101,12 @@ class DependencyInjection {
     getIt.registerLazySingleton<PatientRemoteDataSource>(
       () => PatientRemoteDataSourceImpl(getIt<DioClient>()),
     );
+    getIt.registerLazySingleton<SessionRemoteDataSource>(
+      () => SessionRemoteDataSourceImpl(getIt<DioClient>()),
+    );
+    getIt.registerLazySingleton<NotificationRemoteDataSource>(
+      () => NotificationRemoteDataSourceImpl(getIt<DioClient>()),
+    );
 
     // Data Sources
     getIt.registerLazySingleton<FirebaseDataSource>(
@@ -111,8 +128,8 @@ class DependencyInjection {
     // Repositories
     getIt.registerLazySingleton<AuthRepository>(
       () => AuthRepository(
-        getIt<FirebaseDataSource>(),
-        getIt<LocalDataSource>(),
+        getIt<AuthRemoteDataSource>(),
+        getIt<SharedPreferences>(),
       ),
     );
 
@@ -120,13 +137,13 @@ class DependencyInjection {
       () => ProfileRepository(
         getIt<FirebaseDataSource>(),
         getIt<LocalDataSource>(),
+        getIt<ProfileRemoteDataSource>(),
       ),
     );
 
     getIt.registerLazySingleton<CommunityRepository>(
       () => CommunityRepository(
-        getIt<FirebaseDataSource>(),
-        getIt<LocalDataSource>(),
+        getIt<CommunityRemoteDataSource>(),
       ),
     );
 
@@ -134,7 +151,12 @@ class DependencyInjection {
       () => ChatRepository(
         getIt<FirebaseDataSource>(),
         getIt<LocalDataSource>(),
+        getIt<ChatRemoteDataSource>(),
       ),
+    );
+
+    getIt.registerLazySingleton<SessionRepository>(
+      () => SessionRepository(getIt<SessionRemoteDataSource>()),
     );
 
     getIt.registerLazySingleton<AnalysisRepository>(
@@ -151,9 +173,21 @@ class DependencyInjection {
       ),
     );
 
+    getIt.registerLazySingleton<PatientRepository>(
+      () => PatientRepository(getIt<PatientRemoteDataSource>()),
+    );
+
+    getIt.registerLazySingleton<NotificationRepository>(
+      () => NotificationRepository(getIt<NotificationRemoteDataSource>()),
+    );
+
     // Providers
     getIt.registerLazySingleton<AuthProvider>(
-      () => AuthProvider(getIt<AuthRepository>()),
+      () => AuthProvider(
+        getIt<AuthRepository>(),
+        getIt<ProfileRepository>(),
+        getIt<LocalDataSource>(),
+      ),
     );
 
     getIt.registerLazySingleton<UserProvider>(
@@ -171,11 +205,17 @@ class DependencyInjection {
     );
 
     getIt.registerLazySingleton<NotificationProvider>(
-      () => NotificationProvider(getIt<NotificationService>()),
+      () => NotificationProvider(
+        getIt<NotificationService>(),
+        getIt<NotificationRepository>(),
+      ),
     );
 
     getIt.registerLazySingleton<PatientProvider>(
-      () => PatientProvider(getIt<LocalDataSource>()),
+      () => PatientProvider(
+        getIt<LocalDataSource>(),
+        getIt<PatientRepository>(),
+      ),
     );
 
     getIt.registerLazySingleton<CommunityProvider>(
@@ -192,14 +232,21 @@ class DependencyInjection {
     );
 
     getIt.registerFactory<ChatViewModel>(
-      () => ChatViewModel(getIt<ChatRepository>()),
+      () => ChatViewModel(
+        getIt<ChatRepository>(),
+        getIt<FirebaseAuthService>(),
+      ),
+    );
+
+    getIt.registerFactory<SessionViewModel>(
+      () => SessionViewModel(getIt<SessionRepository>()),
     );
 
     getIt.registerFactory<AnalysisViewModel>(
       () => AnalysisViewModel(getIt<AnalysisRepository>()),
     );
 
-    getIt.registerFactory<CommunityViewModel>(
+    getIt.registerLazySingleton<CommunityViewModel>(
       () => CommunityViewModel(getIt<CommunityRepository>()),
     );
 

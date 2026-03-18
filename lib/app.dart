@@ -9,6 +9,8 @@ import 'l10n/app_localizations.dart';
 import 'shared/providers/theme_provider.dart';
 import 'shared/providers/locale_provider.dart';
 
+import 'features/session/view/floating_timer_overlay.dart';
+
 class LumoAIApp extends StatelessWidget {
   const LumoAIApp({super.key});
 
@@ -41,6 +43,15 @@ class LumoAIApp extends StatelessWidget {
           // Routing — Splash handles onboarding/auth checks
           initialRoute: AppRoutes.initialRoute,
           onGenerateRoute: AppRoutes.onGenerateRoute,
+
+          builder: (context, child) {
+            return Stack(
+              children: [
+                if (child != null) child,
+                const FloatingTimerOverlay(),
+              ],
+            );
+          },
         );
       },
     );

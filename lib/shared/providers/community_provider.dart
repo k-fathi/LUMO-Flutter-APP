@@ -4,7 +4,7 @@ import '../../features/community/models/mock_post.dart';
 class CommunityProvider with ChangeNotifier {
   final List<MockPost> _posts = [
     MockPost(
-      id: '1',
+      id: 1,
       authorName: 'د. سارة أحمد',
       authorRole: 'doctor',
       timeAgo: 'منذ ساعتين',
@@ -16,7 +16,7 @@ class CommunityProvider with ChangeNotifier {
       isLiked: true,
     ),
     MockPost(
-      id: '2',
+      id: 2,
       authorName: 'أم محمد',
       authorRole: 'parent',
       timeAgo: 'منذ ٤ ساعات',
@@ -27,7 +27,7 @@ class CommunityProvider with ChangeNotifier {
       commentsCount: 8,
     ),
     MockPost(
-      id: '3',
+      id: 3,
       authorName: 'د. خالد العمري',
       authorRole: 'doctor',
       timeAgo: 'منذ يوم',
@@ -42,7 +42,7 @@ class CommunityProvider with ChangeNotifier {
 
   List<MockPost> get posts => _posts;
 
-  void toggleLike(String postId) {
+  void toggleLike(int postId) {
     final index = _posts.indexWhere((p) => p.id == postId);
     if (index != -1) {
       final post = _posts[index];
@@ -54,7 +54,7 @@ class CommunityProvider with ChangeNotifier {
     }
   }
 
-  void addComment(String postId) {
+  void addComment(int postId) {
     final index = _posts.indexWhere((p) => p.id == postId);
     if (index != -1) {
       final post = _posts[index];
@@ -65,7 +65,7 @@ class CommunityProvider with ChangeNotifier {
     }
   }
 
-  void addCommentToPost(String postId,
+  void addCommentToPost(int postId,
       {required String authorName,
       required String content,
       required bool isDoctor}) {
@@ -86,7 +86,7 @@ class CommunityProvider with ChangeNotifier {
     String? imageUrl,
   }) {
     final newPost = MockPost(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: DateTime.now().millisecondsSinceEpoch,
       authorName: authorName,
       authorRole: authorRole,
       timeAgo: 'الآن',
@@ -101,7 +101,7 @@ class CommunityProvider with ChangeNotifier {
   }
 
   void updatePost({
-    required String postId,
+    required int postId,
     required String content,
     String? imageUrl,
   }) {

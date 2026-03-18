@@ -49,7 +49,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     _viewModel = context.read<AIViewModel>();
 
     final authProvider = context.read<AuthProvider>();
-    final userId = authProvider.currentUser?.id ?? '';
+    final userId = authProvider.currentUser?.id ?? 0;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _viewModel.loadChatHistory(userId);
@@ -105,7 +105,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     if (text.trim().isEmpty) return;
 
     final authProvider = context.read<AuthProvider>();
-    final userId = authProvider.currentUser?.id ?? '';
+    final userId = authProvider.currentUser?.id ?? 0;
 
     _viewModel.sendMessage(userId, text);
     _scrollToBottom();
@@ -412,7 +412,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
           TextButton(
             onPressed: () {
               final authProvider = context.read<AuthProvider>();
-              final userId = authProvider.currentUser?.id ?? '';
+              final userId = authProvider.currentUser?.id ?? 0;
               _viewModel.clearChatHistory(userId);
               Navigator.pop(context);
             },

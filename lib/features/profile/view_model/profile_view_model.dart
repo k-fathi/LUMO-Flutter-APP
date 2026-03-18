@@ -26,7 +26,7 @@ class ProfileViewModel extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   /// Load user profile
-  Future<void> loadProfile(String userId) async {
+  Future<void> loadProfile(int userId) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -37,13 +37,12 @@ class ProfileViewModel extends ChangeNotifier {
         _user = userData;
         _userName = userData.name;
         _userRole = userData.role.name;
-        _followers = userData.followersCount;
-        _following = userData.followingCount;
-        _isLoading = false;
-        notifyListeners();
+        _followers = userData.followersCount ?? 0;
+        _following = userData.followingCount ?? 0;
       }
     } catch (e) {
       _errorMessage = 'فشل تحميل الملف الشخصي: $e';
+    } finally {
       _isLoading = false;
       notifyListeners();
     }
@@ -51,11 +50,14 @@ class ProfileViewModel extends ChangeNotifier {
 
   /// Update user profile
   Future<void> updateProfile({
-    required String userId,
+    required int userId,
     String? name,
     String? bio,
     String? phone,
     String? avatarUrl,
+    String? childName,
+    int? childAge,
+    String? childMedicalCondition,
     String? childPhotoUrl,
   }) async {
     _isLoading = true;
@@ -69,14 +71,16 @@ class ProfileViewModel extends ChangeNotifier {
         bio: bio,
         phone: phone,
         avatarUrl: avatarUrl,
+        childName: childName,
+        childAge: childAge,
+        childMedicalCondition: childMedicalCondition,
         childPhotoUrl: childPhotoUrl,
       );
       _user = updatedUser;
       _userName = updatedUser.name;
-      _isLoading = false;
-      notifyListeners();
     } catch (e) {
       _errorMessage = 'فشل تحديث الملف الشخصي: $e';
+    } finally {
       _isLoading = false;
       notifyListeners();
     }
@@ -94,10 +98,9 @@ class ProfileViewModel extends ChangeNotifier {
       _userRole = 'parent';
       _followers = 0;
       _following = 0;
-      _isLoading = false;
-      notifyListeners();
     } catch (e) {
       _errorMessage = 'فشل تسجيل الخروج: $e';
+    } finally {
       _isLoading = false;
       notifyListeners();
     }

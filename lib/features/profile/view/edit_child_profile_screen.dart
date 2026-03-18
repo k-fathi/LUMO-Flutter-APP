@@ -4,16 +4,20 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/gradient_app_bar.dart';
 import '../../../shared/widgets/avatar_widget.dart';
 import '../../../l10n/app_localizations.dart';
-import '../models/mock_child_data.dart';
 import 'dart:io';
+import '../models/mock_child_data.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import '../../../shared/providers/auth_provider.dart';
+import '../view_model/profile_view_model.dart';
+import '../../../data/models/parent_model.dart';
 
 class EditChildProfileScreen extends StatefulWidget {
-  final MockChildData childData;
+  final MockChildData? childData;
 
   const EditChildProfileScreen({
     super.key,
-    this.childData = defaultMockChild,
+    this.childData,
   });
 
   @override
@@ -24,9 +28,6 @@ class _EditChildProfileScreenState extends State<EditChildProfileScreen> {
   late TextEditingController _nameController;
   late TextEditingController _ageController;
   late TextEditingController _conditionController;
-  late TextEditingController _bloodTypeController;
-  late TextEditingController _weightController;
-  late TextEditingController _heightController;
 
   File? _childImage;
   final _imagePicker = ImagePicker();
@@ -34,19 +35,23 @@ class _EditChildProfileScreenState extends State<EditChildProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.childData.name);
-    _ageController =
-        TextEditingController(text: widget.childData.age.toString());
+    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+
+    String name = widget.childData?.name ?? defaultMockChild.name;
+    int age = widget.childData?.age ?? defaultMockChild.age;
+    String conditionKey =
+        widget.childData?.conditionKey ?? defaultMockChild.conditionKey;
+
+    if (user is ParentModel) {
+      name = user.childName;
+      age = user.childAge;
+      conditionKey = user.childMedicalCondition ?? conditionKey;
+    }
+
+    _nameController = TextEditingController(text: name);
+    _ageController = TextEditingController(text: age.toString());
     _conditionController = TextEditingController(
-        text: widget.childData.conditionKey == 'conditionAutism'
-            ? 'طيف التوحد'
-            : widget.childData.conditionKey);
-    _bloodTypeController =
-        TextEditingController(text: widget.childData.bloodType);
-    _weightController =
-        TextEditingController(text: widget.childData.weight.toString());
-    _heightController =
-        TextEditingController(text: widget.childData.height.toString());
+        text: conditionKey == 'conditionAutism' ? 'طيف التوحد' : conditionKey);
   }
 
   @override
@@ -54,9 +59,6 @@ class _EditChildProfileScreenState extends State<EditChildProfileScreen> {
     _nameController.dispose();
     _ageController.dispose();
     _conditionController.dispose();
-    _bloodTypeController.dispose();
-    _weightController.dispose();
-    _heightController.dispose();
     super.dispose();
   }
 
@@ -110,7 +112,7 @@ class _EditChildProfileScreenState extends State<EditChildProfileScreen> {
                       ),
                     ),
                     child: AvatarWidget(
-                      imageUrl: widget.childData.photoUrl,
+                      imageUrl: widget.childData?.photoUrl,
                       imageFile: _childImage,
                       name: _nameController.text.isNotEmpty
                           ? _nameController.text
@@ -168,59 +170,71 @@ class _EditChildProfileScreenState extends State<EditChildProfileScreen> {
               icon: Icons.medical_information_outlined,
               controller: _conditionController,
             ),
-            const SizedBox(height: 16),
-            _buildFormField(
-              theme,
-              label: 'فصيلة الدم',
-              icon: Icons.bloodtype_outlined,
-              controller: _bloodTypeController,
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildFormField(
-                    theme,
-                    label: 'الوزن (كجم)',
-                    icon: Icons.monitor_weight_outlined,
-                    controller: _weightController,
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildFormField(
-                    theme,
-                    label: 'الطول (سم)',
-                    icon: Icons.height_outlined,
-                    controller: _heightController,
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-              ],
-            ),
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
               height: 56,
-              child: ElevatedButton(
-                onPressed: () {
-                  // Mock save behavior
-                  Navigator.pop(context);
+              child: Consumer<ProfileViewModel>(
+                builder: (context, profileVM, _) {
+                  return ElevatedButton(
+                    onPressed: profileVM.isLoading
+                        ? null
+                        : () async {
+                            final name = _nameController.text.trim();
+                            final age = int.tryParse(_ageController.text) ?? 0;
+                            final condition = _conditionController.text.trim();
+
+                            final auth = Provider.of<AuthProvider>(context, listen: false);
+                            final userId = auth.currentUser?.id;
+
+                            if (userId != null) {
+                              await profileVM.updateProfile(
+                                userId: userId,
+                                childName: name,
+                                childAge: age,
+                                childMedicalCondition: condition,
+                                childPhotoUrl: _childImage?.path,
+                              );
+
+                              if (mounted) {
+                                if (profileVM.errorMessage == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('تم حفظ التعديلات بنجاح'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                  // Refresh auth provider user if needed
+                                  await auth.init();
+                                  if (mounted) Navigator.pop(context);
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(profileVM.errorMessage!),
+                                      backgroundColor: AppColors.destructive,
+                                    ),
+                                  );
+                                }
+                              }
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: profileVM.isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Text(
+                            'حفظ التعديلات',
+                            style: AppTextStyles.label.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  );
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: Text(
-                  'حفظ التعديلات',
-                  style: AppTextStyles.label.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
               ),
             ),
           ],

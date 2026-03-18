@@ -23,7 +23,7 @@ class _MockMessage {
 
 /// Mock Conversation data passed to this screen
 class ChatConversation {
-  final String id;
+  final int id;
   final String userName;
   final String? avatarUrl;
   final bool isOnline;

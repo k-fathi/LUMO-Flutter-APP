@@ -4,7 +4,12 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/providers/auth_provider.dart';
+import '../../../shared/providers/patient_provider.dart';
 import '../../../core/router/route_names.dart';
+import '../../../shared/widgets/avatar_widget.dart';
+import '../../../data/models/connection_request_model.dart';
+import '../../../shared/providers/notification_provider.dart';
+import 'package:timeago/timeago.dart' as timeago;
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -14,16 +19,74 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  // Mock request state
-  bool _hasNotification = true;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<PatientProvider>().fetchRequests();
+      context.read<NotificationProvider>().fetchNotifications();
+      context.read<NotificationProvider>().markAllAsRead();
+    });
+  }
+
+  Future<void> _handleAccept(ConnectionRequestModel request) async {
+    try {
+      await context.read<PatientProvider>().acceptPatientRequest(request);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.requestAccepted(request.doctorName)),
+            backgroundColor: const Color(0xFF10B981),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: AppColors.destructive,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleReject(ConnectionRequestModel request) async {
+    try {
+      await context.read<PatientProvider>().rejectPatientRequest(request);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.requestRejected(request.doctorName)),
+            backgroundColor: AppColors.destructive,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: AppColors.destructive,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final authProvider = context.watch<AuthProvider>();
+    final patientProvider = context.watch<PatientProvider>();
+    
     final currentUser = authProvider.currentUser;
     final isDoctor = currentUser?.role.isDoctor ?? false;
+    final requests = patientProvider.joinRequests;
+    final generalNotifications = context.watch<NotificationProvider>().notifications;
+    final isLoading = patientProvider.isLoading || context.watch<NotificationProvider>().isLoading;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -40,14 +103,44 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: _hasNotification
-          ? ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _buildNotificationCard(context, l10n, theme, isDoctor),
-              ],
-            )
-          : _buildEmptyState(l10n),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await context.read<PatientProvider>().fetchRequests();
+          await context.read<NotificationProvider>().fetchNotifications();
+        },
+        child: isLoading && requests.isEmpty && generalNotifications.isEmpty
+            ? const Center(child: CircularProgressIndicator())
+            : requests.isEmpty && generalNotifications.isEmpty
+                ? _buildEmptyState(l10n)
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: requests.length + generalNotifications.length,
+                    itemBuilder: (context, index) {
+                      if (index < requests.length) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildNotificationCard(
+                            context,
+                            l10n,
+                            theme,
+                            isDoctor,
+                            requests[index],
+                          ),
+                        );
+                      } else {
+                        final notification = generalNotifications[index - requests.length];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildGeneralNotificationCard(
+                            context,
+                            theme,
+                            notification,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+      ),
     );
   }
 
@@ -70,8 +163,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
-  Widget _buildNotificationCard(BuildContext context, AppLocalizations l10n,
-      ThemeData theme, bool isDoctor) {
+  Widget _buildNotificationCard(
+    BuildContext context, 
+    AppLocalizations l10n,
+    ThemeData theme, 
+    bool isDoctor,
+    ConnectionRequestModel request,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -93,30 +191,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                    isDoctor
-                        ? Icons.check_circle_outline_rounded
-                        : Icons.person_add_rounded,
-                    color: AppColors.primary),
+              AvatarWidget(
+                imageUrl: isDoctor ? request.parentAvatarUrl : request.doctorAvatarUrl,
+                name: isDoctor ? request.parentName : request.doctorName,
+                size: 40,
+                fallbackIcon: isDoctor ? Icons.person : Icons.medical_services_rounded,
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   isDoctor
-                      ? l10n.doctorNotificationAccepted('عمر')
-                      : l10n.doctorRequestMessage('أحمد محمود'),
+                      ? l10n.doctorNotificationAccepted(request.childName)
+                      : l10n.doctorRequestMessage(request.doctorName),
                   style:
                       AppTextStyles.body.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
               Text(
-                'الآن',
+                timeago.format(request.createdAt, locale: Localizations.localeOf(context).languageCode),
                 style: AppTextStyles.caption
                     .copyWith(color: AppColors.mutedForeground),
               )
@@ -128,9 +220,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               children: [
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      setState(() => _hasNotification = false);
-                    },
+                    onPressed: () => _handleAccept(request),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF10B981), // Medical Green
                       foregroundColor: Colors.white,
@@ -145,9 +235,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () {
-                      setState(() => _hasNotification = false);
-                    },
+                    onPressed: () => _handleReject(request),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.destructive,
                       side: const BorderSide(color: AppColors.destructive),
@@ -170,9 +258,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     context,
                     RouteNames.doctorPatientDetail,
                     arguments: {
-                      'parentId': 'mock_parent_id',
-                      'parentName': 'محمد علي',
-                      'childName': 'عمر',
+                      'parentId': request.parentId,
+                      'parentName': request.parentName,
+                      'childName': request.childName,
                     },
                   );
                 },
@@ -189,4 +277,64 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
     );
   }
+  Widget _buildGeneralNotificationCard(
+    BuildContext context,
+    ThemeData theme,
+    dynamic notification,
+  ) {
+    // Backend returns notifications like: { title, content, type, created_at, ... }
+    final title = notification['title'] ?? 'إشعار جديد';
+    final content = notification['content'] ?? notification['message'] ?? '';
+    final createdAt = DateTime.tryParse(notification['created_at'] ?? '') ?? DateTime.now();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: theme.dividerColor),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.notifications_active_outlined, 
+                color: AppColors.primary, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600),
+                ),
+                if (content.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    content,
+                    style: AppTextStyles.caption.copyWith(
+                        color: AppColors.mutedForeground),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Text(
+                  timeago.format(createdAt, locale: Localizations.localeOf(context).languageCode),
+                  style: AppTextStyles.caption.copyWith(
+                      color: AppColors.mutedForeground, fontSize: 10),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
+

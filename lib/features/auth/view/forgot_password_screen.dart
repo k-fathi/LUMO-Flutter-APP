@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_text_field.dart';
+import '../../../shared/providers/auth_provider.dart';
 import '../../../shared/mixins/form_validation_mixin.dart';
 
 /// Forgot Password Screen - Pixel-perfect match to React ForgotPasswordScreen
@@ -20,7 +23,8 @@ class ForgotPasswordScreen extends StatefulWidget {
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with FormValidationMixin {
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
+    with FormValidationMixin {
   final _phoneController = TextEditingController();
   bool _isLoading = false;
 
@@ -35,21 +39,40 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with FormVa
 
     setState(() => _isLoading = true);
 
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 1));
+    final authProvider = context.read<AuthProvider>();
+    final response = await authProvider.forgotPassword(
+      phone: _phoneController.text.trim(),
+    );
 
     if (!mounted) return;
-
     setState(() => _isLoading = false);
 
-    // In a real app, navigate to verification code screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('تم إرسال رمز التحقق'),
-        backgroundColor: AppColors.primary,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    if (response != null && response.status) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(response.message),
+          backgroundColor: AppColors.primary,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      Navigator.pushNamed(
+        context,
+        RouteNames.otpVerification,
+        arguments: {
+          'phone': _phoneController.text.trim(),
+          'isPasswordReset': true,
+        },
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authProvider.errorMessage ?? 'فشل إرسال رمز التحقق'),
+          backgroundColor: AppColors.destructive,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override
@@ -126,10 +149,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with FormVa
 
                       // Submit button - React: w-full h-14 rounded-2xl bg-gradient-to-r from-[#2196F3] to-[#1565C0]
                       AppButton(
-                        text: _isLoading ? 'جاري الإرسال...' : 'إرسال رمز التحقق',
-                        onPressed: _phoneController.text.trim().isEmpty && !_isLoading
-                            ? null
-                            : _handleSendCode,
+                        text:
+                            _isLoading ? 'جاري الإرسال...' : 'إرسال رمز التحقق',
+                        onPressed:
+                            _phoneController.text.trim().isEmpty && !_isLoading
+                                ? null
+                                : _handleSendCode,
                         isLoading: _isLoading,
                       ),
 
@@ -140,7 +165,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with FormVa
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(16), // rounded-2xl
+                          borderRadius:
+                              BorderRadius.circular(16), // rounded-2xl
                           border: Border.all(
                             color: const Color(0xFFE3F2FD),
                           ),

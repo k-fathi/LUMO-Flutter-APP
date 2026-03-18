@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
-import '../../../data/repositories/auth_repository.dart';
+import '../../../data/models/auth/auth_models.dart';
 import '../../../data/models/user_model.dart';
-import '../../../core/enums/user_role.dart';
+import '../../../data/repositories/auth_repository.dart';
 
 /// Auth ViewModel
 ///
-/// Complete authentication state management
-/// Features:
-/// - Sign in/up/out
-/// - Current user management
-/// - Loading states
-/// - Error handling
+/// Complete authentication state management.
+/// Delegates to [AuthRepository] for all REST API calls.
 class AuthViewModel extends ChangeNotifier {
   final AuthRepository _authRepository;
 
@@ -24,18 +21,31 @@ class AuthViewModel extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   UserModel? get currentUser => _currentUser;
-  bool get isAuthenticated => _currentUser != null;
+  bool get isAuthenticated => _authRepository.isLoggedIn;
 
-  /// Sign in
-  Future<bool> signIn(String email, String password) async {
+  // ─────────────────────────────────────────────
+  //  Login
+  // ─────────────────────────────────────────────
+
+  Future<bool> login(String phone, String password) async {
     _setLoading(true);
     _errorMessage = null;
 
     try {
-      _currentUser = await _authRepository.signIn(
-        email: email,
+      final fcmToken = await _getFcmToken();
+
+      final request = LoginRequest(
+        phone: phone,
         password: password,
+        fcmToken: fcmToken,
       );
+
+      final AuthResponse response = await _authRepository.login(request);
+
+      if (response.user != null) {
+        _currentUser = response.user;
+      }
+
       _setLoading(false);
       return true;
     } catch (e) {
@@ -45,35 +55,45 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-  /// Sign up
-  Future<bool> signUp({
-    required String email,
-    required String password,
+  // ─────────────────────────────────────────────
+  //  Register
+  // ─────────────────────────────────────────────
+
+  Future<bool> register({
     required String name,
-    required UserRole role,
-    String? phone,
+    required String email,
+    required String phone,
+    required String password,
+    required String passwordConfirmation,
+    required String role,
     String? childName,
     int? childAge,
-    String? specialization,
-    String? licenseNumber,
-    int? yearsOfExperience,
+    String? doctorNumber,
+    String? clinicLocation,
   }) async {
     _setLoading(true);
     _errorMessage = null;
 
     try {
-      _currentUser = await _authRepository.signUp(
-        email: email,
-        password: password,
+      final request = RegisterRequest(
         name: name,
-        role: role,
+        email: email,
         phone: phone,
+        password: password,
+        passwordConfirmation: passwordConfirmation,
+        role: role,
         childName: childName,
         childAge: childAge,
-        specialization: specialization,
-        licenseNumber: licenseNumber,
-        yearsOfExperience: yearsOfExperience,
+        doctorNumber: doctorNumber,
+        clinicLocation: clinicLocation,
       );
+
+      final AuthResponse response = await _authRepository.register(request);
+
+      if (response.user != null) {
+        _currentUser = response.user;
+      }
+
       _setLoading(false);
       return true;
     } catch (e) {
@@ -83,23 +103,21 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-  /// Sign out
-  Future<void> signOut() async {
-    await _authRepository.signOut();
+  // ─────────────────────────────────────────────
+  //  Logout
+  // ─────────────────────────────────────────────
+
+  Future<void> logout() async {
+    try {
+      await _authRepository.logout();
+    } catch (_) {}
     _currentUser = null;
     notifyListeners();
   }
 
-  /// Load current user
-  Future<void> loadCurrentUser() async {
-    try {
-      _currentUser = await _authRepository.getCurrentUser();
-      notifyListeners();
-    } catch (e) {
-      _errorMessage = e.toString();
-      notifyListeners();
-    }
-  }
+  // ─────────────────────────────────────────────
+  //  Helpers
+  // ─────────────────────────────────────────────
 
   void _setLoading(bool value) {
     _isLoading = value;
@@ -109,5 +127,14 @@ class AuthViewModel extends ChangeNotifier {
   void clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+
+  Future<String?> _getFcmToken() async {
+    try {
+      return await FirebaseMessaging.instance.getToken();
+    } catch (e) {
+      debugPrint('Failed to get FCM token: $e');
+      return null;
+    }
   }
 }

@@ -1,5 +1,5 @@
 class MockPost {
-  final String id;
+  final int id;
   final String authorName;
   final String authorRole; // 'doctor' or 'parent'
   final String timeAgo; // Deprecated, use timestamp
@@ -26,7 +26,7 @@ class MockPost {
   });
 
   MockPost copyWith({
-    String? id,
+    int? id,
     String? authorName,
     String? authorRole,
     String? timeAgo,

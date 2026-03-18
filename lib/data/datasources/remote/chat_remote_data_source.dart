@@ -5,6 +5,14 @@ import '../../models/message_model.dart';
 abstract class ChatRemoteDataSource {
   Future<List<MessageModel>> getChatHistory();
   Future<String> askAiConsultation(String question);
+  Future<String> getFirebaseToken();
+  Future<List<dynamic>> getMyChats();
+  Future<void> startChat(int receiverId);
+  Future<void> updateLastMessage({
+    required int senderId,
+    required int receiverId,
+    required String message,
+  });
 }
 
 class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
@@ -26,5 +34,41 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
       data: {'question': question},
     );
     return response.data['answer'];
+  }
+
+  @override
+  Future<String> getFirebaseToken() async {
+    final response = await _dioClient.get(ApiConstants.firebaseToken);
+    return response.data['token'];
+  }
+
+  @override
+  Future<List<dynamic>> getMyChats() async {
+    final response = await _dioClient.get(ApiConstants.myChats);
+    return response.data['chats'];
+  }
+
+  @override
+  Future<void> startChat(int receiverId) async {
+    await _dioClient.post(
+      ApiConstants.startChat,
+      data: {'receiver_id': receiverId},
+    );
+  }
+
+  @override
+  Future<void> updateLastMessage({
+    required int senderId,
+    required int receiverId,
+    required String message,
+  }) async {
+    await _dioClient.post(
+      ApiConstants.updateLastMessage,
+      data: {
+        'sender_id': senderId,
+        'receiver_id': receiverId,
+        'message': message,
+      },
+    );
   }
 }

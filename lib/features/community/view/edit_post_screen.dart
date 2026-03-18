@@ -47,10 +47,11 @@ class _EditPostScreenState extends State<EditPostScreen> {
     setState(() => _isLoading = true);
 
     final viewModel = context.read<CommunityViewModel>();
-    final success = await viewModel.updatePost(
-      postId: widget.post.id,
-      content: _contentController.text.trim(),
+    await viewModel.updatePost(
+      widget.post.id,
+      _contentController.text.trim(),
     );
+    final success = viewModel.errorMessage == null;
 
     if (!mounted) return;
 

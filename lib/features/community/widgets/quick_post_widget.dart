@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/providers/auth_provider.dart';
+import 'package:provider/provider.dart';
 import '../view/create_post_screen.dart';
 
 /// QuickPostWidget - Figma Screen 6 Spec
@@ -36,14 +38,24 @@ class QuickPostWidget extends StatelessWidget {
         child: Row(
           children: [
             // Current User Avatar
-            const CircleAvatar(
-              radius: 20,
-              backgroundColor: AppColors.secondary,
-              child: Icon(
-                Icons.person_rounded,
-                color: AppColors.primary,
-                size: 22,
-              ),
+            Consumer<AuthProvider>(
+              builder: (context, auth, _) {
+                final user = auth.currentUser;
+                return CircleAvatar(
+                  radius: 20,
+                  backgroundColor: AppColors.secondary,
+                  backgroundImage: user?.avatarUrl != null
+                      ? NetworkImage(user!.avatarUrl!)
+                      : null,
+                  child: user?.avatarUrl == null
+                      ? const Icon(
+                          Icons.person_rounded,
+                          color: AppColors.primary,
+                          size: 22,
+                        )
+                      : null,
+                );
+              },
             ),
             const SizedBox(width: 12),
 

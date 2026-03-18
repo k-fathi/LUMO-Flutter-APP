@@ -252,7 +252,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   getIt<ProfileViewModel>().logout(); // Clears profile state
 
                   // 3. Clear auth and local caches
-                  await context.read<AuthProvider>().signOut();
+                  await context.read<AuthProvider>().logout();
 
                   if (!context.mounted) return;
                   Navigator.pushNamedAndRemoveUntil(

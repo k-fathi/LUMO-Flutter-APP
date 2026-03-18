@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import '../datasources/firebase_data_source.dart';
 import '../datasources/local_data_source.dart';
+import '../datasources/remote/profile_remote_data_source.dart';
 import '../models/connection_request_model.dart';
 import '../models/doctor_code_model.dart';
 import '../models/doctor_model.dart';
@@ -12,16 +14,44 @@ import '../../core/utils/app_constants.dart';
 class ProfileRepository {
   final FirebaseDataSource _firebaseDataSource;
   final LocalDataSource _localDataSource;
+  final ProfileRemoteDataSource? _remoteDataSource;
 
-  ProfileRepository(this._firebaseDataSource, this._localDataSource);
+  ProfileRepository(
+    this._firebaseDataSource,
+    this._localDataSource, [
+    this._remoteDataSource,
+  ]);
 
   // ==================== USER PROFILE ====================
 
-  Future<UserModel?> getUserProfile(String userId) async {
-    final userData = await _firebaseDataSource.getUserById(userId);
+  Future<UserModel?> getUserProfile(int userId) async {
+    // Check if this is the current user
+    final currentUserData = _localDataSource.getCurrentUser();
+    final currentUserId = currentUserData != null 
+        ? int.tryParse(currentUserData['id']?.toString() ?? '') 
+        : null;
+    
+    final isMyProfile = userId == currentUserId;
+
+    // 1. Try REST API only for current user
+    if (_remoteDataSource != null && isMyProfile) {
+      try {
+        final profile = await _remoteDataSource!.getProfile();
+        // Persist to local cache
+        if (isMyProfile) {
+          await _localDataSource.saveCurrentUser(profile.toJson());
+        }
+        return profile;
+      } catch (e) {
+        debugPrint('REST Profile fetch failed: $e. Falling back to Firebase.');
+      }
+    }
+
+    // 2. Fallback to Firebase for others (or if REST failed)
+    final userData = await _firebaseDataSource.getUserById(userId.toString());
     if (userData == null) return null;
 
-    final role = UserRole.fromString(userData['role'] as String);
+    final role = UserRole.fromString(userData['role'] as String? ?? 'parent');
     if (role == UserRole.doctor) {
       return DoctorModel.fromJson(userData);
     } else {
@@ -29,8 +59,8 @@ class ProfileRepository {
     }
   }
 
-  Stream<UserModel?> streamUserProfile(String userId) {
-    return _firebaseDataSource.streamUser(userId).map((userData) {
+  Stream<UserModel?> streamUserProfile(int userId) {
+    return _firebaseDataSource.streamUser(userId.toString()).map((userData) {
       if (userData == null) return null;
       final role = UserRole.fromString(userData['role'] as String);
       if (role == UserRole.doctor) {
@@ -42,55 +72,73 @@ class ProfileRepository {
   }
 
   Future<UserModel> updateProfile({
-    required String userId,
+    required int userId,
     String? name,
     String? bio,
     String? phone,
     String? avatarUrl,
+    String? avatarFilePath,
+    String? childName,
+    int? childAge,
+    String? childMedicalCondition,
     String? childPhotoUrl,
   }) async {
-    final updateData = <String, dynamic>{};
+    // 1. Try the real REST API first (preferred path)
+    if (_remoteDataSource != null) {
+      try {
+        final updatedUser = await _remoteDataSource!.updateProfile(
+          userId: userId,
+          name: name,
+          phone: phone,
+          bio: bio,
+          avatarFilePath: avatarFilePath ?? avatarUrl,
+          childName: childName,
+          childAge: childAge,
+          childMedicalCondition: childMedicalCondition,
+          childPhotoUrl: childPhotoUrl,
+        );
+        // Persist fresh server data locally
+        await _localDataSource.saveCurrentUser(updatedUser.toJson());
+        return updatedUser;
+      } catch (e) {
+        // If REST API fails, fall through to local/Firebase path
+      }
+    }
 
+    // 2. Offline / fallback: apply changes locally
+    final updateData = <String, dynamic>{};
     if (name != null) updateData['name'] = name;
     if (bio != null) updateData['bio'] = bio;
     if (phone != null) updateData['phone'] = phone;
     if (avatarUrl != null) updateData['avatar_url'] = avatarUrl;
+    if (childName != null) updateData['child_name'] = childName;
+    if (childAge != null) updateData['child_age'] = childAge;
+    if (childMedicalCondition != null) {
+      updateData['child_medical_condition'] = childMedicalCondition;
+    }
     if (childPhotoUrl != null) updateData['child_photo_url'] = childPhotoUrl;
 
-    // 1. Try to update on Firebase (Network)
-    try {
-      await _firebaseDataSource.updateUser(userId, updateData);
-    } catch (e) {
-      // Ignore network errors for demo purposes
-      // debugPrint('Firebase update failed: $e');
-    }
-
-    // 2. Fetch latest data (Network) OR fallback to local + updates
     Map<String, dynamic>? latestUserData;
     try {
-      latestUserData = await _firebaseDataSource.getUserById(userId);
-    } catch (e) {
-      // Ignore network errors
-    }
+      latestUserData = await _firebaseDataSource.getUserById(userId.toString());
+    } catch (_) {}
 
-    // 3. If network fetch failed, use local cache and apply updates manually
     if (latestUserData == null) {
       final currentLocal = _localDataSource.getCurrentUser();
       if (currentLocal != null) {
-        // Create a mutable copy and apply updates
-        latestUserData = Map<String, dynamic>.from(currentLocal);
-        latestUserData.addAll(updateData);
+        latestUserData = Map<String, dynamic>.from(currentLocal)
+          ..addAll(updateData);
       }
+    } else {
+      latestUserData.addAll(updateData);
     }
 
     if (latestUserData == null) {
       throw Exception('Could not update profile: No local data found');
     }
 
-    // 4. Save to local storage (Persistence)
     await _localDataSource.saveCurrentUser(latestUserData);
 
-    // 5. Return the updated model
     final role = UserRole.fromString(latestUserData['role'] as String);
     if (role == UserRole.doctor) {
       return DoctorModel.fromJson(latestUserData);
@@ -99,24 +147,27 @@ class ProfileRepository {
     }
   }
 
-  Future<String> uploadAvatar(String userId, String filePath) async {
-    return await _firebaseDataSource.uploadUserAvatar(userId, filePath);
+  Future<String> uploadAvatar(int userId, String filePath) async {
+    return await _firebaseDataSource.uploadUserAvatar(
+        userId.toString(), filePath);
   }
 
   // ==================== FOLLOW SYSTEM ====================
 
-  Future<void> followUser(String followerId, String followingId) async {
-    await _firebaseDataSource.followUser(followerId, followingId);
+  Future<void> followUser(int followerId, int followingId) async {
+    await _firebaseDataSource.followUser(
+        followerId.toString(), followingId.toString());
   }
 
-  Future<void> unfollowUser(String followerId, String followingId) async {
-    await _firebaseDataSource.unfollowUser(followerId, followingId);
+  Future<void> unfollowUser(int followerId, int followingId) async {
+    await _firebaseDataSource.unfollowUser(
+        followerId.toString(), followingId.toString());
   }
 
   // ==================== DOCTOR CODE SYSTEM ====================
 
   Future<DoctorCodeModel> generateDoctorCode(
-      String doctorId, String doctorName) async {
+      int doctorId, String doctorName) async {
     final now = DateTime.now();
     final codeString =
         'DOC${now.millisecondsSinceEpoch.toString().substring(6)}';
@@ -156,12 +207,12 @@ class ProfileRepository {
   // ==================== CONNECTION REQUEST SYSTEM ====================
 
   Future<ConnectionRequestModel> createConnectionRequest({
-    required String parentId,
+    required int parentId,
     required String parentName,
     String? parentAvatarUrl,
     required String childName,
     required int childAge,
-    required String doctorId,
+    required int doctorId,
     required String doctorName,
     String? doctorAvatarUrl,
     required String doctorCode,
@@ -199,7 +250,7 @@ class ProfileRepository {
   }
 
   Future<void> acceptConnectionRequest(
-      String requestId, String doctorId, String parentId) async {
+      String requestId, int doctorId, int parentId) async {
     final updateData = {
       'status': ConnectionStatus.accepted.name,
       'responded_at': DateTime.now().toIso8601String(),
@@ -223,8 +274,10 @@ class ProfileRepository {
   }
 
   Stream<List<ConnectionRequestModel>> streamDoctorConnectionRequests(
-      String doctorId) {
-    return _firebaseDataSource.streamDoctorConnectionRequests(doctorId).map(
+      int doctorId) {
+    return _firebaseDataSource
+        .streamDoctorConnectionRequests(doctorId.toString())
+        .map(
           (requestsList) => requestsList
               .map(
                   (requestData) => ConnectionRequestModel.fromJson(requestData))

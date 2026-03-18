@@ -20,8 +20,8 @@ class DoctorModel extends UserModel {
     super.avatarUrl,
     super.bio,
     super.phone,
-    required super.createdAt,
-    required super.updatedAt,
+    super.createdAt,
+    super.updatedAt,
     super.followersCount,
     super.followingCount,
     super.isVerified,
@@ -41,33 +41,45 @@ class DoctorModel extends UserModel {
   // Factory constructor from JSON
   factory DoctorModel.fromJson(Map<String, dynamic> json) {
     return DoctorModel(
-      id: json['id'] as String,
-      email: json['email'] as String,
-      name: json['name'] as String,
-      avatarUrl: json['avatar_url'] as String?,
-      bio: json['bio'] as String?,
-      phone: json['phone'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
-      followersCount: json['followers_count'] as int? ?? 0,
-      followingCount: json['following_count'] as int? ?? 0,
-      isVerified: json['is_verified'] as bool? ?? false,
-      isActive: json['is_active'] as bool? ?? true,
-      specialization: json['specialization'] as String,
-      licenseNumber: json['license_number'] as String,
-      yearsOfExperience: json['years_of_experience'] as int? ?? 0,
-      clinicAddress: json['clinic_address'] as String?,
-      clinicPhone: json['clinic_phone'] as String?,
+      id: json['id'] is int
+          ? json['id']
+          : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      email: json['email']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      avatarUrl:
+          json['avatar_url']?.toString() ?? json['profile_image']?.toString(),
+      bio: json['bio']?.toString(),
+      phone: json['phone']?.toString(),
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString())
+          : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'].toString())
+          : null,
+      followersCount:
+          int.tryParse(json['followers_count']?.toString() ?? '') ?? 0,
+      followingCount:
+          int.tryParse(json['following_count']?.toString() ?? '') ?? 0,
+      isVerified: json['is_verified'] == true || json['is_verified'] == 1,
+      isActive: json['is_active'] == true ||
+          json['is_active'] == 1 ||
+          json['is_active'] == null,
+      specialization: json['specialization']?.toString() ?? '',
+      licenseNumber: json['license_number']?.toString() ?? '',
+      yearsOfExperience:
+          int.tryParse(json['years_of_experience']?.toString() ?? '') ?? 0,
+      clinicAddress: json['clinic_address']?.toString(),
+      clinicPhone: json['clinic_phone']?.toString(),
       patientIds: (json['patient_ids'] as List<dynamic>?)
-              ?.map((e) => e as String)
+              ?.map((e) => e.toString())
               .toList() ??
           [],
-      generatedCode: json['generated_code'] as String?,
+      generatedCode: json['generated_code']?.toString(),
       codeExpiresAt: json['code_expires_at'] != null
-          ? DateTime.parse(json['code_expires_at'] as String)
+          ? DateTime.tryParse(json['code_expires_at'].toString())
           : null,
-      rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
-      reviewsCount: json['reviews_count'] as int? ?? 0,
+      rating: double.tryParse(json['rating']?.toString() ?? '') ?? 0.0,
+      reviewsCount: int.tryParse(json['reviews_count']?.toString() ?? '') ?? 0,
     );
   }
 
@@ -93,7 +105,7 @@ class DoctorModel extends UserModel {
   // CopyWith method
   @override
   DoctorModel copyWith({
-    String? id,
+    int? id,
     String? email,
     String? name,
     UserRole? role,

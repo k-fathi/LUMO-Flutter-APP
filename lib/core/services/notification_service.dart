@@ -107,7 +107,7 @@ class NotificationService {
     required String chatRoomId,
   }) async {
     await showNotification(
-      id: chatRoomId.hashCode,
+      id: chatRoomId.hashCode & 0x7FFFFFFF,
       title: 'رسالة جديدة من $senderName',
       body: message,
       payload: 'chat:$chatRoomId',
@@ -119,7 +119,7 @@ class NotificationService {
     required String postId,
   }) async {
     await showNotification(
-      id: postId.hashCode,
+      id: postId.hashCode & 0x7FFFFFFF,
       title: 'إعجاب جديد',
       body: 'أعجب $userName بمنشورك',
       payload: 'post:$postId',
@@ -132,7 +132,7 @@ class NotificationService {
     required String postId,
   }) async {
     await showNotification(
-      id: DateTime.now().millisecondsSinceEpoch,
+      id: DateTime.now().millisecondsSinceEpoch & 0x7FFFFFFF,
       title: 'تعليق جديد من $userName',
       body: comment,
       payload: 'post:$postId',
@@ -144,7 +144,7 @@ class NotificationService {
     required String userId,
   }) async {
     await showNotification(
-      id: userId.hashCode,
+      id: userId.hashCode & 0x7FFFFFFF,
       title: 'متابع جديد',
       body: 'بدأ $userName بمتابعتك',
       payload: 'profile:$userId',
@@ -156,7 +156,7 @@ class NotificationService {
     required String requestId,
   }) async {
     await showNotification(
-      id: requestId.hashCode,
+      id: requestId.hashCode & 0x7FFFFFFF,
       title: 'طلب اتصال من طبيب',
       body: 'الدكتور $doctorName يريد الاتصال بك',
       payload: 'connection_request:$requestId',
@@ -168,7 +168,7 @@ class NotificationService {
     required String analysisId,
   }) async {
     await showNotification(
-      id: analysisId.hashCode,
+      id: analysisId.hashCode & 0x7FFFFFFF,
       title: 'تحليل جديد',
       body: 'قام الدكتور $doctorName بإضافة تحليل جديد',
       payload: 'analysis:$analysisId',

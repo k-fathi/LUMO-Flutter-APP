@@ -83,7 +83,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
           children: [
             const _OverviewTab(),
             DoctorPatientDetail(
-              parentId: 'dummy_parent', // Need actual data or dummy
+              parentId: 0, // Using 0 as dummy int ID
               parentName: 'ولي الأمر',
               childName: widget.patientName,
             ),

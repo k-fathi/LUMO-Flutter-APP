@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../widgets/community_header.dart';
-import '../widgets/post_card.dart';
 import '../widgets/quick_post_widget.dart';
-import '../../../shared/providers/community_provider.dart';
-import 'package:provider/provider.dart';
+import '../widgets/post_card.dart';
+import '../view_model/community_view_model.dart';
+import 'posts_feed_widget.dart';
+import '../../../shared/widgets/empty_state.dart';
+import '../../../shared/widgets/shimmer_loading.dart';
 import '../../../l10n/app_localizations.dart';
 
 /// CommunityScreen (Home) - Figma Screen 6
@@ -22,40 +25,24 @@ class CommunityScreen extends StatefulWidget {
 }
 
 class _CommunityScreenState extends State<CommunityScreen> {
-  bool _isLoadingMore = false;
-  bool _isInitialLoading = false;
-
   @override
   void initState() {
     super.initState();
-
-    // Simulate initial loading
-    _isInitialLoading = true;
-    Future.delayed(const Duration(milliseconds: 1000), () {
+    // Start fetching data immediately on next frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        setState(() {
-          _isInitialLoading = false;
-        });
+        context.read<CommunityViewModel>().fetchPosts();
       }
     });
   }
 
-  void _onScrollThresholdReached() {
-    if (!_isLoadingMore) {
-      // Trigger load more
-      setState(() {
-        _isLoadingMore = true;
-      });
-      // Simulate network delay
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        if (mounted) {
-          setState(() {
-            _isLoadingMore = false;
-            // Append more items to list here in real implementation
-          });
-        }
-      });
-    }
+  Future<void> _handleRefresh() async {
+    final viewModel = context.read<CommunityViewModel>();
+    await Future.wait([
+      viewModel.loadHomeFeed(),
+      viewModel.loadFollowingFeed(),
+      viewModel.loadMyPosts(),
+    ]);
   }
 
   @override
@@ -65,14 +52,13 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final communityProvider = context.watch<CommunityProvider>();
-    final posts = communityProvider.posts;
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        backgroundColor: theme.scaffoldBackgroundColor,
         body: SafeArea(
           child: Column(
             children: [
@@ -81,10 +67,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
               // ── Tab Bar ───────────────────────────────────────
               TabBar(
-                labelColor: Theme.of(context).colorScheme.primary,
-                unselectedLabelColor:
-                    Theme.of(context).textTheme.bodySmall?.color,
-                indicatorColor: Theme.of(context).colorScheme.primary,
+                labelColor: theme.colorScheme.primary,
+                unselectedLabelColor: theme.textTheme.bodySmall?.color,
+                indicatorColor: theme.colorScheme.primary,
                 tabs: [
                   Tab(text: l10n.explore),
                   Tab(text: l10n.following),
@@ -95,9 +80,15 @@ class _CommunityScreenState extends State<CommunityScreen> {
               Expanded(
                 child: TabBarView(
                   children: [
-                    _buildFeedTab(posts),
-                    _buildFeedTab(posts.reversed
-                        .toList()), // Mock sorting for Following tab
+                    const _CommunityFeedWrapper(),
+                    RefreshIndicator(
+                      onRefresh: _handleRefresh,
+                      child: Consumer<CommunityViewModel>(
+                        builder: (context, viewModel, child) => PostsFeedWidget(
+                          customPosts: viewModel.followingPosts,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -107,79 +98,86 @@ class _CommunityScreenState extends State<CommunityScreen> {
       ),
     );
   }
+}
 
-  Widget _buildFeedTab(List posts) {
-    if (_isInitialLoading) return _buildShimmerLoading(context);
-    if (posts.isEmpty) return _buildEmptyState(context);
+class _CommunityFeedWrapper extends StatelessWidget {
+  const _CommunityFeedWrapper();
 
-    return NotificationListener<ScrollNotification>(
-      onNotification: (ScrollNotification scrollInfo) {
-        if (!scrollInfo.metrics.outOfRange &&
-            scrollInfo.metrics.pixels >=
-                scrollInfo.metrics.maxScrollExtent - 200) {
-          _onScrollThresholdReached();
-        }
-        return false;
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: () async {
+        await context.read<CommunityViewModel>().loadHomeFeed();
       },
-      child: ListView.builder(
-        padding: const EdgeInsets.only(bottom: 16),
-        itemCount: posts.length + 1 + (_isLoadingMore ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return const QuickPostWidget();
-          }
-          if (index == posts.length + 1 && _isLoadingMore) {
-            return const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
-          return PostCard(post: posts[index - 1]);
-        },
-      ),
-    );
-  }
-
-  Widget _buildShimmerLoading(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 3,
-      itemBuilder: (context, index) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          height: 180,
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(16),
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          const SliverToBoxAdapter(
+            child: QuickPostWidget(),
           ),
-          child: const Center(
-              child: CircularProgressIndicator(
-                  strokeWidth: 2)), // Basic placeholder for shimmer
-        );
-      },
-    );
-  }
+          Consumer<CommunityViewModel>(
+            builder: (context, viewModel, child) {
+              final posts = viewModel.posts;
+              
+              // Show shimmer if loading OR if not yet initialized (first load)
+              if ((viewModel.isLoading || !viewModel.isInitialized) && posts.isEmpty) {
+                return SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => const Padding(
+                      padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+                      child: ShimmerCard(),
+                    ),
+                    childCount: 3,
+                  ),
+                );
+              }
 
-  Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.feed_outlined,
-              size: 80, color: Theme.of(context).disabledColor),
-          const SizedBox(height: 16),
-          Text(
-            'لا توجد منشورات حتى الآن',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).textTheme.bodyLarge?.color,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'كن أول من يشارك قصة أو نصيحة في المجتمع!',
-            style: TextStyle(color: Theme.of(context).disabledColor),
+              if (viewModel.errorMessage != null && posts.isEmpty) {
+                return SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline_rounded, color: Colors.red, size: 48),
+                          const SizedBox(height: 16),
+                          Text(
+                            viewModel.errorMessage!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () => viewModel.loadHomeFeed(),
+                            child: const Text('إعادة المحاولة'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              if (posts.isEmpty) {
+                return const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: EmptyState(
+                    icon: Icons.article_outlined,
+                    title: 'لا توجد منشورات بعد',
+                    message: 'كن أول من ينشر في المجتمع',
+                  ),
+                );
+              }
+
+              return SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => PostCard(post: posts[index]),
+                  childCount: posts.length,
+                ),
+              );
+            },
           ),
         ],
       ),

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_text_styles.dart';
 import '../../../l10n/app_localizations.dart';
+import 'package:provider/provider.dart';
+import '../../../shared/providers/notification_provider.dart';
+import '../../../shared/providers/patient_provider.dart';
 
 import '../view/notifications_screen.dart';
 
@@ -37,28 +40,36 @@ class CommunityHeader extends StatelessWidget {
             ),
           ),
 
-          // Notifications Button
-          Container(
-            decoration: BoxDecoration(
-              color: theme.cardColor,
-              border: Border.all(color: theme.dividerColor),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const NotificationsScreen(),
+          Consumer2<NotificationProvider, PatientProvider>(
+            builder: (context, notificationProvider, patientProvider, child) {
+              final totalUnread = notificationProvider.unreadCount + patientProvider.pendingRequestsCount;
+              return Badge(
+                label: Text(totalUnread.toString()),
+                isLabelVisible: totalUnread > 0,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    border: Border.all(color: theme.dividerColor),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                );
-              },
-              icon: Icon(
-                Icons.notifications_none_rounded,
-                color: theme.iconTheme.color,
-                size: 24,
-              ),
-            ),
+                  child: IconButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const NotificationsScreen(),
+                        ),
+                      );
+                    },
+                    icon: Icon(
+                      Icons.notifications_none_rounded,
+                      color: theme.iconTheme.color,
+                      size: 24,
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),

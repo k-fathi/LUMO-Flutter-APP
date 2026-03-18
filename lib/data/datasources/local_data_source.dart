@@ -9,7 +9,7 @@ class LocalDataSource {
 
   Future<void> saveCurrentUser(Map<String, dynamic> userData) async {
     await _localStorage.saveUserData(userData);
-    await _localStorage.saveUserId(userData['id'] as String);
+    await _localStorage.saveUserId(userData['id'].toString());
   }
 
   Map<String, dynamic>? getCurrentUser() {

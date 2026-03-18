@@ -1,15 +1,18 @@
+import '../../core/utils/date_formatter.dart';
+
 class CommentModel {
-  final String id;
-  final String postId;
-  final String userId;
+  final int id;
+  final int postId;
+  final int userId;
   final String userName;
   final String? userAvatarUrl;
   final String content;
   final DateTime createdAt;
   final DateTime updatedAt;
   final int likesCount;
-  final List<String> likedByUserIds;
-  final String? parentCommentId; // For nested comments/replies
+  final List<int> likedByUserIds;
+  final int? parentCommentId; // For nested comments/replies
+  final bool isLiked;
 
   const CommentModel({
     required this.id,
@@ -23,25 +26,57 @@ class CommentModel {
     this.likesCount = 0,
     this.likedByUserIds = const [],
     this.parentCommentId,
+    this.isLiked = false,
   });
 
   // Factory constructor from JSON
   factory CommentModel.fromJson(Map<String, dynamic> json) {
+    // Robust parsing for user data (handles nested objects like 'user' or 'author')
+    final userMap = json['user'] is Map<String, dynamic>
+        ? json['user']
+        : (json['author'] is Map<String, dynamic>
+            ? json['author']
+            : (json['commenter'] is Map<String, dynamic>
+                ? json['commenter']
+                : (json['member'] is Map<String, dynamic> ? json['member'] : null)));
+
+    final userName = json['user_name']?.toString() ??
+        userMap?['name']?.toString() ??
+        userMap?['full_name']?.toString() ??
+        'مستخدم';
+
+    final userAvatarUrl = json['user_avatar_url']?.toString() ??
+        userMap?['avatar_url']?.toString() ??
+        userMap?['profile_image']?.toString() ??
+        userMap?['image']?.toString();
+
     return CommentModel(
-      id: json['id'] as String,
-      postId: json['post_id'] as String,
-      userId: json['user_id'] as String,
-      userName: json['user_name'] as String,
-      userAvatarUrl: json['user_avatar_url'] as String?,
-      content: json['content'] as String,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      id: json['id'] is int
+          ? json['id']
+          : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      postId: json['post_id'] is int
+          ? json['post_id']
+          : int.tryParse(json['post_id']?.toString() ?? '0') ?? 0,
+      userId: json['user_id'] ?? json['author_id'] ?? userMap?['id'] ?? 0,
+      userName: userName.isNotEmpty ? userName : 'مستخدم',
+      userAvatarUrl: userAvatarUrl,
+      content: (json['content'] ?? json['comment'])?.toString() ?? '',
+      createdAt: DateFormatter.parseServerDateTime(json['created_at']?.toString()),
+      updatedAt: DateFormatter.parseServerDateTime(json['updated_at']?.toString()),
       likesCount: json['likes_count'] as int? ?? 0,
       likedByUserIds: (json['liked_by_user_ids'] as List<dynamic>?)
-          ?.map((e) => e as String)
-          .toList() ??
+              ?.map((e) => int.tryParse(e.toString()) ?? 0)
+              .toList() ??
           [],
-      parentCommentId: json['parent_comment_id'] as String?,
+      parentCommentId: (json['parent_comment_id'] ?? json['parent_id']) != null && 
+                       (json['parent_comment_id'] ?? json['parent_id']).toString() != '0'
+          ? int.tryParse((json['parent_comment_id'] ?? json['parent_id']).toString())
+          : null,
+      isLiked: json['is_liked'] == true ||
+          json['liked'] == true ||
+          json['has_liked'] == true ||
+          json['is_liked'] == 1 ||
+          json['is_liked']?.toString() == 'true',
     );
   }
 
@@ -59,22 +94,24 @@ class CommentModel {
       'likes_count': likesCount,
       'liked_by_user_ids': likedByUserIds,
       'parent_comment_id': parentCommentId,
+      'is_liked': isLiked,
     };
   }
 
   // CopyWith method
   CommentModel copyWith({
-    String? id,
-    String? postId,
-    String? userId,
+    int? id,
+    int? postId,
+    int? userId,
     String? userName,
     String? userAvatarUrl,
     String? content,
     DateTime? createdAt,
     DateTime? updatedAt,
     int? likesCount,
-    List<String>? likedByUserIds,
-    String? parentCommentId,
+    List<int>? likedByUserIds,
+    int? parentCommentId,
+    bool? isLiked,
   }) {
     return CommentModel(
       id: id ?? this.id,
@@ -88,11 +125,12 @@ class CommentModel {
       likesCount: likesCount ?? this.likesCount,
       likedByUserIds: likedByUserIds ?? this.likedByUserIds,
       parentCommentId: parentCommentId ?? this.parentCommentId,
+      isLiked: isLiked ?? this.isLiked,
     );
   }
 
   // Helper methods
-  bool isLikedBy(String userId) => likedByUserIds.contains(userId);
+  bool isLikedBy(int userId) => isLiked || likedByUserIds.contains(userId);
   bool get isReply => parentCommentId != null;
   bool get isTopLevel => parentCommentId == null;
 

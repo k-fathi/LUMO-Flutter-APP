@@ -1,18 +1,25 @@
+import 'package:flutter/foundation.dart';
 import '../datasources/firebase_data_source.dart';
 import '../datasources/local_data_source.dart';
 import '../models/chat_room_model.dart';
 import '../models/message_model.dart';
+import '../datasources/remote/chat_remote_data_source.dart';
 
 class ChatRepository {
   final FirebaseDataSource _firebaseDataSource;
   final LocalDataSource _localDataSource;
+  final ChatRemoteDataSource _chatRemoteDataSource;
 
-  ChatRepository(this._firebaseDataSource, this._localDataSource);
+  ChatRepository(
+    this._firebaseDataSource,
+    this._localDataSource,
+    this._chatRemoteDataSource,
+  );
 
   // ==================== CHAT ROOM OPERATIONS ====================
 
   Future<ChatRoomModel> createChatRoom({
-    required List<String> participantIds,
+    required List<int> participantIds,
     required Map<String, String> participantNames,
     required Map<String, String?> participantAvatars,
   }) async {
@@ -25,17 +32,30 @@ class ChatRepository {
       'last_message': null,
       'last_message_sender_id': null,
       'last_message_timestamp': null,
-      'unread_counts': {for (var id in participantIds) id: 0},
+      'unread_counts': {for (var id in participantIds) id.toString(): 0},
       'created_at': now.toIso8601String(),
       'updated_at': now.toIso8601String(),
       'is_active': true,
-      'typing_status': {for (var id in participantIds) id: false},
+      'typing_status': {for (var id in participantIds) id.toString(): false},
     };
 
     final chatRoomId = await _firebaseDataSource.createChatRoom(chatRoomData);
     chatRoomData['id'] = chatRoomId;
 
     return ChatRoomModel.fromJson(chatRoomData);
+  }
+
+  Future<void> startChat(int receiverId) async {
+    await _chatRemoteDataSource.startChat(receiverId);
+  }
+
+  Future<String> getFirebaseToken() async {
+    return await _chatRemoteDataSource.getFirebaseToken();
+  }
+
+  Future<List<ChatRoomModel>> getMyChats() async {
+    final List<dynamic> chatsData = await _chatRemoteDataSource.getMyChats();
+    return chatsData.map((json) => ChatRoomModel.fromJson(json)).toList();
   }
 
   Future<ChatRoomModel?> getChatRoom(String chatRoomId) async {
@@ -51,8 +71,8 @@ class ChatRepository {
         );
   }
 
-  Stream<List<ChatRoomModel>> streamUserChats(String userId) {
-    return _firebaseDataSource.streamUserChats(userId).map(
+  Stream<List<ChatRoomModel>> streamUserChats(int userId) {
+    return _firebaseDataSource.streamUserChats(userId.toString()).map(
           (chatsList) => chatsList
               .map((chatData) => ChatRoomModel.fromJson(chatData))
               .toList(),
@@ -63,7 +83,7 @@ class ChatRepository {
 
   Future<MessageModel> sendMessage({
     required String chatRoomId,
-    required String senderId,
+    required int senderId,
     required String senderName,
     String? senderAvatarUrl,
     required String content,
@@ -76,7 +96,7 @@ class ChatRepository {
 
     final messageData = {
       'chat_room_id': chatRoomId,
-      'sender_id': senderId,
+      'sender_id': senderId.toString(),
       'sender_name': senderName,
       'sender_avatar_url': senderAvatarUrl,
       'content': content,
@@ -97,6 +117,25 @@ class ChatRepository {
 
     // Save draft (empty it after sending)
     await _localDataSource.clearChatDraft(chatRoomId);
+
+    // Update last message on Laravel backend
+    try {
+      final chatRoom = await getChatRoom(chatRoomId);
+      if (chatRoom != null) {
+        final receiverIdStr =
+            chatRoom.getOtherParticipantId(senderId.toString());
+        final receiverId = int.tryParse(receiverIdStr);
+        if (receiverId != null) {
+          await _chatRemoteDataSource.updateLastMessage(
+            senderId: senderId,
+            receiverId: receiverId,
+            message: content,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Laravel update-last-message failed: $e');
+    }
 
     return MessageModel.fromJson(messageData);
   }

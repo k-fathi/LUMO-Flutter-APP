@@ -2,10 +2,10 @@ import '../../core/enums/child_state.dart';
 
 class ChildAnalysisModel {
   final String id;
-  final String parentId;
+  final int parentId;
   final String parentName;
   final String childName;
-  final String doctorId;
+  final int doctorId;
   final String doctorName;
   final DateTime date;
   final String? notes;
@@ -35,10 +35,14 @@ class ChildAnalysisModel {
   factory ChildAnalysisModel.fromJson(Map<String, dynamic> json) {
     return ChildAnalysisModel(
       id: json['id'] as String,
-      parentId: json['parent_id'] as String,
+      parentId: json['parent_id'] is int
+          ? json['parent_id']
+          : int.tryParse(json['parent_id']?.toString() ?? '0') ?? 0,
       parentName: json['parent_name'] as String,
       childName: json['child_name'] as String,
-      doctorId: json['doctor_id'] as String,
+      doctorId: json['doctor_id'] is int
+          ? json['doctor_id']
+          : int.tryParse(json['doctor_id']?.toString() ?? '0') ?? 0,
       doctorName: json['doctor_name'] as String,
       date: DateTime.parse(json['date'] as String),
       notes: json['notes'] as String?,
@@ -74,10 +78,10 @@ class ChildAnalysisModel {
   // CopyWith method
   ChildAnalysisModel copyWith({
     String? id,
-    String? parentId,
+    int? parentId,
     String? parentName,
     String? childName,
-    String? doctorId,
+    int? doctorId,
     String? doctorName,
     DateTime? date,
     String? notes,
@@ -107,7 +111,8 @@ class ChildAnalysisModel {
   // Helper methods
   bool get hasNotes => notes != null && notes!.isNotEmpty;
   bool get hasAttachment => attachmentUrl != null && attachmentUrl!.isNotEmpty;
-  int get currentStateIndex => states.indexWhere((s) => s.state == currentState);
+  int get currentStateIndex =>
+      states.indexWhere((s) => s.state == currentState);
 
   @override
   bool operator ==(Object other) {

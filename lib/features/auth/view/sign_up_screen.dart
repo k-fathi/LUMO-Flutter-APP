@@ -70,12 +70,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
     try {
       final authProvider = context.read<AuthProvider>();
 
-      await authProvider.signUp(
+      await authProvider.register(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
+        passwordConfirmation: _passwordController.text.trim(),
         name: _nameController.text.trim(),
         phone: _phoneController.text.trim(),
-        role: widget.userRole,
+        role: widget.userRole.name,
         // Parent-specific
         childName: widget.userRole == UserRole.parent
             ? _childNameController.text.trim()
@@ -83,10 +84,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
         childAge: widget.userRole == UserRole.parent
             ? int.tryParse(_childAgeController.text.trim())
             : null,
-        childPhoto: widget.userRole == UserRole.parent ? _childImage : null,
         // Doctor-specific
-        licenseNumber: widget.userRole == UserRole.doctor
+        doctorNumber: widget.userRole == UserRole.doctor
             ? _licenseIdController.text.trim()
+            : null,
+        clinicLocation: widget.userRole == UserRole.doctor
+            ? _clinicLocationController.text.trim()
             : null,
       );
 

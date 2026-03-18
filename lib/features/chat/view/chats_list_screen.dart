@@ -1,36 +1,104 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/router/route_names.dart';
-import '../../../data/models/doctor_model.dart';
-import '../../../core/utils/mock_accounts.dart';
+import '../../../core/enums/user_role.dart';
+import '../../../data/models/user_model.dart';
+import '../../../data/models/parent_model.dart';
+import '../../../data/models/chat_room_model.dart';
 import '../../../l10n/app_localizations.dart';
-import 'chat_screen.dart';
-
-/// Mock conversation thread for the list
-class _MockConversationThread {
-  final ChatConversation conversation;
-  final String lastMessage;
-  final String time;
-  final int unreadCount;
-
-  const _MockConversationThread({
-    required this.conversation,
-    required this.lastMessage,
-    required this.time,
-    this.unreadCount = 0,
-  });
-}
+import '../../../shared/providers/patient_provider.dart';
+import '../../../shared/providers/auth_provider.dart';
+import '../view_model/chat_view_model.dart';
+import 'chat_room_screen.dart';
+import '../../ai_helper/view/ai_chat_screen.dart';
+import '../widgets/chat_avatar.dart';
 
 /// ChatsListScreen (Tab 3) - Figma Screen 9
 ///
 /// ListView of conversation threads.
 /// Each item: Avatar (Green Dot online), Name, Last Message, Time, Unread Badge.
 /// FAB: (+) to start new conversation.
-/// Tapping pushes ChatScreen (covers main layout, hides bottom nav).
-class ChatsListScreen extends StatelessWidget {
+/// Tapping pushes ChatRoomScreen.
+class ChatsListScreen extends StatefulWidget {
   const ChatsListScreen({super.key});
+
+  @override
+  State<ChatsListScreen> createState() => _ChatsListScreenState();
+}
+
+class _ChatsListScreenState extends State<ChatsListScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ChatViewModel>().loadChatRooms();
+      final auth = context.read<AuthProvider>();
+      if (auth.currentUser?.role == UserRole.doctor) {
+        context.read<PatientProvider>().fetchPatients();
+      }
+    });
+  }
+
+  List<dynamic> _buildDisplayItems(
+    List<ChatRoomModel> rooms,
+    UserModel currentUser,
+    List<UserModel> patients,
+  ) {
+    final List<dynamic> items = [];
+    final currentUserIdStr = currentUser.id.toString();
+
+    if (currentUser.role == UserRole.doctor) {
+      // For Doctors: Show active chats, but also show connected patients who haven't started a chat yet
+      final activePatientIds = rooms.map((r) => r.getOtherParticipantId(currentUserIdStr)).toList();
+      
+      // 1. Active Chats
+      items.addAll(rooms);
+      
+      // 2. Add AI Bot (optional but good for consistency)
+      items.add('AI_BOT');
+      
+      // 3. Connected patients not yet in active chats
+      for (final patient in patients) {
+        if (!activePatientIds.contains(patient.id.toString())) {
+          items.add(patient);
+        }
+      }
+    } else {
+      // For Parents: Primary Doctor -> AI Bot -> Others
+      final parent = currentUser is ParentModel ? currentUser : null;
+      final connectedDoctorIds = parent?.connectedDoctorIds ?? [];
+      
+      // Separate doctor rooms from others
+      final doctorRooms = <ChatRoomModel>[];
+      final otherRooms = <ChatRoomModel>[];
+      
+      for (final room in rooms) {
+        final otherId = room.getOtherParticipantId(currentUserIdStr);
+        if (connectedDoctorIds.contains(otherId)) {
+          doctorRooms.add(room);
+        } else {
+          otherRooms.add(room);
+        }
+      }
+      
+      // 1. Doctor Chats
+      items.addAll(doctorRooms);
+      
+      // 2. AI Bot (Always second or first if no doctor chat)
+      items.insert(items.length >= 1 ? 1 : 0, 'AI_BOT');
+      
+      // 3. Other Chats
+      items.addAll(otherRooms);
+      
+      // 4. Also show connected doctors who haven't chatted yet (if any)
+      // Note: We don't have full doctor models here typically, 
+      // but if we did, we would add them.
+    }
+
+    return items;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,37 +128,56 @@ class ChatsListScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: _mockThreads.isEmpty
-          ? _buildEmptyState(l10n, theme)
-          : ListView.separated(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: _mockThreads.length,
-              separatorBuilder: (_, __) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 72),
-                child: Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: theme.dividerColor,
-                ),
+      body: Consumer3<ChatViewModel, AuthProvider, PatientProvider>(
+        builder: (context, chatViewModel, authProvider, patientProvider, child) {
+          final currentUser = authProvider.currentUser;
+          if (currentUser == null) return const SizedBox.shrink();
+
+          if (chatViewModel.isLoading && chatViewModel.chatRooms.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final items = _buildDisplayItems(
+            chatViewModel.chatRooms,
+            currentUser,
+            patientProvider.patients,
+          );
+
+          if (items.isEmpty) {
+            return _buildEmptyState(l10n, theme);
+          }
+
+          return ListView.separated(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: items.length,
+            separatorBuilder: (_, __) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 72),
+              child: Divider(
+                height: 1,
+                thickness: 1,
+                color: theme.dividerColor,
               ),
-              itemBuilder: (context, index) {
-                final thread = _mockThreads[index];
-                return _ChatListTile(
-                  thread: thread,
-                  onTap: () {
-                    // Push ChatScreen — covers main layout (hides bottom nav)
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ChatScreen(
-                          conversation: thread.conversation,
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
             ),
+            itemBuilder: (context, index) {
+              final item = items[index];
+
+              if (item is String && item == 'AI_BOT') {
+                return _buildAiChatTile(context, theme, l10n);
+              }
+
+              if (item is ChatRoomModel) {
+                return _buildChatRoomTile(context, item, currentUser, theme);
+              }
+
+              if (item is UserModel) {
+                return _buildUserContactTile(context, item, currentUser, theme);
+              }
+
+              return const SizedBox.shrink();
+            },
+          );
+        },
+      ),
       // FAB: Start new conversation (RTL: bottom-left)
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -115,6 +202,124 @@ class ChatsListScreen extends StatelessWidget {
           child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
         ),
       ),
+    );
+  }
+
+  Widget _buildAiChatTile(
+      BuildContext context, ThemeData theme, AppLocalizations l10n) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          gradient: AppColors.primaryGradient,
+          shape: BoxShape.circle,
+        ),
+        child: Image.asset(
+          'assets/images_from_web/web_bot.png',
+          width: 24,
+          height: 24,
+        ),
+      ),
+      title: Text(l10n.aiHelper, style: AppTextStyles.label),
+      subtitle: const Text('مساعدك الذكي دائم الاستعداد',
+          maxLines: 1, overflow: TextOverflow.ellipsis),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AIChatScreen()),
+        );
+      },
+    );
+  }
+
+  Widget _buildChatRoomTile(BuildContext context, ChatRoomModel room,
+      UserModel currentUser, ThemeData theme) {
+    final otherName = room.getOtherParticipantName(currentUser.id.toString());
+    final otherAvatar = room.getOtherParticipantAvatar(currentUser.id.toString());
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      leading: ChatAvatar(
+        name: otherName,
+        imageUrl: otherAvatar,
+        size: 50,
+      ),
+      title: Text(otherName, style: AppTextStyles.label),
+      subtitle: Text(
+        room.lastMessage ?? 'إبدأ المحادثة الآن',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (room.lastMessageTimestamp != null)
+            Text(
+              "${room.lastMessageTimestamp!.hour}:${room.lastMessageTimestamp!.minute.toString().padLeft(2, '0')}",
+              style: AppTextStyles.caption,
+            ),
+          if (room.getUnreadCount(currentUser.id.toString()) > 0)
+            Container(
+              margin: const EdgeInsets.only(top: 4),
+              padding: const EdgeInsets.all(6),
+              decoration: const BoxDecoration(
+                color: AppColors.primary,
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                room.getUnreadCount(currentUser.id.toString()).toString(),
+                style: const TextStyle(color: Colors.white, fontSize: 10),
+              ),
+            ),
+        ],
+      ),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatRoomScreen(
+              chatRoomId: room.id,
+              otherUserName: otherName,
+              otherUserAvatar: otherAvatar,
+              otherUserId: room.getOtherParticipantId(currentUser.id.toString()),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildUserContactTile(BuildContext context, UserModel user,
+      UserModel currentUser, ThemeData theme) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      leading: ChatAvatar(
+        name: user.name,
+        imageUrl: user.profileImage ?? user.avatarUrl,
+        size: 50,
+      ),
+      title: Text(user.name, style: AppTextStyles.label),
+      subtitle: const Text('بدء محادثة جديدة', style: TextStyle(fontStyle: FontStyle.italic)),
+      onTap: () {
+        // Deterministic chat ID
+        final List<String> ids = [currentUser.id.toString(), user.id.toString()];
+        ids.sort();
+        final String chatRoomId = ids.join('_');
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatRoomScreen(
+              chatRoomId: chatRoomId,
+              otherUserName: user.name,
+              otherUserAvatar: user.profileImage ?? user.avatarUrl,
+              otherUserId: user.id.toString(),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -150,353 +355,140 @@ class ChatsListScreen extends StatelessWidget {
 
   void _showNewChatBottomSheet(
       BuildContext context, ThemeData theme, AppLocalizations l10n) {
+    final patientProvider = context.read<PatientProvider>();
+    final authProvider = context.read<AuthProvider>();
+    final isDoctor = authProvider.currentUser?.role == UserRole.doctor;
+
+    // Load patients if doctor
+    if (isDoctor && patientProvider.patients.isEmpty) {
+      patientProvider.fetchPatients();
+    }
+
+    final List<UserModel> contacts = isDoctor 
+        ? patientProvider.patients 
+        : []; // For parents, maybe show followed users later
+
     showModalBottomSheet(
       context: context,
       backgroundColor: theme.scaffoldBackgroundColor,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
-        final mockContacts = [
-          MockAccounts.getDoctorAccount(),
-          MockAccounts.getParentAccount(),
-        ];
-
-        return SafeArea(
-          child: Directionality(
-            textDirection: TextDirection.rtl,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Premium UI Drag Handle
-                Center(
-                  child: Container(
-                    margin: const EdgeInsets.only(top: 12, bottom: 8),
-                    width: 40,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(10),
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.4,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (_, scrollController) {
+            return SafeArea(
+              child: Directionality(
+                textDirection: TextDirection.rtl,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Premium UI Drag Handle
+                    Center(
+                      child: Container(
+                        margin: const EdgeInsets.only(top: 12, bottom: 8),
+                        width: 40,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
                     ),
-                  ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                      child: Text(
+                        'بدء محادثة جديدة',
+                        style: AppTextStyles.h2
+                            .copyWith(fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    Divider(height: 1, color: theme.dividerColor),
+                    Expanded(
+                      child: contacts.isEmpty
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24.0),
+                                child: Text(
+                                  isDoctor
+                                      ? 'لا يوجد مرضى مرتبطين بعد. أضف مرضى للتمكن من مراسلتهم.'
+                                      : 'لا يوجد جهات اتصال متاحة حالياً.',
+                                  textAlign: TextAlign.center,
+                                  style: AppTextStyles.bodySmall,
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              controller: scrollController,
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              itemCount: contacts.length,
+                              itemBuilder: (context, index) {
+                                final contact = contacts[index];
+                                return _buildContactTile(
+                                  ctx,
+                                  contact,
+                                  authProvider.currentUser?.id.toString() ?? '',
+                                );
+                              },
+                            ),
+                    ),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-                  child: Text(
-                    'بدء محادثة جديدة',
-                    style:
-                        AppTextStyles.h2.copyWith(fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                Divider(height: 1, color: theme.dividerColor),
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: mockContacts.length,
-                    itemBuilder: (context, index) {
-                      final contact = mockContacts[index];
-                      return _buildDoctorContactTile(
-                        ctx,
-                        contact,
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildDoctorContactTile(
-      BuildContext context, Map<String, dynamic> contact) {
-    final theme = Theme.of(context);
-    final name = contact['name'] ?? 'مستخدم';
-    final role = contact['role'] == 'doctor' ? 'طبيب' : 'ولي أمر';
-    final isOnline = true; // Hardcoded mock
-    final id = contact['id'];
-
-    void navigateToProfile() {
-      Navigator.pop(context); // Close BottomSheet
-      Navigator.pushNamed(
-        context,
-        '/profile',
-        arguments: {'userId': id},
-      );
-    }
+  Widget _buildContactTile(
+      BuildContext context, UserModel contact, String currentUserId) {
+    final name = contact.name;
+    final role = contact.role == UserRole.doctor ? 'طبيب' : 'ولي أمر';
+    final id = contact.id.toString();
 
     return Directionality(
-        textDirection: TextDirection.rtl,
-        child: ListTile(
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          leading: GestureDetector(
-            onTap: navigateToProfile,
-            child: Stack(
-              children: [
-                CircleAvatar(
-                  backgroundColor: AppColors.secondary,
-                  child: Text(
-                    name.isNotEmpty ? name[0] : '?',
-                    style: AppTextStyles.h3.copyWith(color: AppColors.primary),
-                  ),
-                ),
-                if (isOnline)
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: AppColors.online,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                            color: theme.scaffoldBackgroundColor, width: 2),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          title: GestureDetector(
-            onTap: navigateToProfile,
-            child: Text(name,
-                style:
-                    AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
-          ),
-          subtitle:
-              Text(role, style: AppTextStyles.caption.copyWith(fontSize: 12)),
-          onTap: () {
-            Navigator.pop(context); // Close sheet
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('جاري فتح محادثة مع $name...')),
-            );
-          },
-        ));
-  }
-}
-
-/// Individual Chat List Tile
-class _ChatListTile extends StatelessWidget {
-  final _MockConversationThread thread;
-  final VoidCallback onTap;
-
-  const _ChatListTile({
-    required this.thread,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final conv = thread.conversation;
-    final hasUnread = thread.unreadCount > 0;
-    final theme = Theme.of(context);
-
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            // ── Avatar + Online Dot ─────────────────────────
-            GestureDetector(
-              onTap: () {
-                if (!conv.isAI) {
-                  final mockUser = DoctorModel(
-                    id: conv.id,
-                    email: 'doctor@demo.com',
-                    name: conv.userName,
-                    createdAt: DateTime.now(),
-                    updatedAt: DateTime.now(),
-                    specialization: 'استشاري النفسية',
-                    licenseNumber: '12345',
-                    yearsOfExperience: 5,
-                  );
-                  Navigator.pushNamed(
-                    context,
-                    RouteNames.profile,
-                    arguments: {'user': mockUser},
-                  );
-                }
-              },
-              child: Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 26,
-                    backgroundColor:
-                        conv.isAI ? AppColors.primary : AppColors.secondary,
-                    child: conv.isAI
-                        ? const Icon(Icons.smart_toy_rounded,
-                            color: Colors.white, size: 26)
-                        : Text(
-                            conv.userName.isNotEmpty ? conv.userName[0] : '?',
-                            style: AppTextStyles.h3.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                  ),
-                  // Green dot online indicator
-                  if (conv.isOnline)
-                    Positioned(
-                      bottom: 1,
-                      right: 1,
-                      child: Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: AppColors.online,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                              color: theme.scaffoldBackgroundColor, width: 2),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 14),
-
-            // ── Content ─────────────────────────────────────
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Name + Time row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          conv.userName,
-                          style: AppTextStyles.label.copyWith(
-                            fontWeight:
-                                hasUnread ? FontWeight.w700 : FontWeight.w600,
-                            color: theme.textTheme.bodyLarge?.color,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Text(
-                        thread.time,
-                        style: AppTextStyles.caption.copyWith(
-                          fontSize: 11,
-                          color: hasUnread
-                              ? AppColors.primary
-                              : theme.textTheme.bodySmall?.color,
-                          fontWeight:
-                              hasUnread ? FontWeight.w600 : FontWeight.normal,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-
-                  // Last message + Unread badge row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          thread.lastMessage,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: hasUnread
-                                ? theme.textTheme.bodyMedium?.color
-                                : theme.textTheme.bodySmall?.color,
-                            fontWeight:
-                                hasUnread ? FontWeight.w500 : FontWeight.normal,
-                          ),
-                        ),
-                      ),
-                      // Unread Badge
-                      if (hasUnread) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            gradient: AppColors.primaryGradient,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            '${thread.unreadCount}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
+      textDirection: TextDirection.rtl,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        leading: ChatAvatar(
+          name: name,
+          imageUrl: contact.avatarUrl,
+          size: 50,
         ),
+        title: Text(name,
+            style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
+        subtitle:
+            Text(role, style: AppTextStyles.caption.copyWith(fontSize: 12)),
+        onTap: () {
+          Navigator.pop(context); // Close sheet
+
+          // Generate a deterministic chat ID based on user IDs
+          final List<String> ids = [currentUserId, id];
+          ids.sort();
+          final String chatRoomId = ids.join('_');
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ChatRoomScreen(
+                chatRoomId: chatRoomId,
+                otherUserName: name,
+                otherUserAvatar: contact.avatarUrl,
+                otherUserId: id,
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 }
-
-// ── Mock Data ─────────────────────────────────────────────────
-// 4 conversations including LUMO AI Assistant
-final List<_MockConversationThread> _mockThreads = [
-  // LUMO AI Assistant (always first)
-  const _MockConversationThread(
-    conversation: ChatConversation(
-      id: 'ai-lumo',
-      userName: 'مساعد LUMO الذكي',
-      isOnline: true,
-      isAI: true,
-    ),
-    lastMessage: 'كيف يمكنني مساعدتك اليوم؟ 🤖',
-    time: '10:02 ص',
-    unreadCount: 1,
-  ),
-
-  // Doctor conversation
-  const _MockConversationThread(
-    conversation: ChatConversation(
-      id: 'conv-1',
-      userName: 'د. أحمد محمد',
-      isOnline: true,
-    ),
-    lastMessage: 'العفو، لا تتردد في التواصل في أي وقت',
-    time: '9:35 ص',
-    unreadCount: 2,
-  ),
-
-  // Parent conversation
-  const _MockConversationThread(
-    conversation: ChatConversation(
-      id: 'conv-2',
-      userName: 'سارة أحمد',
-      isOnline: false,
-    ),
-    lastMessage: 'شكراً لك على المعلومات المفيدة!',
-    time: 'أمس',
-    unreadCount: 0,
-  ),
-
-  // Another doctor
-  const _MockConversationThread(
-    conversation: ChatConversation(
-      id: 'conv-3',
-      userName: 'د. فاطمة علي',
-      isOnline: false,
-    ),
-    lastMessage: 'موعدك القادم يوم الثلاثاء الساعة 10 صباحاً',
-    time: 'الثلاثاء',
-    unreadCount: 0,
-  ),
-];

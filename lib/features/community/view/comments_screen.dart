@@ -3,16 +3,19 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/avatar_widget.dart';
-import '../../../shared/providers/user_provider.dart';
-import '../../../shared/providers/community_provider.dart';
 import '../../../core/router/route_names.dart';
-import '../../../data/models/doctor_model.dart';
-import '../../../data/models/parent_model.dart';
+import '../../../core/utils/date_formatter.dart';
 import 'package:provider/provider.dart';
+import '../view_model/community_view_model.dart';
+import '../../../data/models/comment_model.dart';
+import '../../../shared/providers/auth_provider.dart';
+import '../../../data/models/user_model.dart';
+import '../../../core/enums/user_role.dart';
+
 
 /// CommentsScreen — shows a list of dummy comments + input field.
 class CommentsScreen extends StatefulWidget {
-  final String postId;
+  final int postId;
 
   const CommentsScreen({super.key, required this.postId});
 
@@ -22,71 +25,40 @@ class CommentsScreen extends StatefulWidget {
 
 class _CommentsScreenState extends State<CommentsScreen> {
   final _controller = TextEditingController();
-  final List<_Comment> _comments = [
-    _Comment(
-      authorId: 'doc_sarah',
-      author: 'د. سارة أحمد',
-      text: 'معلومات رائعة ومفيدة جداً، شكراً للمشاركة! 👏',
-      timeAgo: 'منذ ساعة',
-      timestamp: DateTime.now().subtract(const Duration(hours: 1)),
-      isDoctor: true,
-    ),
-    _Comment(
-      authorId: 'parent_mohamed',
-      author: 'محمد خالد',
-      text: 'هل يمكنك مشاركة المزيد من التفاصيل؟',
-      timeAgo: 'منذ ساعتين',
-      timestamp: DateTime.now().subtract(const Duration(hours: 2)),
-      isDoctor: false,
-    ),
-    _Comment(
-      authorId: 'parent_fatima',
-      author: 'فاطمة علي',
-      text: 'تجربة ملهمة، شكراً لك ❤️',
-      timeAgo: 'منذ 3 ساعات',
-      timestamp: DateTime.now().subtract(const Duration(hours: 3)),
-      isDoctor: false,
-    ),
-  ];
+  final _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<CommunityViewModel>().fetchComments(widget.postId);
+    });
+  }
 
   @override
   void dispose() {
     _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
-  void _addComment() {
+  void _addComment() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
-    final userProvider = context.read<UserProvider>();
-    final userName = userProvider.user?.name ?? 'أنت';
-    final userRole = userProvider.user?.role.name ?? 'parent';
-    final isDoctor = userRole == 'doctor';
+    final viewModel = context.read<CommunityViewModel>();
+    final success = await viewModel.addComment(widget.postId, text);
 
-    setState(() {
-      _comments.insert(
-        0,
-        _Comment(
-          authorId: userProvider.user?.id ?? 'mock_id',
-          author: userName,
-          text: text,
-          timeAgo: 'الآن',
-          timestamp: DateTime.now(),
-          isDoctor: isDoctor,
+    if (success && mounted) {
+      _controller.clear();
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(viewModel.errorMessage ?? 'فشل إضافة التعليق'),
+          backgroundColor: AppColors.destructive,
         ),
       );
-    });
-
-    // Update the counter in the main mock feed
-    context.read<CommunityProvider>().addCommentToPost(
-          widget.postId,
-          authorName: userName,
-          content: text,
-          isDoctor: isDoctor,
-        );
-
-    _controller.clear();
+    }
   }
 
   @override
@@ -116,24 +88,79 @@ class _CommentsScreenState extends State<CommentsScreen> {
         children: [
           // ── Comments List ───────────────────────────────────
           Expanded(
-            child: _comments.isEmpty
-                ? Center(
+            child: Consumer<CommunityViewModel>(
+              builder: (context, viewModel, child) {
+                if (viewModel.isLoading && viewModel.comments.isEmpty) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                
+                if (viewModel.comments.isEmpty) {
+                  return Center(
                     child: Text(
                       'لا توجد تعليقات بعد',
                       style: AppTextStyles.body.copyWith(
                         color: AppColors.mutedForeground,
                       ),
                     ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _comments.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final c = _comments[index];
-                      return _CommentTile(comment: c);
-                    },
-                  ),
+                  );
+                }
+
+                // Group comments: top-level + their immediate replies
+                // Note: Currently displaying them in flat list with indentation if it's a reply
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: viewModel.comments.length,
+                  itemBuilder: (context, index) {
+                    final c = viewModel.comments[index];
+                    final isReply = c.isReply;
+                    
+                    return Padding(
+                      padding: EdgeInsetsDirectional.only(
+                        bottom: 12,
+                        start: isReply ? 45.0 : 0.0, // Proper indentation using start
+                      ),
+                      child: _CommentTile(
+                        comment: c,
+                        onReply: () {
+                          viewModel.setReplyingTo(c);
+                          _focusNode.requestFocus();
+                        },
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+
+          // ── Reply Bar ─────────────────────────────────────
+          Consumer<CommunityViewModel>(
+            builder: (context, viewModel, child) {
+              if (viewModel.replyingToComment == null) return const SizedBox.shrink();
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'الرد على ${viewModel.replyingToComment!.userName}',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => viewModel.setReplyingTo(null),
+                      icon: const Icon(Icons.close_rounded, size: 16),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
 
           // ── Input Bar ──────────────────────────────────────
@@ -152,6 +179,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                   Expanded(
                     child: TextField(
                       controller: _controller,
+                      focusNode: _focusNode,
                       textInputAction: TextInputAction.send,
                       onSubmitted: (_) => _addComment(),
                       decoration: InputDecoration(
@@ -180,11 +208,25 @@ class _CommentsScreenState extends State<CommentsScreen> {
                       color: AppColors.primary,
                       shape: BoxShape.circle,
                     ),
-                    child: IconButton(
-                      onPressed: _addComment,
-                      icon: const Icon(Icons.send_rounded,
-                          color: Colors.white, size: 18),
-                      padding: EdgeInsets.zero,
+                    child: Consumer<CommunityViewModel>(
+                      builder: (context, viewModel, child) {
+                        return IconButton(
+                          onPressed: viewModel.isLoading ? null : _addComment,
+                          icon: viewModel.isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
+                                  ),
+                                )
+                              : const Icon(Icons.send_rounded,
+                                  color: Colors.white, size: 18),
+                          padding: EdgeInsets.zero,
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -197,36 +239,21 @@ class _CommentsScreenState extends State<CommentsScreen> {
   }
 }
 
-// ── Comment Data ──────────────────────────────────────────────
-
-class _Comment {
-  final String authorId;
-  final String author;
-  final String text;
-  final String timeAgo;
-  final DateTime timestamp;
-  final bool isDoctor;
-
-  const _Comment({
-    required this.authorId,
-    required this.author,
-    required this.text,
-    required this.timeAgo,
-    required this.timestamp,
-    required this.isDoctor,
-  });
-}
-
-// ── Comment Tile ─────────────────────────────────────────────
-
 class _CommentTile extends StatelessWidget {
-  final _Comment comment;
+  final CommentModel comment;
+  final VoidCallback onReply;
 
-  const _CommentTile({required this.comment});
+  const _CommentTile({required this.comment, required this.onReply});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final authProvider = context.watch<AuthProvider>();
+    final currentUserId = authProvider.currentUser?.id ?? 0;
+    final isLiked = comment.isLikedBy(currentUserId);
+    final viewModel = context.read<CommunityViewModel>();
+    // Note: We don't have isDoctor locally on CommentModel, backend doesn't seem to pass it yet.
+    // For now we assume a fallback or standard icon.
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -241,90 +268,115 @@ class _CommentTile extends StatelessWidget {
             children: [
               AvatarWidget(
                 size: 32,
-                fallbackIcon: comment.isDoctor
-                    ? Icons.medical_services_rounded
-                    : Icons.person_rounded,
-                onTap: () {
-                  final mockUser = comment.isDoctor
-                      ? DoctorModel(
-                          id: comment.authorId,
-                          email: 'doctor@demo.com',
-                          name: comment.author,
-                          createdAt: DateTime.now(),
-                          updatedAt: DateTime.now(),
-                          specialization: 'طب نفسي أطفال',
-                          licenseNumber: '12345',
-                          yearsOfExperience: 5,
-                        )
-                      : ParentModel(
-                          id: comment.authorId,
-                          email: 'parent@demo.com',
-                          name: comment.author,
-                          createdAt: DateTime.now(),
-                          updatedAt: DateTime.now(),
-                          childName: 'طفل',
-                          childAge: 5,
-                        );
-
-                  Navigator.pushNamed(
-                    context,
-                    RouteNames.profile,
-                    arguments: {'user': mockUser},
-                  );
-                },
+                fallbackIcon: Icons.person_rounded, // fallback
+                imageUrl: comment.userAvatarUrl,
+                onTap: () => _navigateToProfile(context, comment),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          comment.author,
-                          style: AppTextStyles.label.copyWith(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
+                child: GestureDetector(
+                  onTap: () => _navigateToProfile(context, comment),
+                  behavior: HitTestBehavior.opaque,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        comment.userName,
+                        style: AppTextStyles.label.copyWith(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
                         ),
-                        if (comment.isDoctor) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 1,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.secondary,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              'طبيب',
-                              style: AppTextStyles.caption.copyWith(
-                                fontSize: 10,
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    Text(
-                      comment.timeAgo,
-                      style: AppTextStyles.caption.copyWith(fontSize: 11),
-                    ),
-                  ],
+                      ),
+                      Text(
+                        DateFormatter.formatRelativeTime(comment.createdAt),
+                        style: AppTextStyles.caption.copyWith(fontSize: 11),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
-            comment.text,
+            comment.content,
             style: AppTextStyles.body.copyWith(fontSize: 13.5),
           ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _CommentActionButton(
+                icon: isLiked ? Icons.favorite_rounded : Icons.favorite_outline_rounded,
+                label: comment.likesCount > 0 ? '${comment.likesCount}' : 'إعجاب',
+                color: isLiked ? Colors.red : AppColors.mutedForeground,
+                onTap: () => viewModel.toggleCommentLike(comment.id, currentUserId),
+              ),
+              const SizedBox(width: 16),
+              _CommentActionButton(
+                icon: Icons.reply_rounded,
+                label: 'رد',
+                color: AppColors.mutedForeground,
+                onTap: onReply,
+              ),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+
+  void _navigateToProfile(BuildContext context, CommentModel comment) {
+    Navigator.pushNamed(
+      context,
+      RouteNames.profile,
+      arguments: {
+        'userId': comment.userId,
+        'user': UserModel(
+          id: comment.userId,
+          name: comment.userName,
+          avatarUrl: comment.userAvatarUrl,
+          email: '',
+          role: UserRole.parent,
+        ),
+      },
+    );
+  }
+}
+
+class _CommentActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _CommentActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+        child: Row(
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: AppTextStyles.caption.copyWith(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -7,8 +7,8 @@ import '../../../core/enums/user_role.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/mixins/form_validation_mixin.dart';
-import '../../../data/repositories/auth_repository.dart';
-import '../../../core/di/dependency_injection.dart';
+import '../../../shared/providers/auth_provider.dart';
+import 'package:provider/provider.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 
@@ -114,50 +114,45 @@ class _SignupScreenState extends State<SignupScreen> with FormValidationMixin {
     setState(() => _isLoading = true);
 
     try {
-      final authRepo = getIt<AuthRepository>();
+      final authProvider = context.read<AuthProvider>();
 
-      await authRepo.signUp(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
+      final success = await authProvider.register(
         name: _nameController.text.trim(),
-        role: _selectedRole,
-        phone: _phoneController.text.trim().isEmpty
-            ? null
-            : _phoneController.text.trim(),
+        email: _emailController.text.trim(),
+        phone: _phoneController.text.trim(),
+        password: _passwordController.text,
+        passwordConfirmation: _confirmPasswordController.text,
+        role: _selectedRole.isParent ? 'patient' : 'doctor',
         childName:
             _selectedRole.isParent ? _childNameController.text.trim() : null,
         childAge: _selectedRole.isParent
             ? int.tryParse(_childAgeController.text)
             : null,
-        childPhoto: _selectedRole.isParent ? _childImage : null,
-        profilePhoto: _userImage,
-        specialization: _selectedRole.isDoctor
-            ? _specializationController.text.trim()
-            : null,
-        licenseNumber: _selectedRole.isDoctor
+        doctorNumber: _selectedRole.isDoctor
             ? _licenseNumberController.text.trim()
             : null,
-        yearsOfExperience: _selectedRole.isDoctor
-            ? int.tryParse(_experienceController.text)
+        clinicLocation: _selectedRole.isDoctor
+            ? _specializationController.text.trim()
             : null,
       );
 
       if (!mounted) return;
 
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        RouteNames.mainLayout,
-        (route) => false,
-      );
+      if (success) {
+        if (!mounted) return;
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          RouteNames.mainLayout,
+          (route) => false,
+        );
+      } else {
+        if (!mounted) return;
+        _showErrorSnackBar(authProvider.errorMessage ?? 'فشل إنشاء الحساب');
+      }
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString()),
-          backgroundColor: AppColors.destructive,
-        ),
-      );
+      _showErrorSnackBar(e.toString());
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -414,6 +409,7 @@ class _SignupScreenState extends State<SignupScreen> with FormValidationMixin {
                     label: 'رقم الطبيب / الترخيص',
                     hint: 'أدخل رقم الطبيب',
                     prefixIcon: Icons.credit_card_outlined,
+                    keyboardType: TextInputType.number,
                     validator: validateLicenseNumber,
                   ),
                   const SizedBox(height: 20),
@@ -460,6 +456,30 @@ class _SignupScreenState extends State<SignupScreen> with FormValidationMixin {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.destructive,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 4),
       ),
     );
   }

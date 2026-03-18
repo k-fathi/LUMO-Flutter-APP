@@ -8,14 +8,10 @@ import '../../../data/repositories/profile_repository.dart';
 import '../../../shared/providers/auth_provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../community/view/community_screen.dart';
-import '../../community/view_model/community_view_model.dart';
 import '../../chat/view/chats_list_screen.dart';
 import '../../chat/view/chatbot_screen.dart';
-import '../../chat/view_model/chat_view_model.dart';
-import '../../ai_helper/view_model/ai_view_model.dart';
 import '../../analysis/view/parent_analysis_screen.dart';
 import '../../analysis/view/doctor_patients_screen.dart';
-import '../../analysis/view_model/analysis_view_model.dart';
 import '../../profile/view/profile_screen.dart';
 
 class MainLayout extends StatefulWidget {
@@ -56,24 +52,8 @@ class _MainLayoutState extends State<MainLayout> {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider<CommunityViewModel>(
-          create: (_) => getIt<CommunityViewModel>(),
-        ),
-        ChangeNotifierProvider<ChatViewModel>(
-          create: (_) => getIt<ChatViewModel>(),
-        ),
-        ChangeNotifierProvider<AIViewModel>(
-          create: (_) => getIt<AIViewModel>(),
-        ),
-        ChangeNotifierProvider<AnalysisViewModel>(
-          create: (_) => getIt<AnalysisViewModel>(),
-        ),
-        Provider<ProfileRepository>.value(
-          value: getIt<ProfileRepository>(),
-        ),
-      ],
+    return Provider<ProfileRepository>.value(
+      value: getIt<ProfileRepository>(),
       child: Scaffold(
         body: IndexedStack(
           index: _currentIndex,

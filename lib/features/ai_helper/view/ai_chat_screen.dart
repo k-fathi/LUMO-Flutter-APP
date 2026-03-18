@@ -25,7 +25,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
     super.initState();
     _viewModel = context.read<AIViewModel>();
     final authProvider = context.read<AuthProvider>();
-    final userId = authProvider.currentUser?.id ?? '';
+    final userId = authProvider.currentUser?.id ?? 0;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _viewModel.loadChatHistory(userId);
     });
@@ -55,7 +55,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
     if (message.isEmpty) return;
 
     final authProvider = context.read<AuthProvider>();
-    final userId = authProvider.currentUser?.id ?? '';
+    final userId = authProvider.currentUser?.id ?? 0;
 
     _messageController.clear();
 
@@ -128,7 +128,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
                           'Your AI Assistant.',
                           style: TextStyle(
                             fontSize: 16,
-                            color: const Color(0xFF2196F3).withValues(alpha: 0.8),
+                            color:
+                                const Color(0xFF2196F3).withValues(alpha: 0.8),
                           ),
                         ),
                       ],
@@ -239,7 +240,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
           TextButton(
             onPressed: () {
               final authProvider = context.read<AuthProvider>();
-              final userId = authProvider.currentUser?.id ?? '';
+              final userId = authProvider.currentUser?.id ?? 0;
               _viewModel.clearChatHistory(userId);
               Navigator.pop(context);
             },

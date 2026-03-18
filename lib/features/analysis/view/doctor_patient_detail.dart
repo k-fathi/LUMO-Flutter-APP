@@ -3,12 +3,12 @@ import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/enums/child_state.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/custom_app_bar.dart';
 import '../../../shared/widgets/empty_state.dart';
-import '../../../shared/providers/auth_provider.dart';
+import '../../../shared/providers/patient_provider.dart';
 import '../view_model/analysis_view_model.dart';
+import '../../session/models/session_part.dart';
 import 'analysis_card_widget.dart';
 import 'session_config_bottom_sheet.dart';
 
@@ -50,7 +50,7 @@ class SessionAnalysisData {
 }
 
 class DoctorPatientDetail extends StatefulWidget {
-  final String parentId;
+  final int parentId;
   final String parentName;
   final String childName;
 
@@ -74,46 +74,157 @@ class _DoctorPatientDetailState extends State<DoctorPatientDetail> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: CustomAppBar(title: widget.childName),
+      appBar: CustomAppBar(
+        title: widget.childName,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_remove_rounded, color: AppColors.destructive),
+            tooltip: 'إلغاء ربط المريض',
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (ctx) => Dialog(
+                  backgroundColor: Colors.transparent,
+                  insetPadding: const EdgeInsets.symmetric(horizontal: 40),
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Theme.of(ctx).cardColor,
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.destructive.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.person_remove_rounded,
+                            color: AppColors.destructive,
+                            size: 32,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'إلغاء ربط المريض',
+                          style: AppTextStyles.h3.copyWith(
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Cairo',
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'هل أنت متأكد أنك تريد إلغاء ربط المريض ${widget.childName}؟ سيتم إزالته من قائمة مرضاك.',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: Theme.of(ctx).textTheme.bodySmall?.color,
+                            fontFamily: 'Cairo',
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text(
+                                  'تراجع',
+                                  style: TextStyle(
+                                    color: Theme.of(ctx).textTheme.bodyLarge?.color,
+                                    fontFamily: 'Cairo',
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  Navigator.pop(ctx);
+                                  try {
+                                    await context.read<PatientProvider>().disconnectPatient(widget.parentId);
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('تم إلغاء ربط المريض بنجاح', style: TextStyle(fontFamily: 'Cairo')),
+                                          backgroundColor: Colors.green,
+                                          behavior: SnackBarBehavior.floating,
+                                        ),
+                                      );
+                                      Navigator.pop(context); // Go back to patients list
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(context.read<PatientProvider>().error ?? 'فشل إلغاء الربط', style: const TextStyle(fontFamily: 'Cairo')),
+                                          backgroundColor: AppColors.destructive,
+                                          behavior: SnackBarBehavior.floating,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.destructive,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'إلغاء الربط',
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           SessionConfigBottomSheet.show(
             context,
-            onSubmit: (gamesDuration, storiesDuration) {
-              final authProvider = context.read<AuthProvider>();
-              final currentUser = authProvider.currentUser;
-              final viewModel = context.read<AnalysisViewModel>();
-
+            receiverId: widget.parentId,
+            onSubmit: (List<SessionPart> parts) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'جاري إرسال إعدادات الجلسة للروبوت (ألعاب: ${gamesDuration.toInt()}د، قصص: ${storiesDuration.toInt()}د)...',
-                    style: const TextStyle(fontFamily: 'Cairo'),
-                  ),
+                const SnackBar(
+                  content: Text('جاري بدء الجلسة...', style: TextStyle(fontFamily: 'Cairo')),
                   backgroundColor: AppColors.primary,
                   behavior: SnackBarBehavior.floating,
                 ),
               );
-
-              Future.delayed(const Duration(seconds: 2), () async {
-                if (!context.mounted) return;
-
-                setState(() {
-                  hasSessionData = true;
-                });
-
-                if (currentUser == null) return;
-
-                await viewModel.createAnalysis(
-                  parentId: widget.parentId,
-                  parentName: widget.parentName,
-                  childName: widget.childName,
-                  doctorId: currentUser.id,
-                  doctorName: currentUser.name,
-                  currentState: ChildState.good,
-                  notes: "جلسة #1 - تقييم الروبوت التلقائي",
-                );
-              });
             },
           );
         },

@@ -11,7 +11,7 @@ class ParentModel extends UserModel {
   final String? address;
   final List<String> allergies;
   final List<String> medications;
-  final String? childPhotoUrl; // Added
+  final String? childPhotoUrl;
 
   const ParentModel({
     required super.id,
@@ -20,8 +20,8 @@ class ParentModel extends UserModel {
     super.avatarUrl,
     super.bio,
     super.phone,
-    required super.createdAt,
-    required super.updatedAt,
+    super.createdAt,
+    super.updatedAt,
     super.followersCount,
     super.followingCount,
     super.isVerified,
@@ -41,37 +41,48 @@ class ParentModel extends UserModel {
   // Factory constructor from JSON
   factory ParentModel.fromJson(Map<String, dynamic> json) {
     return ParentModel(
-      id: json['id'] as String,
-      email: json['email'] as String,
-      name: json['name'] as String,
-      avatarUrl: json['avatar_url'] as String?,
-      bio: json['bio'] as String?,
-      phone: json['phone'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
-      followersCount: json['followers_count'] as int? ?? 0,
-      followingCount: json['following_count'] as int? ?? 0,
-      isVerified: json['is_verified'] as bool? ?? false,
-      isActive: json['is_active'] as bool? ?? true,
-      childName: json['child_name'] as String,
-      childAge: json['child_age'] as int,
-      childGender: json['child_gender'] as String?,
-      childMedicalCondition: json['child_medical_condition'] as String?,
+      id: json['id'] is int
+          ? json['id']
+          : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      email: json['email']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      avatarUrl:
+          json['avatar_url']?.toString() ?? json['profile_image']?.toString(),
+      bio: json['bio']?.toString(),
+      phone: json['phone']?.toString(),
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString())
+          : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'].toString())
+          : null,
+      followersCount:
+          int.tryParse(json['followers_count']?.toString() ?? '') ?? 0,
+      followingCount:
+          int.tryParse(json['following_count']?.toString() ?? '') ?? 0,
+      isVerified: json['is_verified'] == true || json['is_verified'] == 1,
+      isActive: json['is_active'] == true ||
+          json['is_active'] == 1 ||
+          json['is_active'] == null,
+      childName: json['child_name']?.toString() ?? '',
+      childAge: int.tryParse(json['child_age']?.toString() ?? '') ?? 0,
+      childGender: json['child_gender']?.toString(),
+      childMedicalCondition: json['child_medical_condition']?.toString(),
       connectedDoctorIds: (json['connected_doctor_ids'] as List<dynamic>?)
-              ?.map((e) => e as String)
+              ?.map((e) => e.toString())
               .toList() ??
           [],
-      emergencyContact: json['emergency_contact'] as String?,
-      address: json['address'] as String?,
+      emergencyContact: json['emergency_contact']?.toString(),
+      address: json['address']?.toString(),
       allergies: (json['allergies'] as List<dynamic>?)
-              ?.map((e) => e as String)
+              ?.map((e) => e.toString())
               .toList() ??
           [],
       medications: (json['medications'] as List<dynamic>?)
-              ?.map((e) => e as String)
+              ?.map((e) => e.toString())
               .toList() ??
           [],
-      childPhotoUrl: json['child_photo_url'] as String?,
+      childPhotoUrl: json['child_photo_url']?.toString(),
     );
   }
 
@@ -97,7 +108,7 @@ class ParentModel extends UserModel {
   // CopyWith method
   @override
   ParentModel copyWith({
-    String? id,
+    int? id,
     String? email,
     String? name,
     UserRole? role,

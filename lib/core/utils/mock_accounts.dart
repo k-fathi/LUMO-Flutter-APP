@@ -20,7 +20,7 @@ class MockAccounts {
   static Map<String, dynamic> getDoctorAccount() {
     final now = DateTime.now();
     return {
-      'id': 'mock-doctor-001',
+      'id': 1001,
       'email': 'doctor@test.com',
       'name': 'د. أحمد محمد',
       'role': 'doctor',
@@ -51,7 +51,7 @@ class MockAccounts {
   static Map<String, dynamic> getParentAccount() {
     final now = DateTime.now();
     return {
-      'id': 'mock-parent-001',
+      'id': 2001,
       'email': 'user@test.com',
       'name': 'فاطمة علي',
       'role': 'parent',

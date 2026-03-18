@@ -18,7 +18,7 @@ class AIViewModel extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   // Load chat history
-  Future<void> loadChatHistory(String userId) async {
+  Future<void> loadChatHistory(int userId) async {
     try {
       final history = await _aiRepository.getChatHistory(userId);
       _messages.clear();
@@ -28,7 +28,7 @@ class AIViewModel extends ChangeNotifier {
         _messages.add(
           AIMessageModel(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
-            userId: 'ai',
+            userId: 0,
             content:
                 'مرحباً! أنا مساعد Lumo AI الذكي. يمكنني مساعدتك في الإجابة عن أسئلتك المتعلقة بصحة الأطفال والرعاية الطبية. كيف يمكنني مساعدتك اليوم؟',
             isUser: false,
@@ -46,7 +46,7 @@ class AIViewModel extends ChangeNotifier {
   }
 
   // Send message
-  Future<void> sendMessage(String userId, String content) async {
+  Future<void> sendMessage(int userId, String content) async {
     if (content.trim().isEmpty) return;
 
     // Add user message
@@ -63,7 +63,7 @@ class AIViewModel extends ChangeNotifier {
     // Add loading message
     final loadingMessage = AIMessageModel(
       id: '${DateTime.now().millisecondsSinceEpoch + 1}',
-      userId: 'ai',
+      userId: 0,
       content: '',
       isUser: false,
       timestamp: DateTime.now(),
@@ -94,7 +94,7 @@ class AIViewModel extends ChangeNotifier {
       // Add error message
       final errorMessage = AIMessageModel(
         id: '${DateTime.now().millisecondsSinceEpoch + 2}',
-        userId: 'ai',
+        userId: 0,
         content: '',
         isUser: false,
         timestamp: DateTime.now(),
@@ -108,7 +108,7 @@ class AIViewModel extends ChangeNotifier {
   }
 
   // Clear chat history
-  Future<void> clearChatHistory(String userId) async {
+  Future<void> clearChatHistory(int userId) async {
     await _aiRepository.clearChatHistory(userId);
     _messages.clear();
     await loadChatHistory(userId); // Add welcome message again

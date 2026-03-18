@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 import '../../features/splash/view/splash_screen.dart';
 import '../../features/onboarding/view/onboarding_screen.dart';
 import '../../data/models/user_model.dart';
+import '../../data/models/post_model.dart';
 import '../../features/loading/view/loading_screen.dart';
 import '../../features/auth/view/role_selection_screen.dart';
 import '../../features/auth/view/login_screen.dart';
 import '../../features/auth/view/signup_screen.dart';
 import '../../features/auth/view/forgot_password_screen.dart';
+import '../../features/auth/view/otp_verification_screen.dart';
+import '../../features/auth/view/reset_password_screen.dart';
 import '../../features/home/view/main_layout.dart';
 import '../../features/community/view/create_post_screen.dart';
 import '../../features/community/view/post_detail_screen.dart';
@@ -34,6 +37,8 @@ import '../../core/di/dependency_injection.dart';
 import '../../features/home/view_model/home_view_model.dart';
 import '../../features/analysis/view_model/analysis_view_model.dart';
 import '../../features/chat/view_model/chat_view_model.dart';
+import '../../features/profile/view_model/profile_view_model.dart';
+
 
 class AppRoutes {
   const AppRoutes._();
@@ -70,6 +75,24 @@ class AppRoutes {
       case RouteNames.forgotPassword:
         return RouteTransitions.slideBottom(const ForgotPasswordScreen());
 
+      case RouteNames.otpVerification:
+        final args = settings.arguments as Map<String, dynamic>;
+        return RouteTransitions.slideRight(
+          OtpVerificationScreen(
+            phone: args['phone'] as String,
+            isPasswordReset: args['isPasswordReset'] as bool? ?? false,
+          ),
+        );
+
+      case RouteNames.resetPassword:
+        final args = settings.arguments as Map<String, dynamic>;
+        return RouteTransitions.slideRight(
+          ResetPasswordScreen(
+            phone: args['phone'] as String,
+            otp: args['otp'] as String,
+          ),
+        );
+
       // ==================== MAIN APP ====================
       case RouteNames.mainLayout:
         return RouteTransitions.fade(
@@ -86,11 +109,22 @@ class AppRoutes {
       case RouteNames.editPost:
         final args = settings.arguments as Map<String, dynamic>?;
         return RouteTransitions.slideBottom(
-            CreatePostScreen(initialPost: args));
+          CreatePostScreen(
+            postId: args?['id'] as int?,
+            initialContent: args?['content'] as String?,
+            initialImageUrl: args?['imageUrl'] as String?,
+          ),
+        );
 
       case RouteNames.postDetail:
-        final postId = settings.arguments as String;
-        return RouteTransitions.slideRight(PostDetailScreen(postId: postId));
+        final args = settings.arguments;
+        if (args is PostModel) {
+          return RouteTransitions.slideRight(
+              PostDetailScreen(postId: args.id, initialPost: args));
+        } else {
+          final postId = args as int;
+          return RouteTransitions.slideRight(PostDetailScreen(postId: postId));
+        }
 
       // ==================== CHAT ====================
       case RouteNames.chatsList:
@@ -113,14 +147,20 @@ class AppRoutes {
             ),
           ),
         );
+      
 
-      // ==================== AI HELPER ====================
+// ==================== AI HELPER ====================
       case RouteNames.aiChat:
         return RouteTransitions.slideRight(const AIChatScreen());
 
       // ==================== ANALYSIS ====================
       case RouteNames.parentAnalysis:
-        return RouteTransitions.slideRight(const ParentAnalysisScreen());
+        return RouteTransitions.slideRight(
+          ChangeNotifierProvider(
+            create: (_) => getIt<AnalysisViewModel>(),
+            child: const ParentAnalysisScreen(),
+          ),
+        );
 
       case RouteNames.doctorPatients:
         return RouteTransitions.slideRight(const DoctorPatientsScreen());
@@ -131,7 +171,7 @@ class AppRoutes {
           ChangeNotifierProvider(
             create: (_) => getIt<AnalysisViewModel>(),
             child: DoctorPatientDetail(
-              parentId: args['parentId'] as String,
+              parentId: int.tryParse(args['parentId'].toString()) ?? 0,
               parentName: args['parentName'] as String,
               childName: args['childName'] as String,
             ),
@@ -142,9 +182,14 @@ class AppRoutes {
       case RouteNames.profile:
         final args = settings.arguments as Map<String, dynamic>? ?? {};
         return RouteTransitions.slideRight(
-          ProfileScreen(
-            userId: args['userId'] as String?,
-            user: args['user'] as UserModel?,
+          ChangeNotifierProvider(
+            create: (_) => getIt<ProfileViewModel>(),
+            child: ProfileScreen(
+              userId: args['userId'] != null
+                  ? int.tryParse(args['userId'].toString())
+                  : null,
+              user: args['user'] as UserModel?,
+            ),
           ),
         );
 

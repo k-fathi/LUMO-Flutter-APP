@@ -7,51 +7,64 @@ class DioClient {
   final Dio _dio;
 
   DioClient(this._dio) {
-    _dio
-      ..options.baseUrl = ApiConstants.baseUrl
-      ..options.connectTimeout = const Duration(seconds: 30)
-      ..options.receiveTimeout = const Duration(seconds: 30)
-      ..options.responseType = ResponseType.json
-      ..interceptors.add(
-        InterceptorsWrapper(
-          onRequest: (options, handler) async {
-            // Retrieve token and inject into headers
-            final prefs = await SharedPreferences.getInstance();
-            final token = prefs.getString('auth_token');
-            if (token != null) {
-              options.headers['Authorization'] = 'Bearer $token';
-            }
-            return handler.next(options);
-          },
-          onResponse: (response, handler) {
-            return handler.next(response);
-          },
-          onError: (DioException e, handler) {
-            String errorMessage = 'No Internet Connection. Please try again.';
-            if (e.response != null) {
-              final data = e.response!.data;
-              if (data is Map<String, dynamic>) {
-                errorMessage = data['message'] ?? errorMessage;
-              } else {
-                errorMessage = 'Server Error: ${e.response!.statusCode}';
-              }
-            } else if (e.type == DioExceptionType.connectionTimeout) {
-              errorMessage =
-                  'Connection Timeout. Server took too long to respond.';
-            }
+    _dio.options
+      ..baseUrl = ApiConstants.baseUrl
+      ..connectTimeout = const Duration(seconds: 30)
+      ..receiveTimeout = const Duration(seconds: 30)
+      ..responseType = ResponseType.json
+      ..headers.addAll({
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      })
+      ..followRedirects = false
+      ..validateStatus = (status) => status != null && status < 400;
 
-            final customError = DioException(
-              requestOptions: e.requestOptions,
-              response: e.response,
-              type: e.type,
-              error: ApiException(errorMessage,
-                  statusCode: e.response?.statusCode),
-            );
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          // Retrieve token and inject into headers
+          final prefs = await SharedPreferences.getInstance();
+          final token = prefs.getString('auth_token');
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          return handler.next(options);
+        },
+        onResponse: (response, handler) {
+          return handler.next(response);
+        },
+        onError: (DioException e, handler) {
+          ApiException? apiException;
 
-            return handler.next(customError);
-          },
-        ),
-      );
+          if (e.response != null) {
+            final data = e.response!.data;
+            if (data is Map<String, dynamic>) {
+              apiException =
+                  ApiException.fromJson(data, e.response!.statusCode ?? 500);
+            } else {
+              apiException = ApiException(
+                  'Server Error: ${e.response!.statusCode}',
+                  statusCode: e.response!.statusCode);
+            }
+          } else if (e.type == DioExceptionType.connectionTimeout) {
+            apiException = ApiException(
+                'Connection Timeout. Server took too long to respond.');
+          } else {
+            apiException =
+                ApiException('No Internet Connection. Please try again.');
+          }
+
+          final customError = DioException(
+            requestOptions: e.requestOptions,
+            response: e.response,
+            type: e.type,
+            error: apiException,
+          );
+
+          return handler.next(customError);
+        },
+      ),
+    );
   }
 
   // Get Method
