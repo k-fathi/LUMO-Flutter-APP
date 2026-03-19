@@ -8,6 +8,7 @@ import '../view_model/community_view_model.dart';
 import 'posts_feed_widget.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/shimmer_loading.dart';
+import '../../../shared/providers/auth_provider.dart';
 import '../../../l10n/app_localizations.dart';
 
 /// CommunityScreen (Home) - Figma Screen 6
@@ -24,16 +25,40 @@ class CommunityScreen extends StatefulWidget {
   State<CommunityScreen> createState() => _CommunityScreenState();
 }
 
-class _CommunityScreenState extends State<CommunityScreen> {
+class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_handleTabSelection);
+
     // Start fetching data immediately on next frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        context.read<CommunityViewModel>().fetchPosts();
+        final authProvider = context.read<AuthProvider>();
+        context.read<CommunityViewModel>().fetchPosts(
+          userId: authProvider.currentUser?.id
+        );
       }
     });
+  }
+
+  void _handleTabSelection() {
+    if (_tabController.indexIsChanging) return;
+    
+    // If switched to "Following" tab (index 1), refresh it
+    if (_tabController.index == 1) {
+      context.read<CommunityViewModel>().loadFollowingFeed();
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabController.removeListener(_handleTabSelection);
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _handleRefresh() async {
@@ -45,55 +70,50 @@ class _CommunityScreenState extends State<CommunityScreen> {
     ]);
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        body: SafeArea(
-          child: Column(
-            children: [
-              // ── Sticky Header ─────────────────────────────────
-              const CommunityHeader(),
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ── Sticky Header ─────────────────────────────────
+            const CommunityHeader(),
 
-              // ── Tab Bar ───────────────────────────────────────
-              TabBar(
-                labelColor: theme.colorScheme.primary,
-                unselectedLabelColor: theme.textTheme.bodySmall?.color,
-                indicatorColor: theme.colorScheme.primary,
-                tabs: [
-                  Tab(text: l10n.explore),
-                  Tab(text: l10n.following),
-                ],
-              ),
+            // ── Tab Bar ───────────────────────────────────────
+            TabBar(
+              controller: _tabController,
+              labelColor: theme.colorScheme.primary,
+              unselectedLabelColor: theme.textTheme.bodySmall?.color,
+              indicatorColor: theme.colorScheme.primary,
+              tabs: [
+                Tab(text: l10n.explore),
+                Tab(text: l10n.following),
+              ],
+            ),
 
-              // ── Scrollable Feed ───────────────────────────────
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    const _CommunityFeedWrapper(),
-                    RefreshIndicator(
-                      onRefresh: _handleRefresh,
-                      child: Consumer<CommunityViewModel>(
-                        builder: (context, viewModel, child) => PostsFeedWidget(
-                          customPosts: viewModel.followingPosts,
-                        ),
+            // ── Scrollable Feed ───────────────────────────────
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  const _CommunityFeedWrapper(),
+                  RefreshIndicator(
+                    onRefresh: _handleRefresh,
+                    child: Consumer<CommunityViewModel>(
+                      builder: (context, viewModel, child) => PostsFeedWidget(
+                        customPosts: viewModel.followingPosts,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

@@ -144,6 +144,7 @@ class DependencyInjection {
     getIt.registerLazySingleton<CommunityRepository>(
       () => CommunityRepository(
         getIt<CommunityRemoteDataSource>(),
+        getIt<ProfileRepository>(),
       ),
     );
 

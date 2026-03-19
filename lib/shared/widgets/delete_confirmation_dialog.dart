@@ -8,15 +8,15 @@ class DeleteConfirmationDialog extends StatelessWidget {
   final String message;
   final String confirmText;
   final String cancelText;
-  final VoidCallback onConfirm;
-
+  final VoidCallback? onConfirm;
+  
   const DeleteConfirmationDialog({
     super.key,
     required this.title,
     required this.message,
     this.confirmText = 'حذف',
     this.cancelText = 'إلغاء',
-    required this.onConfirm,
+    this.onConfirm,
   });
 
   static Future<bool?> show(
@@ -25,7 +25,7 @@ class DeleteConfirmationDialog extends StatelessWidget {
         required String message,
         String confirmText = 'حذف',
         String cancelText = 'إلغاء',
-        required VoidCallback onConfirm,
+        VoidCallback? onConfirm,
       }) {
     return showDialog<bool>(
       context: context,
@@ -64,7 +64,7 @@ class DeleteConfirmationDialog extends StatelessWidget {
           text: confirmText,
           type: AppButtonType.destructive,
           onPressed: () {
-            onConfirm();
+            if (onConfirm != null) onConfirm!();
             Navigator.pop(context, true);
           },
           isFullWidth: false,

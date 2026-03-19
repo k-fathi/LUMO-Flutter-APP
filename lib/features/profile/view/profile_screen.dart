@@ -28,7 +28,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  bool _isFollowing = false;
   int _followersCount = 0;
   int _followingCount = 0;
 
@@ -49,7 +48,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               setState(() {
                 _followersCount = profileVM.user?.followersCount ?? 0;
                 _followingCount = profileVM.user?.followingCount ?? 0;
-                _isFollowing = commViewModel.isFollowing(targetUserId);
               });
             }
           }
@@ -65,6 +63,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final profileViewModel = context.watch<ProfileViewModel>();
     final currentUser = authProvider.currentUser;
     
+    final targetUserId = widget.userId ?? widget.user?.id;
     final isMyProfile = (widget.user == null && widget.userId == null) ||
         widget.userId == currentUser?.id ||
         widget.user?.id == currentUser?.id;
@@ -74,6 +73,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final myPosts = communityViewModel.myPosts;
+
+    // Use ViewModel counters as reality, Fallback to local state during optimistic updates
+    final followersShow = (profileViewModel.isLoading) ? _followersCount : (profileViewModel.user?.followersCount ?? _followersCount);
+    final followingShow = (profileViewModel.isLoading) ? _followingCount : (profileViewModel.user?.followingCount ?? _followingCount);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -102,7 +105,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () {
-                        final targetUserId = widget.userId ?? widget.user?.id;
                         if (targetUserId != null) {
                           context.read<ProfileViewModel>().loadProfile(targetUserId);
                         }
@@ -121,7 +123,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           return RefreshIndicator(
             onRefresh: () async {
-              final targetUserId = widget.userId ?? widget.user?.id;
               if (targetUserId != null) {
                 await context.read<ProfileViewModel>().loadProfile(targetUserId);
               }
@@ -136,31 +137,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 role: isDoctor ? l10n.roleDoctor : l10n.roleParent,
                 isDoctor: isDoctor,
                 photoUrl: user?.avatarUrl,
-                followers: _followersCount,
-                following: _followingCount,
+                followers: followersShow,
+                following: followingShow,
                 isMyProfile: isMyProfile,
-                isFollowing: _isFollowing,
-                onToggleFollow: () {
-                  final targetUserId = widget.userId ?? widget.user?.id;
-                  if (targetUserId != null) {
-                    context
-                        .read<CommunityViewModel>()
-                        .toggleFollow(targetUserId);
-                    if (!_isFollowing) {
-                      context.read<NotificationProvider>().sendFollowNotification(
-                            targetUserId: targetUserId,
-                            followerName:
-                                context.read<AuthProvider>().currentUser?.name ??
-                                    '',
-                          );
-                      setState(() {
-                        _isFollowing = true;
+                isFollowing: targetUserId != null && communityViewModel.isFollowing(targetUserId),
+                onToggleFollow: () async {
+                  final currentUserId = context.read<AuthProvider>().currentUser?.id;
+                  if (targetUserId != null && currentUserId != null) {
+                    final wasFollowing = communityViewModel.isFollowing(targetUserId);
+                    
+                    // Optimistic UI update for count
+                    setState(() {
+                      if (!wasFollowing) {
                         _followersCount++;
-                      });
-                    } else {
-                      setState(() {
-                        _isFollowing = false;
+                      } else {
                         _followersCount = (_followersCount > 0) ? _followersCount - 1 : 0;
+                      }
+                    });
+
+                    try {
+                      await context.read<CommunityViewModel>().toggleFollow(
+                        targetUserId, 
+                        currentUserId: currentUserId
+                      );
+                      
+                      // Notify and Sync Count
+                      if (!wasFollowing) {
+                        context.read<NotificationProvider>().sendFollowNotification(
+                          targetUserId: targetUserId,
+                          followerName: context.read<AuthProvider>().currentUser?.name ?? '',
+                        );
+                      }
+                      
+                      // Final sync with backend for actual counts
+                      if (mounted) {
+                        context.read<ProfileViewModel>().loadProfile(targetUserId);
+                      }
+                    } catch (e) {
+                      // Revert on failure
+                      setState(() {
+                        if (!wasFollowing) {
+                          _followersCount--;
+                        } else {
+                          _followersCount++;
+                        }
                       });
                     }
                   }

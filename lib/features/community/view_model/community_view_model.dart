@@ -49,19 +49,35 @@ class CommunityViewModel extends ChangeNotifier {
   }
 
   // Fetch all posts/feeds
-  Future<void> fetchPosts({bool force = false}) async {
-    // We can still use the user-aware logic if we want, or just always fetch
-    // For Bug 1, simplicity is key, but let's keep the user check if possible
-    // Wait, the user's snippet for fetchPosts is simple.
-    
+  Future<void> fetchPosts({bool force = false, int? userId}) async {
+    // 1. Check for User Change
+    if (userId != null && userId != _currentUserId) {
+      _currentUserId = userId;
+      _isInitialized = false;
+      _posts = [];
+      _followingPosts = [];
+      _myPosts = [];
+      force = true; // Force reload for new user
+    } else if (userId != null) {
+      _currentUserId = userId;
+    }
+
+    // 2. If already initialized and not forcing, don't show full loading again
+    if (_isInitialized && !force && _posts.isNotEmpty) {
+      // Background refresh
+      _loadAllFeeds(rethrowError: false);
+      return;
+    }
+
+    // Ensure _isInitialized is false if we are here and force is true
+    if (force) _isInitialized = false;
+
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      await loadHomeFeed(page: 1, rethrowError: true);
-      await loadFollowingFeed(page: 1, rethrowError: true);
-      await loadMyPosts(page: 1, rethrowError: true);
+      await _loadAllFeeds(rethrowError: true);
       _isInitialized = true;
     } catch (e) {
       _errorMessage = 'فشل تحميل المنشورات: ${e.toString()}';
@@ -71,14 +87,68 @@ class CommunityViewModel extends ChangeNotifier {
     }
   }
 
+  // Helper to load all feeds without individual loading states
+  Future<void> _loadAllFeeds({bool rethrowError = false}) async {
+    try {
+      // 1. Load my posts first so they are available for merging into home feed
+      await _loadMyPostsInternal(page: 1);
+      
+      // 2. Load other feeds in parallel
+      await Future.wait([
+        _loadHomeFeedInternal(page: 1),
+        _loadFollowingFeedInternal(page: 1),
+      ]);
+    } catch (e) {
+      if (rethrowError) rethrow;
+    }
+  }
+
+  // Internal versions that don't trigger global loading state
+  Future<void> _loadHomeFeedInternal({int page = 1}) async {
+    final feed = await _repository.getHomeFeed(page: page);
+    if (page == 1) {
+      final List<PostModel> merged = [...feed];
+      for (var myPost in _myPosts) {
+        if (!merged.any((p) => p.id == myPost.id)) {
+          merged.insert(0, myPost);
+        }
+      }
+      _posts = merged;
+    } else {
+      _posts.addAll(feed);
+    }
+  }
+
+  Future<void> _loadFollowingFeedInternal({int page = 1}) async {
+    final followingUsers = await _repository.getFollowingUsers();
+    _followedUserIds = followingUsers.map((u) => u.id).toList();
+
+    final feed = await _repository.getHomeFeed(page: page);
+    final followingOnly = feed
+        .where((post) =>
+            _followedUserIds.contains(post.userId) ||
+            (_currentUserId != null && post.userId == _currentUserId))
+        .toList();
+
+    if (page == 1) {
+      _followingPosts = followingOnly;
+    } else {
+      _followingPosts.addAll(followingOnly);
+    }
+  }
+
+  Future<void> _loadMyPostsInternal({int page = 1}) async {
+    final posts = await _repository.getMyPosts(page: page);
+    if (page == 1) {
+      _myPosts = posts;
+    } else {
+      _myPosts.addAll(posts);
+    }
+  }
+
   // Legacy alias for compatibility if needed
   Future<void> initCommunity(int? userId, {bool force = false}) async {
-    if (userId != _currentUserId) {
-      _isInitialized = false;
-      _posts = [];
-      _currentUserId = userId;
-    }
-    return fetchPosts(force: force);
+    return fetchPosts(force: force, userId: userId);
   }
 
   // Load home feed
@@ -88,20 +158,7 @@ class CommunityViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final feed = await _repository.getHomeFeed(page: page);
-      
-      if (page == 1) {
-        // Merge with myPosts that might not be in the feed yet (e.g. recently created)
-        final List<PostModel> merged = [...feed];
-        for (var myPost in _myPosts) {
-          if (!merged.any((p) => p.id == myPost.id)) {
-            merged.insert(0, myPost);
-          }
-        }
-        _posts = merged;
-      } else {
-        _posts.addAll(feed);
-      }
+      await _loadHomeFeedInternal(page: page);
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -119,23 +176,7 @@ class CommunityViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // 1. Fetch users the current user follows
-      final followingUsers = await _repository.getFollowingUsers();
-      _followedUserIds = followingUsers.map((u) => u.id).toList();
-
-      // 2. Fetch all posts (Discover) and filter by followed users
-      final feed = await _repository.getHomeFeed(page: page);
-
-      final followingOnly = feed
-          .where((post) => _followedUserIds.contains(post.userId) || (_currentUserId != null && post.userId == _currentUserId))
-          .toList();
-
-      if (page == 1) {
-        _followingPosts = followingOnly;
-      } else {
-        _followingPosts.addAll(followingOnly);
-      }
-
+      await _loadFollowingFeedInternal(page: page);
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -153,12 +194,7 @@ class CommunityViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final posts = await _repository.getMyPosts(page: page);
-      if (page == 1) {
-        _myPosts = posts;
-      } else {
-        _myPosts.addAll(posts);
-      }
+      await _loadMyPostsInternal(page: page);
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -196,10 +232,8 @@ class CommunityViewModel extends ChangeNotifier {
       _posts.insert(0, post);
       _myPosts.insert(0, post);
 
-      // Also add to following if appropriate (the user follows themselves concept)
-      if (_followedUserIds.contains(post.userId)) {
-        _followingPosts.insert(0, post);
-      }
+      // Also add to following feed (which includes own posts)
+      _followingPosts.insert(0, post);
 
       return true;
     } catch (e) {
@@ -250,11 +284,10 @@ class CommunityViewModel extends ChangeNotifier {
   }
   // Toggle Like - Bug 2
   Future<void> toggleLike(int postId) async {
-    // 1. Find the post
-    final index = _posts.indexWhere((p) => p.id == postId);
-    if (index == -1) return;
+    // 1. Find the post in any list
+    PostModel? post = findPostById(postId);
+    if (post == null) return;
 
-    final post = _posts[index];
     final wasLiked = post.isLiked;
 
     // 2. Optimistic update — flip immediately in UI
@@ -402,23 +435,28 @@ class CommunityViewModel extends ChangeNotifier {
   }
 
   // Social
-  Future<void> toggleFollow(int userId) async {
+  Future<void> toggleFollow(int userId, {int? currentUserId}) async {
+    final isFollowing = _followedUserIds.contains(userId);
     try {
-      // Optimistic update
-      if (_followedUserIds.contains(userId)) {
+      // 1. Optimistic update for local list
+      if (isFollowing) {
         _followedUserIds.remove(userId);
       } else {
         _followedUserIds.add(userId);
       }
       notifyListeners();
 
-      await _repository.toggleFollow(userId);
+      // 2. Call REST API (with Firebase sync if currentUserId is provided)
+      await _repository.toggleFollow(userId, currentUserId: currentUserId);
+
+      // 3. Background refresh of following feed to ensure UI consistency
+      _loadFollowingFeedInternal(page: 1);
     } catch (e) {
       // Revert optimistic update
-      if (_followedUserIds.contains(userId)) {
-        _followedUserIds.remove(userId);
-      } else {
+      if (isFollowing) {
         _followedUserIds.add(userId);
+      } else {
+        _followedUserIds.remove(userId);
       }
       _errorMessage = 'فشل متابعة المستخدم: ${e.toString()}';
       notifyListeners();

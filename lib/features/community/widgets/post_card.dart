@@ -124,7 +124,6 @@ class _PostCardState extends State<PostCard> {
                               context,
                               title: 'حذف المنشور',
                               message: 'هل أنت متأكد من حذف هذا المنشور؟',
-                              onConfirm: () {},
                             );
                             if (confirmed == true && mounted) {
                               context
@@ -147,9 +146,14 @@ class _PostCardState extends State<PostCard> {
                         builder: (context, viewModel, child) {
                           final isFollowing = viewModel.isFollowing(post.userId);
                           return TextButton(
-                            onPressed: () {
-                              viewModel.toggleFollow(post.userId);
-                              if (!isFollowing && post.userId != 0) {
+                            onPressed: () async {
+                              final wasFollowing = isFollowing;
+                              await viewModel.toggleFollow(
+                                post.userId,
+                                currentUserId: currentUserId,
+                              );
+                              
+                              if (!wasFollowing && post.userId != 0) {
                                 Future.microtask(() {
                                   if (context.mounted) {
                                     context
