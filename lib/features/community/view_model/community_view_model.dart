@@ -286,14 +286,22 @@ class CommunityViewModel extends ChangeNotifier {
   Future<void> toggleLike(int postId) async {
     // 1. Find the post in any list
     PostModel? post = findPostById(postId);
-    if (post == null) return;
+    if (post == null || _currentUserId == null) return;
 
-    final wasLiked = post.isLiked;
+    final wasLiked = post.isLikedBy(_currentUserId!);
+    final List<int> newLikedByUserIds = List.from(post.likedByUserIds);
+    
+    if (wasLiked) {
+      newLikedByUserIds.remove(_currentUserId);
+    } else {
+      newLikedByUserIds.add(_currentUserId!);
+    }
 
     // 2. Optimistic update — flip immediately in UI
     final updatedPost = post.copyWith(
       isLiked: !wasLiked,
       likesCount: wasLiked ? post.likesCount - 1 : post.likesCount + 1,
+      likedByUserIds: newLikedByUserIds,
     );
     _updatePostEverywhere(updatedPost);
     notifyListeners();

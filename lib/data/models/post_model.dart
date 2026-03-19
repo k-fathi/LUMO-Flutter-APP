@@ -159,7 +159,12 @@ class PostModel {
   }
 
   // Helper methods
-  bool isLikedBy(int userId) => isLiked || likedByUserIds.contains(userId);
+  bool isLikedBy(int userId) {
+    if (likedByUserIds.isNotEmpty) {
+      return likedByUserIds.contains(userId);
+    }
+    return isLiked;
+  }
   bool get hasImage => imageUrl != null && imageUrl!.isNotEmpty;
   bool get hasTags => tags.isNotEmpty;
   bool get isPublished => status.isPublished;

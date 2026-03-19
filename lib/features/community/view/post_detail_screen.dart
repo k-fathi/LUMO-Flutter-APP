@@ -238,12 +238,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         child: Row(
                           children: [
                             _buildActionButton(
-                               icon: post.isLiked
+                               icon: post.isLikedBy(currentUserId)
                                    ? Icons.favorite_rounded
                                    : Icons.favorite_outline_rounded,
                                label: post.likesCount.toString(),
-                               color: post.isLiked
-                                   ? const Color(0xFFEC4899)
+                               color: post.isLikedBy(currentUserId)
+                                   ? const Color(0xFFEF4444)
                                    : const Color(0xFF64748B),
                                onTap: () =>
                                    viewModel.toggleLike(post.id),

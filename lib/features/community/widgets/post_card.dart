@@ -40,7 +40,7 @@ class _PostCardState extends State<PostCard> {
     final theme = Theme.of(context);
     final authProvider = context.watch<AuthProvider>();
     final currentUserId = authProvider.currentUser?.id ?? 0;
-    final isLiked = post.isLiked;
+    final isLiked = post.isLikedBy(currentUserId);
     final isOwner = currentUserId != 0 && post.userId == currentUserId;
 
     return Container(
