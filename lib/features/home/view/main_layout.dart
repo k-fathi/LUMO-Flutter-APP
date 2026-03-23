@@ -13,6 +13,7 @@ import '../../chat/view/chats_list_screen.dart';
 import '../../chat/view/chatbot_screen.dart';
 import '../../analysis/view/parent_analysis_screen.dart';
 import '../../analysis/view/doctor_patients_screen.dart';
+import '../../chat/view_model/chat_view_model.dart';
 import '../../profile/view/profile_screen.dart';
 
 class MainLayout extends StatefulWidget {
@@ -24,6 +25,18 @@ class MainLayout extends StatefulWidget {
 
 class _MainLayoutState extends State<MainLayout> {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = context.read<AuthProvider>();
+      final userId = authProvider.currentUser?.id;
+      if (userId != null) {
+        context.read<ChatViewModel>().loadChatRooms(userId);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,12 +96,20 @@ class _MainLayoutState extends State<MainLayout> {
           ),
           NavigationDestination(
             icon: const Icon(IconlyLight.discovery),
-            selectedIcon:
-                const Icon(IconlyBold.discovery, color: AppColors.primary),
+            selectedIcon: const Icon(IconlyBold.discovery, color: AppColors.primary),
             label: l10n.aiHelper,
           ),
           NavigationDestination(
-            icon: const Icon(IconlyLight.chat),
+            icon: Consumer<ChatViewModel>(
+              builder: (context, chatVM, _) {
+                final count = chatVM.totalUnreadCount;
+                return Badge.count(
+                  count: count,
+                  isLabelVisible: count > 0,
+                  child: const Icon(IconlyLight.chat),
+                );
+              },
+            ),
             selectedIcon: const Icon(IconlyBold.chat, color: AppColors.primary),
             label: l10n.chats,
           ),

@@ -171,16 +171,11 @@ class NotificationProvider extends ChangeNotifier {
     required int targetUserId,
     required String followerName,
   }) async {
-    debugPrint('SIMULATION: Urgent notification sent to User $targetUserId -> $followerName followed you!');
-    
-    // In a real production environment, the Backend (Laravel) should automatically send an FCM Push Notification
-    // to the target user when the /follow API is called.
-    // As a local simulation/fallback, we can show a local notification if testing on a single device:
-    await showNotification(
-      title: 'متابع جديد!',
-      body: 'قام $followerName بمتابعتك الآن.',
-      payload: 'profile',
-    );
+    // ✅ الـ backend (Laravel) هو المسؤول عن إرسال FCM push notification
+    //    لـ targetUserId عند POST /user/{id}/follow
+    // من جانبنا بس نعمل refresh للـ notifications list
+    debugPrint('Follow action completed — backend handles FCM push to user $targetUserId');
+    await fetchNotifications();
   }
 
   // Send comment notification

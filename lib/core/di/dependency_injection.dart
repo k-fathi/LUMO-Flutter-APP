@@ -146,7 +146,6 @@ class DependencyInjection {
     getIt.registerLazySingleton<CommunityRepository>(
       () => CommunityRepository(
         getIt<CommunityRemoteDataSource>(),
-        getIt<ProfileRepository>(),
       ),
     );
 
@@ -218,6 +217,7 @@ class DependencyInjection {
       () => PatientProvider(
         getIt<LocalDataSource>(),
         getIt<PatientRepository>(),
+        getIt<ProfileRepository>(),
       ),
     );
 

@@ -10,6 +10,7 @@ import '../../../data/models/chat_room_model.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/providers/patient_provider.dart';
 import '../../../shared/providers/auth_provider.dart';
+import '../../profile/view_model/profile_view_model.dart';
 import '../view_model/chat_view_model.dart';
 import 'chat_room_screen.dart';
 import '../../ai_helper/view/ai_chat_screen.dart';
@@ -130,8 +131,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         ),
       ),
       body: Consumer3<ChatViewModel, AuthProvider, PatientProvider>(
-        builder:
-            (context, chatViewModel, authProvider, patientProvider, child) {
+        builder: (context, chatViewModel, authProvider, patientProvider, child) {
           final currentUser = authProvider.currentUser;
           if (currentUser == null) return const SizedBox.shrink();
 
@@ -342,8 +342,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             color: theme.disabledColor,
           ),
           const SizedBox(height: 16),
+          // BUG FIX #11: Show "لا توجد رسائل بعد" when no chats exist
           Text(
-            l10n.noChatsYet,
+            l10n.noMessages,
             style: AppTextStyles.h3.copyWith(
               color: theme.textTheme.bodyMedium?.color,
             ),
@@ -363,18 +364,27 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 
   void _showNewChatBottomSheet(
       BuildContext context, ThemeData theme, AppLocalizations l10n) {
-    final patientProvider = context.read<PatientProvider>();
     final authProvider = context.read<AuthProvider>();
-    final isDoctor = authProvider.currentUser?.role == UserRole.doctor;
+    final currentUser = authProvider.currentUser;
+    final isDoctor = currentUser?.role == UserRole.doctor;
 
-    // Load patients if doctor
-    if (isDoctor && patientProvider.patients.isEmpty) {
-      patientProvider.fetchPatients();
+    // Load data if needed
+    if (currentUser != null) {
+      if (isDoctor) {
+        if (context.read<PatientProvider>().patients.isEmpty) {
+          context.read<PatientProvider>().fetchPatients();
+        }
+      } else {
+        if (currentUser is ParentModel && currentUser.connectedDoctorIds.isNotEmpty) {
+           context.read<PatientProvider>().fetchDoctors(currentUser.connectedDoctorIds);
+        }
+      }
+      
+      // Load following if empty
+      if (context.read<ProfileViewModel>().followingList.isEmpty) {
+        context.read<ProfileViewModel>().loadFollowing(currentUser.id);
+      }
     }
-
-    final List<UserModel> contacts = isDoctor
-        ? patientProvider.patients
-        : []; // For parents, maybe show followed users later
 
     showModalBottomSheet(
       context: context,
@@ -385,75 +395,146 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       ),
       builder: (ctx) {
         return DraggableScrollableSheet(
-          initialChildSize: 0.6,
+          initialChildSize: 0.7,
           minChildSize: 0.4,
-          maxChildSize: 0.9,
+          maxChildSize: 0.95,
           expand: false,
           builder: (_, scrollController) {
-            return SafeArea(
-              child: Directionality(
-                textDirection: TextDirection.rtl,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Premium UI Drag Handle
-                    Center(
-                      child: Container(
-                        margin: const EdgeInsets.only(top: 12, bottom: 8),
-                        width: 40,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-                      child: Text(
-                        'بدء محادثة جديدة',
-                        style: AppTextStyles.h2
-                            .copyWith(fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    Divider(height: 1, color: theme.dividerColor),
-                    Expanded(
-                      child: contacts.isEmpty
-                          ? Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(24.0),
-                                child: Text(
-                                  isDoctor
-                                      ? 'لا يوجد مرضى مرتبطين بعد. أضف مرضى للتمكن من مراسلتهم.'
-                                      : 'لا يوجد جهات اتصال متاحة حالياً.',
-                                  textAlign: TextAlign.center,
-                                  style: AppTextStyles.bodySmall,
-                                ),
-                              ),
-                            )
-                          : ListView.builder(
-                              controller: scrollController,
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              itemCount: contacts.length,
-                              itemBuilder: (context, index) {
-                                final contact = contacts[index];
-                                return _buildContactTile(
-                                  ctx,
-                                  contact,
-                                  authProvider.currentUser?.id.toString() ?? '',
-                                );
-                              },
+            return Consumer3<PatientProvider, ProfileViewModel, ChatViewModel>(
+              builder: (context, patients, profile, chats, child) {
+                // Aggregate and Deduplicate
+                final Map<int, UserModel> connectedMap = {};
+                final Map<int, UserModel> followingMap = {};
+                final Map<int, UserModel> recentMap = {};
+
+                // 1. Connected
+                final List<UserModel> connectedList = isDoctor ? patients.patients : patients.doctors;
+                for (var u in connectedList) { connectedMap[u.id] = u; }
+
+                // 2. Following
+                for (var u in profile.followingList) { 
+                  if (!connectedMap.containsKey(u.id)) {
+                    followingMap[u.id] = u;
+                  }
+                }
+
+                // 3. Recent (from chat rooms)
+                for (var room in chats.chatRooms) {
+                  final otherIdStr = room.getOtherParticipantId(currentUser!.id.toString());
+                  final otherId = int.tryParse(otherIdStr) ?? 0;
+
+                  if (otherId != 0 &&
+                      !connectedMap.containsKey(otherId) &&
+                      !followingMap.containsKey(otherId)) {
+                    final otherName = room.getOtherParticipantName(currentUser.id.toString());
+                    final otherAvatar = room.getOtherParticipantAvatar(currentUser.id.toString());
+
+                    recentMap[otherId] = UserModel(
+                      id: otherId,
+                      name: otherName,
+                      avatarUrl: otherAvatar,
+                      email: '',
+                      role: UserRole.parent, // Fallback
+                    );
+                  }
+                }
+
+                final hasAny = connectedMap.isNotEmpty || followingMap.isNotEmpty || recentMap.isNotEmpty;
+
+                return SafeArea(
+                  child: Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Premium UI Drag Handle
+                        Center(
+                          child: Container(
+                            margin: const EdgeInsets.only(top: 12, bottom: 8),
+                            width: 40,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(10),
                             ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                          child: Text(
+                            'بدء محادثة جديدة',
+                            style: AppTextStyles.h2
+                                .copyWith(fontWeight: FontWeight.bold),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        Divider(height: 1, color: theme.dividerColor),
+                        
+                        Expanded(
+                          child: !hasAny && (patients.isLoading || profile.isListLoading)
+                              ? const Center(child: CircularProgressIndicator())
+                              : !hasAny
+                                  ? Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(32.0),
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.person_search_rounded, size: 64, color: theme.disabledColor),
+                                            const SizedBox(height: 16),
+                                            Text(
+                                              'لا توجد جهات اتصال بعد.',
+                                              textAlign: TextAlign.center,
+                                              style: AppTextStyles.body,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                                  : ListView(
+                                      controller: scrollController,
+                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                      children: [
+                                        if (connectedMap.isNotEmpty) ...[
+                                          _buildSectionHeader(isDoctor ? 'مرضاي' : 'أطبائي المتصلون'),
+                                          ...connectedMap.values.map((u) => _buildContactTile(ctx, u, currentUser!.id.toString())),
+                                        ],
+                                        if (followingMap.isNotEmpty) ...[
+                                          _buildSectionHeader('أتابعهم'),
+                                          ...followingMap.values.map((u) => _buildContactTile(ctx, u, currentUser!.id.toString())),
+                                        ],
+                                        if (recentMap.isNotEmpty) ...[
+                                          _buildSectionHeader('تواصلت معهم مؤخراً'),
+                                          ...recentMap.values.map((u) => _buildContactTile(ctx, u, currentUser!.id.toString())),
+                                        ],
+                                        const SizedBox(height: 24),
+                                      ],
+                                    ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             );
           },
         );
       },
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+      child: Text(
+        title,
+        style: AppTextStyles.caption.copyWith(
+          fontWeight: FontWeight.bold,
+          color: AppColors.primary,
+          letterSpacing: 0.5,
+        ),
+      ),
     );
   }
 
@@ -463,40 +544,38 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     final role = contact.role == UserRole.doctor ? 'طبيب' : 'ولي أمر';
     final id = contact.id.toString();
 
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-        leading: AvatarWidget(
-          name: name,
-          imageUrl: contact.avatarUrl,
-          size: 50,
-        ),
-        title: Text(name,
-            style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
-        subtitle:
-            Text(role, style: AppTextStyles.caption.copyWith(fontSize: 12)),
-        onTap: () {
-          Navigator.pop(context); // Close sheet
-
-          // Generate a deterministic chat ID based on user IDs
-          final List<String> ids = [currentUserId, id];
-          ids.sort();
-          final String chatRoomId = ids.join('_');
-
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ChatRoomScreen(
-                chatRoomId: chatRoomId,
-                otherUserName: name,
-                otherUserAvatar: contact.avatarUrl,
-                otherUserId: id,
-              ),
-            ),
-          );
-        },
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+      leading: AvatarWidget(
+        name: name,
+        imageUrl: contact.avatarUrl,
+        size: 48,
       ),
+      title: Text(name,
+          style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
+      subtitle:
+          Text(role, style: AppTextStyles.caption.copyWith(fontSize: 12)),
+      onTap: () {
+        Navigator.pop(context); // Close sheet
+
+        // Generate a deterministic chat ID based on user IDs
+        final List<String> ids = [currentUserId, id];
+        ids.sort();
+        final String chatRoomId = ids.join('_');
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatRoomScreen(
+              chatRoomId: chatRoomId,
+              otherUserName: name,
+              otherUserAvatar: contact.avatarUrl,
+              otherUserId: id,
+            ),
+          ),
+        );
+      },
     );
   }
+
 }

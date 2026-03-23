@@ -119,8 +119,8 @@ class PatientRemoteDataSourceImpl implements PatientRemoteDataSource {
 
     // Try variations in parallel for performance, but catch individual errors
     await Future.wait([
-      performSearch({'query': trimmedQuery}), // Broad search often works best
-      performSearch({'query': trimmedQuery, 'role': 'patient'}),
+      performSearch({'query': trimmedQuery}), // Broad search
+      performSearch({'query': trimmedQuery, 'role': 'doctor'}),
       performSearch({'query': trimmedQuery, 'role': 'parent'}),
     ]);
 
@@ -137,8 +137,8 @@ class PatientRemoteDataSourceImpl implements PatientRemoteDataSource {
       if (item is Map<String, dynamic>) {
         try {
           final user = _parseUser(item);
-          // Only add valid users we haven't seen yet, and strictly EXCLUDE doctors
-          if (user.id != 0 && !seenIds.contains(user.id) && user.role != UserRole.doctor) {
+          // Only add valid users we haven't seen yet
+          if (user.id != 0 && !seenIds.contains(user.id)) {
             results.add(user);
             seenIds.add(user.id);
           }

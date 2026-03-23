@@ -26,7 +26,7 @@ class ChatRepository {
     final now = DateTime.now();
 
     final chatRoomData = {
-      'participant_ids': participantIds,
+      'participant_ids': participantIds.map((id) => id.toString()).toList(),
       'participant_names': participantNames,
       'participant_avatars': participantAvatars,
       'last_message': null,
@@ -111,33 +111,63 @@ class ChatRepository {
       'delivered_at': now.toIso8601String(),
     };
 
-    final messageId =
-        await _firebaseDataSource.sendMessage(chatRoomId, messageData);
-    messageData['id'] = messageId;
-
-    // Save draft (empty it after sending)
-    await _localDataSource.clearChatDraft(chatRoomId);
-
-    // Update last message on Laravel backend
     try {
+      // Get room to find participants
       final chatRoom = await getChatRoom(chatRoomId);
+      final participantIds = chatRoom?.participantIds ?? 
+          [senderId.toString(), (await _firebaseDataSource.getChatRoom(chatRoomId))?['receiver_id']?.toString() ?? 'unknown']
+          .where((id) => id != 'unknown').toList();
+      
+      final participantNames = chatRoom?.participantNames ?? {senderId.toString(): senderName};
+      final participantAvatars = chatRoom?.participantAvatars ?? {senderId.toString(): senderAvatarUrl};
+
+      // 1. Write to Firebase first (Primary real-time data)
+      final messageId = await _firebaseDataSource.sendMessage(
+        chatRoomId: chatRoomId,
+        messageData: messageData,
+        participantIds: participantIds.cast<String>(),
+        participantNames: participantNames,
+        participantAvatars: participantAvatars,
+      );
+      messageData['id'] = messageId;
+      
+      // 2. Clear local draft
+      await _localDataSource.clearChatDraft(chatRoomId);
+
+      // 3. SILENT BACKGROUND SYNC to Laravel Backend
+      _syncToLaravel(chatRoomId, senderId, senderName, content);
+
+      return MessageModel.fromJson(messageData);
+    } catch (e) {
+      debugPrint('Error sending message: $e');
+      rethrow;
+    }
+  }
+
+  /// BUG FIX #11: Robust silent sync to Laravel with improved receiver detection
+  Future<void> _syncToLaravel(String chatRoomId, int senderId, String senderName, String content) async {
+    try {
+      // Get room to find receiverId
+      final chatRoom = await getChatRoom(chatRoomId);
+
       if (chatRoom != null) {
-        final receiverIdStr =
-            chatRoom.getOtherParticipantId(senderId.toString());
+        final receiverIdStr = chatRoom.getOtherParticipantId(senderId.toString());
         final receiverId = int.tryParse(receiverIdStr);
+
         if (receiverId != null) {
-          await _chatRemoteDataSource.updateLastMessage(
-            senderId: senderId,
-            receiverId: receiverId,
-            message: content,
-          );
-        }
+        await _chatRemoteDataSource.updateLastMessage(
+          senderId: senderId,
+          receiverId: receiverId,
+          message: content,
+        );
+      }
+      } else {
+        debugPrint('Chat room $chatRoomId not found for Laravel sync.');
       }
     } catch (e) {
-      debugPrint('Laravel update-last-message failed: $e');
+      debugPrint('Laravel sync failed: $e');
+      // We don't rethrow here as Firebase was already successful
     }
-
-    return MessageModel.fromJson(messageData);
   }
 
   Stream<List<MessageModel>> streamMessages(String chatRoomId) {

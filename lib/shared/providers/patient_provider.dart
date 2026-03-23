@@ -1,24 +1,32 @@
 import 'package:flutter/material.dart';
 import '../../data/datasources/local_data_source.dart';
 import '../../data/repositories/patient_repository.dart';
+import '../../data/repositories/profile_repository.dart';
 import '../../data/models/user_model.dart';
 import '../../data/models/connection_request_model.dart';
 
 class PatientProvider with ChangeNotifier {
   final LocalDataSource _localDataSource;
   final PatientRepository _patientRepository;
+  final ProfileRepository _profileRepository;
 
   List<UserModel> _patients = [];
+  List<UserModel> _doctors = [];
   List<ConnectionRequestModel> _joinRequests = [];
   bool _isLoading = false;
   String? _error;
 
-  PatientProvider(this._localDataSource, this._patientRepository) {
+  PatientProvider(
+    this._localDataSource,
+    this._patientRepository,
+    this._profileRepository,
+  ) {
     _loadLocalData();
   }
 
   // Getters
   List<UserModel> get patients => _patients;
+  List<UserModel> get doctors => _doctors;
   List<ConnectionRequestModel> get joinRequests => _joinRequests;
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -34,18 +42,50 @@ class PatientProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchPatients() async {
-    _setLoading(true);
+  Future<void> fetchDoctors(List<String> doctorIds) async {
+    if (doctorIds.isEmpty) {
+      _doctors = [];
+      notifyListeners();
+      return;
+    }
+
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
     try {
-      final patients = await _patientRepository.getDoctorPatients();
-      _patients = patients;
-      await _localDataSource
-          .savePatients(_patients.map((e) => e.toJson()).toList());
-      _error = null;
+      final List<UserModel> fetchedDoctors = [];
+      for (final idStr in doctorIds) {
+        final id = int.tryParse(idStr);
+        if (id != null) {
+          final doctor = await _profileRepository.getUserProfile(id);
+          if (doctor != null) {
+            fetchedDoctors.add(doctor);
+          }
+        }
+      }
+      _doctors = fetchedDoctors;
     } catch (e) {
       _error = e.toString();
     } finally {
-      _setLoading(false);
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchPatients() async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _patients = await _patientRepository.getDoctorPatients();
+      await _localDataSource.savePatients(_patients.map((p) => p.toJson()).toList());
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 

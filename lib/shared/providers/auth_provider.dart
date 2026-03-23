@@ -175,9 +175,17 @@ class AuthProvider extends ChangeNotifier {
         notifyListeners();
         if (onSuccess != null) onSuccess();
       }
+
+      // Final safety: wipe error message before returning true
+      _errorMessage = null;
       return true;
     } catch (e) {
-      _errorMessage = _mapErrorToMessage(e);
+      // Use the mapped message, but also store the literal exception for diagnostics if it's unexpected
+      final mapped = _mapErrorToMessage(e);
+      _errorMessage = (mapped == 'حدث خطأ غير متوقع، يرجى المحاولة لاحقاً')
+          ? 'Error: ${e.toString()}'
+          : mapped;
+      
       debugPrint('Login error: $e');
       return false;
     } finally {
@@ -424,6 +432,13 @@ class AuthProvider extends ChangeNotifier {
   // ─────────────────────────────────────────────
   //  Helpers
   // ─────────────────────────────────────────────
+
+  /// Update current user locally in memory and cache
+  void updateCurrentUserLocally(UserModel updatedUser) {
+    _currentUser = updatedUser;
+    _localDataSource.saveCurrentUser(updatedUser.toJson());
+    notifyListeners();
+  }
 
   void clearError() {
     _errorMessage = null;

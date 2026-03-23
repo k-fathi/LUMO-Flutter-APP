@@ -1,4 +1,5 @@
 import '../../core/services/firebase_auth_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/services/firebase_firestore_service.dart';
 import '../../core/services/firebase_storage_service.dart';
 import '../../core/utils/firebase_collections.dart';
@@ -237,7 +238,13 @@ class FirebaseDataSource {
     );
   }
 
-  Future<String> sendMessage(String chatRoomId, Map<String, dynamic> messageData) async {
+  Future<String> sendMessage({
+    required String chatRoomId,
+    required Map<String, dynamic> messageData,
+    required List<String> participantIds,
+    required Map<String, String> participantNames,
+    required Map<String, String?> participantAvatars,
+  }) async {
     final messageId = await _firestoreService.createSubcollectionDocument(
       collection: FirebaseCollections.chats,
       docId: chatRoomId,
@@ -245,17 +252,20 @@ class FirebaseDataSource {
       data: messageData,
     );
 
-    // Update chat room's last message
-    await _firestoreService.updateDocument(
-      collection: FirebaseCollections.chats,
-      docId: chatRoomId,
-      data: {
-        'last_message': messageData['content'],
-        'last_message_sender_id': messageData['sender_id'],
-        'last_message_timestamp': messageData['timestamp'],
-        'updated_at': DateTime.now().toIso8601String(),
-      },
-    );
+    // Update chat room's last message AND ensure participant metadata exists
+    // Using set + merge=true so it works even if the room document doesn't exist yet
+    await _firestoreService.instance
+        .collection(FirebaseCollections.chats)
+        .doc(chatRoomId)
+        .set({
+      'participant_ids': participantIds,
+      'participant_names': participantNames,
+      'participant_avatars': participantAvatars,
+      'last_message': messageData['content'],
+      'last_message_sender_id': messageData['sender_id'],
+      'last_message_timestamp': messageData['timestamp'],
+      'updated_at': DateTime.now().toIso8601String(),
+    }, SetOptions(merge: true));
 
     return messageId;
   }
