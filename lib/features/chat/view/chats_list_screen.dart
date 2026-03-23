@@ -10,17 +10,11 @@ import '../../../data/models/chat_room_model.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/providers/patient_provider.dart';
 import '../../../shared/providers/auth_provider.dart';
-import '../../profile/view_model/profile_view_model.dart';
 import '../view_model/chat_view_model.dart';
 import 'chat_room_screen.dart';
 import '../../ai_helper/view/ai_chat_screen.dart';
 import '../../../shared/widgets/avatar_widget.dart';
 
-///
-/// ListView of conversation threads.
-/// Each item: Avatar (Green Dot online), Name, Last Message, Time, Unread Badge.
-/// FAB: (+) to start new conversation.
-/// Tapping pushes ChatRoomScreen.
 class ChatsListScreen extends StatefulWidget {
   const ChatsListScreen({super.key});
 
@@ -51,28 +45,21 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     final currentUserIdStr = currentUser.id.toString();
 
     if (currentUser.role == UserRole.doctor) {
-      // For Doctors: Show active chats, but also show connected patients who haven't started a chat yet
       final activePatientIds =
           rooms.map((r) => r.getOtherParticipantId(currentUserIdStr)).toList();
 
-      // 1. Active Chats
       items.addAll(rooms);
-
-      // 2. Add AI Bot (optional but good for consistency)
       items.add('AI_BOT');
 
-      // 3. Connected patients not yet in active chats
       for (final patient in patients) {
         if (!activePatientIds.contains(patient.id.toString())) {
           items.add(patient);
         }
       }
     } else {
-      // For Parents: Primary Doctor -> AI Bot -> Others
       final parent = currentUser is ParentModel ? currentUser : null;
       final connectedDoctorIds = parent?.connectedDoctorIds ?? [];
 
-      // Separate doctor rooms from others
       final doctorRooms = <ChatRoomModel>[];
       final otherRooms = <ChatRoomModel>[];
 
@@ -85,18 +72,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         }
       }
 
-      // 1. Doctor Chats
       items.addAll(doctorRooms);
-
-      // 2. AI Bot (Always second or first if no doctor chat)
       items.insert(items.isNotEmpty ? 1 : 0, 'AI_BOT');
-
-      // 3. Other Chats
       items.addAll(otherRooms);
-
-      // 4. Also show connected doctors who haven't chatted yet (if any)
-      // Note: We don't have full doctor models here typically,
-      // but if we did, we would add them.
     }
 
     return items;
@@ -145,7 +123,16 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             patientProvider.patients,
           );
 
-          if (items.isEmpty) {
+          if (items.isEmpty || (items.length == 1 && items[0] == 'AI_BOT' && chatViewModel.chatRooms.isEmpty)) {
+             if (items.length == 1 && items[0] == 'AI_BOT') {
+                return ListView(
+                  children: [
+                    _buildAiChatTile(context, theme, l10n),
+                    const SizedBox(height: 100),
+                    _buildEmptyState(l10n, theme),
+                  ],
+                );
+             }
             return _buildEmptyState(l10n, theme);
           }
 
@@ -180,7 +167,6 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           );
         },
       ),
-      // FAB: Start new conversation (RTL: bottom-left)
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           _showNewChatBottomSheet(context, theme, l10n);
@@ -253,6 +239,14 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         room.lastMessage ?? 'إبدأ المحادثة الآن',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontWeight: room.getUnreadCount(currentUser.id.toString()) > 0 
+              ? FontWeight.bold 
+              : FontWeight.normal,
+          color: room.getUnreadCount(currentUser.id.toString()) > 0 
+              ? theme.textTheme.bodyLarge?.color 
+              : theme.textTheme.bodySmall?.color,
+        ),
       ),
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -305,22 +299,14 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         size: 50,
       ),
       title: Text(user.name, style: AppTextStyles.label),
-      subtitle: const Text('بدء محادثة جديدة',
-          style: TextStyle(fontStyle: FontStyle.italic)),
+      subtitle: const Text('إبدأ المحادثة الآن',
+          maxLines: 1, overflow: TextOverflow.ellipsis),
       onTap: () {
-        // Deterministic chat ID
-        final List<String> ids = [
-          currentUser.id.toString(),
-          user.id.toString()
-        ];
-        ids.sort();
-        final String chatRoomId = ids.join('_');
-
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => ChatRoomScreen(
-              chatRoomId: chatRoomId,
+              chatRoomId: 'new_${user.id}_${DateTime.now().millisecondsSinceEpoch}',
               otherUserName: user.name,
               otherUserAvatar: user.profileImage ?? user.avatarUrl,
               otherUserId: user.id.toString(),
@@ -334,28 +320,19 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   Widget _buildEmptyState(AppLocalizations l10n, ThemeData theme) {
     return Center(
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.chat_bubble_outline_rounded,
-            size: 64,
-            color: theme.disabledColor,
-          ),
+          Icon(Icons.chat_bubble_outline_rounded,
+              size: 64, color: theme.dividerColor),
           const SizedBox(height: 16),
-          // BUG FIX #11: Show "لا توجد رسائل بعد" when no chats exist
           Text(
-            l10n.noMessages,
-            style: AppTextStyles.h3.copyWith(
-              color: theme.textTheme.bodyMedium?.color,
-            ),
+            "لا توجد رسائل بعد",
+            style: AppTextStyles.h3.copyWith(color: theme.disabledColor),
           ),
           const SizedBox(height: 8),
           Text(
-            l10n.startNewChat,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: theme.textTheme.bodySmall?.color,
-            ),
-            textAlign: TextAlign.center,
+            "ابدأ التواصل مع الأطباء أو المرضى الآن",
+            style: AppTextStyles.caption,
           ),
         ],
       ),
@@ -364,218 +341,76 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 
   void _showNewChatBottomSheet(
       BuildContext context, ThemeData theme, AppLocalizations l10n) {
-    final authProvider = context.read<AuthProvider>();
-    final currentUser = authProvider.currentUser;
-    final isDoctor = currentUser?.role == UserRole.doctor;
-
-    // Load data if needed
-    if (currentUser != null) {
-      if (isDoctor) {
-        if (context.read<PatientProvider>().patients.isEmpty) {
-          context.read<PatientProvider>().fetchPatients();
-        }
-      } else {
-        if (currentUser is ParentModel && currentUser.connectedDoctorIds.isNotEmpty) {
-           context.read<PatientProvider>().fetchDoctors(currentUser.connectedDoctorIds);
-        }
-      }
-      
-      // Load following if empty
-      if (context.read<ProfileViewModel>().followingList.isEmpty) {
-        context.read<ProfileViewModel>().loadFollowing(currentUser.id);
-      }
-    }
-
     showModalBottomSheet(
       context: context,
-      backgroundColor: theme.scaffoldBackgroundColor,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          minChildSize: 0.4,
-          maxChildSize: 0.95,
-          expand: false,
-          builder: (_, scrollController) {
-            return Consumer3<PatientProvider, ProfileViewModel, ChatViewModel>(
-              builder: (context, patients, profile, chats, child) {
-                // Aggregate and Deduplicate
-                final Map<int, UserModel> connectedMap = {};
-                final Map<int, UserModel> followingMap = {};
-                final Map<int, UserModel> recentMap = {};
-
-                // 1. Connected
-                final List<UserModel> connectedList = isDoctor ? patients.patients : patients.doctors;
-                for (var u in connectedList) { connectedMap[u.id] = u; }
-
-                // 2. Following
-                for (var u in profile.followingList) { 
-                  if (!connectedMap.containsKey(u.id)) {
-                    followingMap[u.id] = u;
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: BoxDecoration(
+          color: theme.scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: theme.dividerColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              "بدء محادثة جديدة",
+              style: AppTextStyles.h2.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 24),
+            Expanded(
+              child: Consumer<PatientProvider>(
+                builder: (context, provider, child) {
+                  if (provider.isLoading) {
+                    return const Center(child: CircularProgressIndicator());
                   }
-                }
-
-                // 3. Recent (from chat rooms)
-                for (var room in chats.chatRooms) {
-                  final otherIdStr = room.getOtherParticipantId(currentUser!.id.toString());
-                  final otherId = int.tryParse(otherIdStr) ?? 0;
-
-                  if (otherId != 0 &&
-                      !connectedMap.containsKey(otherId) &&
-                      !followingMap.containsKey(otherId)) {
-                    final otherName = room.getOtherParticipantName(currentUser.id.toString());
-                    final otherAvatar = room.getOtherParticipantAvatar(currentUser.id.toString());
-
-                    recentMap[otherId] = UserModel(
-                      id: otherId,
-                      name: otherName,
-                      avatarUrl: otherAvatar,
-                      email: '',
-                      role: UserRole.parent, // Fallback
-                    );
+                  if (provider.patients.isEmpty) {
+                    return const Center(child: Text("لا يوجد جهات اتصال متاحة"));
                   }
-                }
-
-                final hasAny = connectedMap.isNotEmpty || followingMap.isNotEmpty || recentMap.isNotEmpty;
-
-                return SafeArea(
-                  child: Directionality(
-                    textDirection: TextDirection.rtl,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Premium UI Drag Handle
-                        Center(
-                          child: Container(
-                            margin: const EdgeInsets.only(top: 12, bottom: 8),
-                            width: 40,
-                            height: 5,
-                            decoration: BoxDecoration(
-                              color: Colors.grey.withValues(alpha: 0.3),
-                              borderRadius: BorderRadius.circular(10),
+                  return ListView.builder(
+                    itemCount: provider.patients.length,
+                    itemBuilder: (context, index) {
+                      final user = provider.patients[index];
+                      return ListTile(
+                        leading: AvatarWidget(
+                          name: user.name,
+                          imageUrl: user.avatarUrl,
+                          size: 40,
+                        ),
+                        title: Text(user.name),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ChatRoomScreen(
+                                chatRoomId: 'new_${user.id}_${DateTime.now().millisecondsSinceEpoch}',
+                                otherUserName: user.name,
+                                otherUserAvatar: user.avatarUrl,
+                                otherUserId: user.id.toString(),
+                              ),
                             ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-                          child: Text(
-                            'بدء محادثة جديدة',
-                            style: AppTextStyles.h2
-                                .copyWith(fontWeight: FontWeight.bold),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        Divider(height: 1, color: theme.dividerColor),
-                        
-                        Expanded(
-                          child: !hasAny && (patients.isLoading || profile.isListLoading)
-                              ? const Center(child: CircularProgressIndicator())
-                              : !hasAny
-                                  ? Center(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(32.0),
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Icon(Icons.person_search_rounded, size: 64, color: theme.disabledColor),
-                                            const SizedBox(height: 16),
-                                            Text(
-                                              'لا توجد جهات اتصال بعد.',
-                                              textAlign: TextAlign.center,
-                                              style: AppTextStyles.body,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    )
-                                  : ListView(
-                                      controller: scrollController,
-                                      padding: const EdgeInsets.symmetric(vertical: 8),
-                                      children: [
-                                        if (connectedMap.isNotEmpty) ...[
-                                          _buildSectionHeader(isDoctor ? 'مرضاي' : 'أطبائي المتصلون'),
-                                          ...connectedMap.values.map((u) => _buildContactTile(ctx, u, currentUser!.id.toString())),
-                                        ],
-                                        if (followingMap.isNotEmpty) ...[
-                                          _buildSectionHeader('أتابعهم'),
-                                          ...followingMap.values.map((u) => _buildContactTile(ctx, u, currentUser!.id.toString())),
-                                        ],
-                                        if (recentMap.isNotEmpty) ...[
-                                          _buildSectionHeader('تواصلت معهم مؤخراً'),
-                                          ...recentMap.values.map((u) => _buildContactTile(ctx, u, currentUser!.id.toString())),
-                                        ],
-                                        const SizedBox(height: 24),
-                                      ],
-                                    ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-      child: Text(
-        title,
-        style: AppTextStyles.caption.copyWith(
-          fontWeight: FontWeight.bold,
-          color: AppColors.primary,
-          letterSpacing: 0.5,
+                          );
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
-
-  Widget _buildContactTile(
-      BuildContext context, UserModel contact, String currentUserId) {
-    final name = contact.name;
-    final role = contact.role == UserRole.doctor ? 'طبيب' : 'ولي أمر';
-    final id = contact.id.toString();
-
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-      leading: AvatarWidget(
-        name: name,
-        imageUrl: contact.avatarUrl,
-        size: 48,
-      ),
-      title: Text(name,
-          style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
-      subtitle:
-          Text(role, style: AppTextStyles.caption.copyWith(fontSize: 12)),
-      onTap: () {
-        Navigator.pop(context); // Close sheet
-
-        // Generate a deterministic chat ID based on user IDs
-        final List<String> ids = [currentUserId, id];
-        ids.sort();
-        final String chatRoomId = ids.join('_');
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ChatRoomScreen(
-              chatRoomId: chatRoomId,
-              otherUserName: name,
-              otherUserAvatar: contact.avatarUrl,
-              otherUserId: id,
-            ),
-          ),
-        );
-      },
-    );
-  }
-
 }
