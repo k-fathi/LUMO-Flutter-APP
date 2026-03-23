@@ -63,12 +63,17 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final auth = context.read<AuthProvider>();
     final replyTo = viewModel.replyingToComment;
     
+    final scaffoldContext = ScaffoldMessenger.of(context);
+    final notificationProvider = context.read<NotificationProvider>();
+    
     final success = await viewModel.addComment(widget.postId, content);
 
-    if (success && mounted) {
+    if (!mounted) return;
+
+    if (success) {
       // 1. Send Notification
       final postOwnerId = viewModel.findPostById(widget.postId)?.userId ?? 0;
-      context.read<NotificationProvider>().sendCommentNotification(
+      notificationProvider.sendCommentNotification(
         postId: widget.postId,
         postOwnerId: replyTo?.userId ?? postOwnerId,
         commenterName: auth.currentUser?.name ?? 'مستخدم',
@@ -78,14 +83,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       _commentController.clear();
       viewModel.setReplyingTo(null);
       
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldContext.showSnackBar(
         const SnackBar(
           content: Text('تم إضافة التعليق بنجاح'),
           backgroundColor: AppColors.success,
         ),
       );
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+    } else {
+      scaffoldContext.showSnackBar(
         SnackBar(
           content: Text(viewModel.errorMessage ?? 'فشل إضافة التعليق'),
           backgroundColor: AppColors.destructive,
@@ -255,14 +260,17 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                           arguments: post,
                                         );
                                       } else if (value == 'delete') {
+                                        final navigator = Navigator.of(context);
                                         final confirmed = await DeleteConfirmationDialog.show(
                                           context,
                                           title: 'حذف المنشور',
                                           message: 'هل أنت متأكد من حذف هذا المنشور؟',
                                         );
-                                        if (confirmed == true && mounted) {
+                                        if (!mounted) return;
+                                        if (confirmed == true) {
                                           await viewModel.deletePost(post.id);
-                                          if (mounted) Navigator.pop(context);
+                                          if (!mounted) return;
+                                          navigator.pop();
                                         }
                                       } else if (value == 'report') {
                                         ScaffoldMessenger.of(context).showSnackBar(

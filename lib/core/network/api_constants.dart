@@ -35,8 +35,8 @@ class ApiConstants {
 
   // Social & Search
   static const String toggleFollow = '/user/{id}/follow';
-  static const String getFollowers = '/user/followers';
-  static const String getFollowing = '/user/followings';
+  static const String getMyFollowers = '/user/followers';
+  static const String getMyFollowings = '/user/followings';
   static const String searchUsers = '/search/users';
 
   // Notifications

@@ -1,0 +1,1655 @@
+===== lib/shared/providers/notification_provider.dart =====
+import 'package:flutter/material.dart';
+import 'package:flutter_app_badger/flutter_app_badger.dart';
+import '../../core/services/notification_service.dart';
+import '../../data/repositories/notification_repository.dart';
+
+class NotificationProvider extends ChangeNotifier {
+  final NotificationService _notificationService;
+  final NotificationRepository? _repository;
+
+  NotificationProvider(this._notificationService, [this._repository]);
+
+  bool _notificationsEnabled = true;
+  int _unreadCount = 0;
+  List<dynamic> _notifications = [];
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  bool get notificationsEnabled => _notificationsEnabled;
+  int get unreadCount => _unreadCount;
+  List<dynamic> get notifications => _notifications;
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
+
+  // Initialize notifications
+  Future<void> init() async {
+    await _notificationService.initialize();
+    await _notificationService.requestPermissions();
+    if (_repository != null) {
+      await fetchNotifications();
+    }
+  }
+
+  // Fetch from backend
+  Future<void> fetchNotifications() async {
+    if (_repository == null) return;
+    
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _notifications = await _repository!.getNotifications();
+      // Update unread count based on logic (handling both bool and int from backend)
+      _unreadCount = _notifications.where((n) {
+        final isRead = n['is_read'];
+        return isRead == false || isRead == 0 || isRead == null || n['read_at'] == null;
+      }).length;
+      _updateAppBadge();
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // Mark all as read
+  Future<void> markAllAsRead() async {
+    if (_repository == null) return;
+    
+    try {
+      await _repository!.markNotificationsAsRead();
+      _unreadCount = 0;
+      _updateAppBadge();
+      notifyListeners();
+      // We intentionally do NOT call fetchNotifications() here!
+      // This allows the NotificationsScreen to keep the visual "unread highlight" 
+      // on previously unread items until the user leaves and refreshes later.
+    } catch (e) {
+      debugPrint('Failed to mark notifications as read: $e');
+    }
+  }
+
+  // Delete notifications older than a date
+  Future<void> clearNotifications(DateTime date) async {
+    if (_repository == null) return;
+    
+    try {
+      await _repository!.deleteNotifications(date);
+      await fetchNotifications();
+    } catch (e) {
+      debugPrint('Failed to delete notifications: $e');
+    }
+  }
+
+  // Toggle notifications
+  void toggleNotifications(bool enabled) {
+    _notificationsEnabled = enabled;
+    notifyListeners();
+  }
+
+  // Update unread count manually
+  void updateUnreadCount(int count) {
+    _unreadCount = count;
+    notifyListeners();
+  }
+
+  // Increment unread count
+  void incrementUnreadCount() {
+    _unreadCount++;
+    _updateAppBadge();
+    notifyListeners();
+  }
+
+  // Clear unread count
+  void clearUnreadCount() {
+    _unreadCount = 0;
+    _updateAppBadge();
+    notifyListeners();
+  }
+
+  /// Updates the app icon badge based on the current unread count.
+  void _updateAppBadge() {
+    try {
+      if (_unreadCount > 0) {
+        FlutterAppBadger.updateBadgeCount(_unreadCount);
+      } else {
+        FlutterAppBadger.removeBadge();
+      }
+    } catch (e) {
+      debugPrint('App badger update failed (platform may not support it): $e');
+    }
+  }
+
+  // Show local notification
+  Future<void> showNotification({
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    if (!_notificationsEnabled) return;
+
+    await _notificationService.showNotification(
+      id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
+      title: title,
+      body: body,
+      payload: payload,
+    );
+  }
+
+  // Send post like notification (server-side action typically, but kept for compatibility)
+  Future<void> sendPostLikeNotification({
+    required int postId,
+    required int postOwnerId,
+    required String likerName,
+  }) async {
+    debugPrint(
+        'Sending like notification for post $postId to owner $postOwnerId');
+    // Actual backend handles this when toggleLike is called
+  }
+
+  // Send connection accepted notification
+  Future<void> sendConnectionAcceptedNotification({
+    required int doctorId,
+    required String patientName,
+  }) async {
+    debugPrint('SIMULATION: Urgent notification sent to Doctor \$doctorId -> Patient \$patientName accepted the request!');
+    
+    // In a real production environment, the Backend (Laravel) should automatically send an FCM Push Notification
+    // to the doctor when the /accept API is called.
+    // As a local simulation/fallback, we can show a local notification if testing on a single device:
+    await showNotification(
+      title: 'طلب إضافة مقبول!',
+      body: 'لقد وافق \$patientName على طلب الإضافة الخاص بك. يمكنك الآن متابعة حالته.',
+      payload: 'doctor_patients_list',
+    );
+  }
+
+  // Send follow notification — backend handles actual push to target user
+  Future<void> sendFollowNotification({
+    required int targetUserId,
+    required String followerName,
+  }) async {
+    debugPrint('SIMULATION: Urgent notification sent to User $targetUserId -> $followerName followed you!');
+    
+    // In a real production environment, the Backend (Laravel) should automatically send an FCM Push Notification
+    // to the target user when the /follow API is called.
+    // As a local simulation/fallback, we can show a local notification if testing on a single device:
+    await showNotification(
+      title: 'متابع جديد!',
+      body: 'قام $followerName بمتابعتك الآن.',
+      payload: 'profile',
+    );
+  }
+
+  // Send comment notification
+  Future<void> sendCommentNotification({
+    required int postId,
+    required int postOwnerId,
+    required String commenterName,
+  }) async {
+    debugPrint('User $commenterName commented on post $postId');
+    // Backend handles this
+  }
+
+  // Send chat message notification
+  Future<void> sendMessageNotification({
+    required int targetUserId,
+    required String senderName,
+    required String messagePreview,
+  }) async {
+    debugPrint('Message notification from $senderName to $targetUserId');
+    await showNotification(
+      title: 'رسالة جديدة من $senderName',
+      body: messagePreview,
+      payload: 'chat_$targetUserId',
+    );
+  }
+}
+===== lib/data/repositories/notification_repository.dart =====
+import '../datasources/remote/notification_remote_data_source.dart';
+
+class NotificationRepository {
+  final NotificationRemoteDataSource _remoteDataSource;
+
+  NotificationRepository(this._remoteDataSource);
+
+  Future<List<dynamic>> getNotifications() async {
+    return await _remoteDataSource.getNotifications();
+  }
+
+  Future<void> markNotificationsAsRead() async {
+    await _remoteDataSource.markAsRead();
+  }
+
+  Future<void> deleteNotifications(DateTime date) async {
+    final dateStr = date.toIso8601String().split('T')[0];
+    await _remoteDataSource.deleteNotifications(dateStr);
+  }
+}
+===== lib/data/datasources/remote/notification_remote_data_source.dart =====
+import '../../../core/network/dio_client.dart';
+import '../../../core/network/api_constants.dart';
+
+abstract class NotificationRemoteDataSource {
+  Future<List<dynamic>> getNotifications();
+  Future<void> markAsRead();
+  Future<void> deleteNotifications(String date);
+}
+
+class NotificationRemoteDataSourceImpl implements NotificationRemoteDataSource {
+  final DioClient _dioClient;
+
+  NotificationRemoteDataSourceImpl(this._dioClient);
+
+  @override
+  Future<List<dynamic>> getNotifications() async {
+    final response = await _dioClient.get(ApiConstants.getNotifications);
+    // Based on Postman, it returns { "notifications": [...] } or { "data": [...] }
+    final data = response.data;
+    if (data is Map<String, dynamic>) {
+      return data['notifications'] ?? data['data'] ?? [];
+    }
+    return [];
+  }
+
+  @override
+  Future<void> markAsRead() async {
+    await _dioClient.post(ApiConstants.readNotifications);
+  }
+
+  @override
+  Future<void> deleteNotifications(String date) async {
+    await _dioClient.delete(
+      '${ApiConstants.deleteNotifications}?date=$date',
+    );
+  }
+}
+===== lib/data/repositories/profile_repository.dart =====
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
+import '../datasources/firebase_data_source.dart';
+import '../datasources/local_data_source.dart';
+import '../datasources/remote/profile_remote_data_source.dart';
+import '../models/connection_request_model.dart';
+import '../models/doctor_code_model.dart';
+import '../models/doctor_model.dart';
+import '../models/parent_model.dart';
+import '../models/user_model.dart';
+import '../../core/enums/user_role.dart';
+import '../../core/enums/connection_status.dart';
+import '../../core/utils/app_constants.dart';
+
+class ProfileRepository {
+  final FirebaseDataSource _firebaseDataSource;
+  final LocalDataSource _localDataSource;
+  final ProfileRemoteDataSource? _remoteDataSource;
+
+  ProfileRepository(
+    this._firebaseDataSource,
+    this._localDataSource, [
+    this._remoteDataSource,
+  ]);
+
+  // ==================== USER PROFILE ====================
+
+  Future<UserModel?> getUserProfile(int userId) async {
+    // Check if this is the current user
+    final currentUserData = _localDataSource.getCurrentUser();
+    final currentUserId = currentUserData != null
+        ? int.tryParse(currentUserData['id']?.toString() ?? '')
+        : null;
+
+    final isMyProfile = userId == currentUserId || userId <= 0;
+
+    // 1. Try REST API only for current user
+    if (_remoteDataSource != null && isMyProfile) {
+      try {
+        final profile = await _remoteDataSource!.getProfile();
+        // Persist to local cache
+        await _localDataSource.saveCurrentUser(profile.toJson());
+        return profile;
+      } catch (e) {
+        final isUnauthenticated =
+            e.toString().toLowerCase().contains('unauthenticated') ||
+                e.toString().contains('401');
+
+        if (isUnauthenticated) {
+          rethrow; // Let AuthProvider handle the 401 and log out
+        }
+        debugPrint('REST Profile fetch failed: $e. Falling back to Firebase.');
+      }
+    }
+
+    // 2. Fallback to Firebase for others (or if REST failed)
+    if (userId <= 0) return null; // Can't fetch "me" from Firebase without ID
+
+    // 🔥 Avoid hanging on Desktop/Linux where Firebase might not be initialized
+    if (!kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
+      debugPrint('Skipping Firebase fallback on desktop platform.');
+      return null;
+    }
+
+    try {
+      final userData = await _firebaseDataSource.getUserById(userId.toString());
+      if (userData == null) return null;
+
+      final role = UserRole.fromString(userData['role'] as String? ?? 'parent');
+      if (role == UserRole.doctor) {
+        return DoctorModel.fromJson(userData);
+      } else {
+        return ParentModel.fromJson(userData);
+      }
+    } catch (e) {
+      debugPrint('Firebase fetch failed: $e');
+      return null;
+    }
+  }
+
+  Stream<UserModel?> streamUserProfile(int userId) {
+    return _firebaseDataSource.streamUser(userId.toString()).map((userData) {
+      if (userData == null) return null;
+      final role = UserRole.fromString(userData['role'] as String);
+      if (role == UserRole.doctor) {
+        return DoctorModel.fromJson(userData);
+      } else {
+        return ParentModel.fromJson(userData);
+      }
+    });
+  }
+
+  Future<UserModel> updateProfile({
+    required int userId,
+    String? name,
+    String? bio,
+    String? phone,
+    String? avatarUrl,
+    String? avatarFilePath,
+    String? childName,
+    int? childAge,
+    String? childMedicalCondition,
+    String? childPhotoUrl,
+  }) async {
+    // 1. Try the real REST API first (preferred path)
+    if (_remoteDataSource != null) {
+      try {
+        final updatedUser = await _remoteDataSource!.updateProfile(
+          userId: userId,
+          name: name,
+          phone: phone,
+          bio: bio,
+          avatarFilePath: avatarFilePath ?? avatarUrl,
+          childName: childName,
+          childAge: childAge,
+          childMedicalCondition: childMedicalCondition,
+          childPhotoUrl: childPhotoUrl,
+        );
+        // Persist fresh server data locally
+        await _localDataSource.saveCurrentUser(updatedUser.toJson());
+        return updatedUser;
+      } catch (e) {
+        // If REST API fails, fall through to local/Firebase path
+      }
+    }
+
+    // 2. Offline / fallback: apply changes locally
+    final updateData = <String, dynamic>{};
+    if (name != null) updateData['name'] = name;
+    if (bio != null) updateData['bio'] = bio;
+    if (phone != null) updateData['phone'] = phone;
+    if (avatarUrl != null) updateData['avatar_url'] = avatarUrl;
+    if (childName != null) updateData['child_name'] = childName;
+    if (childAge != null) updateData['child_age'] = childAge;
+    if (childMedicalCondition != null) {
+      updateData['child_medical_condition'] = childMedicalCondition;
+    }
+    if (childPhotoUrl != null) updateData['child_photo_url'] = childPhotoUrl;
+
+    Map<String, dynamic>? latestUserData;
+    try {
+      latestUserData = await _firebaseDataSource.getUserById(userId.toString());
+    } catch (_) {}
+
+    if (latestUserData == null) {
+      final currentLocal = _localDataSource.getCurrentUser();
+      if (currentLocal != null) {
+        latestUserData = Map<String, dynamic>.from(currentLocal)
+          ..addAll(updateData);
+      }
+    } else {
+      latestUserData.addAll(updateData);
+    }
+
+    if (latestUserData == null) {
+      throw Exception('Could not update profile: No local data found');
+    }
+
+    await _localDataSource.saveCurrentUser(latestUserData);
+
+    final role = UserRole.fromString(latestUserData['role'] as String);
+    if (role == UserRole.doctor) {
+      return DoctorModel.fromJson(latestUserData);
+    } else {
+      return ParentModel.fromJson(latestUserData);
+    }
+  }
+
+  Future<String> uploadAvatar(int userId, String filePath) async {
+    return await _firebaseDataSource.uploadUserAvatar(
+        userId.toString(), filePath);
+  }
+
+  // ==================== FOLLOW SYSTEM ====================
+
+  Future<void> followUser(int followerId, int followingId) async {
+    await _firebaseDataSource.followUser(
+        followerId.toString(), followingId.toString());
+  }
+
+  Future<void> unfollowUser(int followerId, int followingId) async {
+    await _firebaseDataSource.unfollowUser(
+        followerId.toString(), followingId.toString());
+  }
+
+  Future<List<UserModel>> getFollowers(int userId) async {
+    if (_remoteDataSource != null) {
+      try {
+        return await _remoteDataSource!.getFollowers(userId);
+      } catch (e) {
+        debugPrint('REST getFollowers failed: $e');
+      }
+    }
+    return []; // Fallback to empty list if no remote source or it fails
+  }
+
+  Future<List<UserModel>> getFollowing(int userId) async {
+    if (_remoteDataSource != null) {
+      try {
+        return await _remoteDataSource!.getFollowing(userId);
+      } catch (e) {
+        debugPrint('REST getFollowing failed: $e');
+      }
+    }
+    return []; // Fallback to empty list if no remote source or it fails
+  }
+
+  // ==================== DOCTOR CODE SYSTEM ====================
+
+  Future<DoctorCodeModel> generateDoctorCode(
+      int doctorId, String doctorName) async {
+    final now = DateTime.now();
+    final codeString =
+        'DOC${now.millisecondsSinceEpoch.toString().substring(6)}';
+
+    final codeData = {
+      'code': codeString,
+      'doctor_id': doctorId,
+      'doctor_name': doctorName,
+      'created_at': now.toIso8601String(),
+      'expires_at': now.add(AppConstants.doctorCodeExpiry).toIso8601String(),
+      'is_active': true,
+      'usage_count': 0,
+      'max_usage': 100,
+    };
+
+    final codeId = await _firebaseDataSource.createDoctorCode(codeData);
+    codeData['id'] = codeId;
+
+    // Save locally for quick access
+    await _localDataSource.saveDoctorCode(codeString);
+
+    return DoctorCodeModel.fromJson(codeData);
+  }
+
+  Future<DoctorCodeModel?> validateDoctorCode(String code) async {
+    final codeData = await _firebaseDataSource.getDoctorCodeByCode(code);
+    if (codeData == null) return null;
+
+    final codeModel = DoctorCodeModel.fromJson(codeData);
+
+    // Check if valid
+    if (!codeModel.isValid) return null;
+
+    return codeModel;
+  }
+
+  // ==================== CONNECTION REQUEST SYSTEM ====================
+
+  Future<ConnectionRequestModel> createConnectionRequest({
+    required int parentId,
+    required String parentName,
+    String? parentAvatarUrl,
+    required String childName,
+    required int childAge,
+    required int doctorId,
+    required String doctorName,
+    String? doctorAvatarUrl,
+    required String doctorCode,
+  }) async {
+    final now = DateTime.now();
+
+    final requestData = {
+      'parent_id': parentId,
+      'parent_name': parentName,
+      'parent_avatar_url': parentAvatarUrl,
+      'child_name': childName,
+      'child_age': childAge,
+      'doctor_id': doctorId,
+      'doctor_name': doctorName,
+      'doctor_avatar_url': doctorAvatarUrl,
+      'doctor_code': doctorCode,
+      'status': 'pending',
+      'created_at': now.toIso8601String(),
+      'updated_at': now.toIso8601String(),
+      'responded_at': null,
+      'rejection_reason': null,
+    };
+
+    final requestId =
+        await _firebaseDataSource.createConnectionRequest(requestData);
+    requestData['id'] = requestId;
+
+    // Increment code usage
+    final codeData = await _firebaseDataSource.getDoctorCodeByCode(doctorCode);
+    if (codeData != null) {
+      await _firebaseDataSource.incrementCodeUsage(codeData['id'] as String);
+    }
+
+    return ConnectionRequestModel.fromJson(requestData);
+  }
+
+  Future<void> acceptConnectionRequest(
+      String requestId, int doctorId, int parentId) async {
+    final updateData = {
+      'status': ConnectionStatus.accepted.name,
+      'responded_at': DateTime.now().toIso8601String(),
+    };
+
+    await _firebaseDataSource.updateConnectionRequest(requestId, updateData);
+
+    // Add to each other's lists
+    // TODO: Implement adding parent to doctor's patient list and vice versa
+  }
+
+  Future<void> rejectConnectionRequest(String requestId,
+      {String? reason}) async {
+    final updateData = {
+      'status': ConnectionStatus.rejected.name,
+      'responded_at': DateTime.now().toIso8601String(),
+      'rejection_reason': reason,
+    };
+
+    await _firebaseDataSource.updateConnectionRequest(requestId, updateData);
+  }
+
+  Stream<List<ConnectionRequestModel>> streamDoctorConnectionRequests(
+      int doctorId) {
+    return _firebaseDataSource
+        .streamDoctorConnectionRequests(doctorId.toString())
+        .map(
+          (requestsList) => requestsList
+              .map(
+                  (requestData) => ConnectionRequestModel.fromJson(requestData))
+              .toList(),
+        );
+  }
+}
+===== lib/data/datasources/remote/community_remote_data_source.dart =====
+import 'package:dio/dio.dart';
+import '../../../core/network/dio_client.dart';
+import '../../../core/network/api_constants.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../core/enums/user_role.dart';
+import '../../models/post_model.dart';
+import '../../models/user_model.dart';
+import '../../models/parent_model.dart';
+import '../../models/doctor_model.dart';
+import '../../models/comment_model.dart';
+
+abstract class CommunityRemoteDataSource {
+  Future<List<PostModel>> getHomeFeed({int page = 1});
+  Future<List<PostModel>> getExploreFeed({int page = 1});
+  Future<List<PostModel>> getMyPosts({int page = 1});
+  Future<PostModel> createPost(String content, {String? imagePath});
+  Future<PostModel> updatePost(String postId, String content,
+      {String? imagePath});
+  Future<void> deletePost(String postId);
+  Future<void> toggleLike(String postId);
+  Future<void> addComment(String postId, String comment, {int? parentId});
+  Future<List<CommentModel>> getComments(String postId);
+  Future<void> toggleCommentLike(String commentId);
+  Future<void> toggleFollow(String userId);
+  Future<List<UserModel>> getFollowingUsers();
+  Future<List<UserModel>> searchUsers(String query, {String? role});
+  Future<PostModel> getPostById(String postId);
+}
+
+class CommunityRemoteDataSourceImpl implements CommunityRemoteDataSource {
+  final DioClient _dioClient;
+
+  CommunityRemoteDataSourceImpl(this._dioClient);
+
+  @override
+  Future<List<PostModel>> getHomeFeed({int page = 1}) async {
+    final response = await _dioClient.get(
+      ApiConstants.homeFeed,
+      queryParameters: {'page': page},
+    );
+    return _parsePostList(response.data);
+  }
+
+  @override
+  Future<List<PostModel>> getExploreFeed({int page = 1}) async {
+    final response = await _dioClient.get(
+      ApiConstants.exploreFeed,
+      queryParameters: {'page': page},
+    );
+    return _parsePostList(response.data);
+  }
+
+  @override
+  Future<List<PostModel>> getMyPosts({int page = 1}) async {
+    final response = await _dioClient.get(
+      ApiConstants.myPosts,
+      queryParameters: {'page': page},
+    );
+    return _parsePostList(response.data);
+  }
+
+  List<PostModel> _parsePostList(dynamic responseData) {
+    List<dynamic> data = [];
+
+    if (responseData is Map<String, dynamic>) {
+      final rawData = responseData['posts'] ??
+          responseData['data'] ??
+          responseData['results'];
+      if (rawData is List) {
+        data = rawData;
+      } else if (rawData is Map<String, dynamic>) {
+        final innerData =
+            rawData['posts'] ?? rawData['data'] ?? rawData['results'] ?? [];
+        if (innerData is List) {
+          data = innerData;
+        }
+      } else {
+        // Last resort: check if the map itself has a 'results' key or similar
+        data = [];
+      }
+    } else if (responseData is List) {
+      data = responseData;
+    }
+
+    return data
+        .map((json) {
+          try {
+            return PostModel.fromJson(json as Map<String, dynamic>);
+          } catch (e) {
+            return null;
+          }
+        })
+        .whereType<PostModel>()
+        .toList();
+  }
+
+  @override
+  Future<PostModel> createPost(String content, {String? imagePath}) async {
+    final formData = FormData.fromMap({
+      'content': content,
+      if (imagePath != null) 'image': await MultipartFile.fromFile(imagePath),
+    });
+
+    final response = await _dioClient.post(
+      ApiConstants.createPost,
+      data: formData,
+    );
+
+    final dynamic responseData = response.data;
+    if (responseData == null) {
+      throw ApiException('لم يتم استلام بيانات من السيرفر');
+    }
+
+    final Map<String, dynamic> data =
+        responseData is Map<String, dynamic> ? responseData : {};
+    final postData = data['post'] ?? data['data'] ?? data;
+
+    if (postData == null || postData is! Map<String, dynamic>) {
+      throw ApiException('تنسيق بيانات المنشور غير صالح');
+    }
+
+    return PostModel.fromJson(postData);
+  }
+
+  @override
+  Future<PostModel> updatePost(String postId, String content,
+      {String? imagePath}) async {
+    final formData = FormData.fromMap({
+      'content': content,
+      if (imagePath != null) 'image': await MultipartFile.fromFile(imagePath),
+    });
+
+    final response = await _dioClient.post(
+      '${ApiConstants.updatePost.replaceAll('{id}', postId)}?_method=PUT',
+      data: formData,
+    );
+
+    final dynamic responseData = response.data;
+    if (responseData == null) {
+      throw ApiException('لم يتم استلام بيانات من السيرفر');
+    }
+
+    final Map<String, dynamic> data =
+        responseData is Map<String, dynamic> ? responseData : {};
+    final postData = data['post'] ?? data['data'] ?? data;
+
+    if (postData == null || postData is! Map<String, dynamic>) {
+      throw ApiException('تنسيق بيانات المنشور غير صالح');
+    }
+
+    return PostModel.fromJson(postData);
+  }
+
+  @override
+  Future<void> deletePost(String postId) async {
+    await _dioClient.post(
+      '${ApiConstants.deletePost.replaceAll('{id}', postId)}?_method=DELETE',
+    );
+  }
+
+  @override
+  Future<void> toggleLike(String postId) async {
+    await _dioClient.post(
+      ApiConstants.toggleLike.replaceAll('{id}', postId),
+    );
+  }
+
+  @override
+  Future<void> addComment(String postId, String comment,
+      {int? parentId}) async {
+    await _dioClient.post(
+      ApiConstants.postComments.replaceAll('{id}', postId),
+      data: {
+        'comment': comment,
+        'parent_id': parentId,
+        'parent_comment_id': parentId,
+        'image': null,
+      },
+    );
+  }
+
+  @override
+  Future<void> toggleCommentLike(String commentId) async {
+    await _dioClient.post(
+      ApiConstants.toggleCommentLike.replaceAll('{id}', commentId),
+    );
+  }
+
+  @override
+  Future<List<CommentModel>> getComments(String postId) async {
+    final response = await _dioClient.get(
+      ApiConstants.postComments.replaceAll('{id}', postId),
+    );
+    final responseData = response.data;
+    List<dynamic> data = [];
+
+    if (responseData is Map<String, dynamic>) {
+      data = responseData['comments'] ??
+          responseData['data'] ??
+          responseData['comment'] ??
+          [];
+    } else if (responseData is List) {
+      data = responseData;
+    }
+
+    return data
+        .map((json) {
+          try {
+            return CommentModel.fromJson(json as Map<String, dynamic>);
+          } catch (e) {
+            return null;
+          }
+        })
+        .whereType<CommentModel>()
+        .toList();
+  }
+
+  @override
+  Future<void> toggleFollow(String userId) async {
+    await _dioClient.post(
+      ApiConstants.toggleFollow.replaceAll('{id}', userId),
+    );
+  }
+
+  @override
+  Future<List<UserModel>> getFollowingUsers() async {
+    final response = await _dioClient.get(ApiConstants.getFollowing);
+    final List<dynamic> data =
+        response.data['followings'] ?? response.data['data'] ?? [];
+    return data.map((json) => _parseUser(json)).toList();
+  }
+
+  @override
+  Future<List<UserModel>> searchUsers(String query, {String? role}) async {
+    final response = await _dioClient.get(
+      ApiConstants.searchUsers,
+      queryParameters: {
+        'query': query,
+        if (role != null) 'role': role,
+      },
+    );
+    final List<dynamic> data = response.data['users'] ?? [];
+    return data.map((json) => _parseUser(json)).toList();
+  }
+
+  @override
+  Future<PostModel> getPostById(String postId) async {
+    final response = await _dioClient.get(
+      ApiConstants.showPost.replaceAll('{id}', postId),
+    );
+    final dynamic responseData = response.data;
+    final Map<String, dynamic> data =
+        responseData is Map<String, dynamic> ? responseData : {};
+    final postData = data['post'] ?? data['data'] ?? data;
+
+    if (postData == null || postData is! Map<String, dynamic>) {
+      throw ApiException('تنسيق بيانات المنشور غير صالح');
+    }
+
+    return PostModel.fromJson(postData);
+  }
+
+  UserModel _parseUser(Map<String, dynamic> json) {
+    final role = UserRole.fromString(json['role']?.toString() ?? 'patient');
+    if (role == UserRole.parent) {
+      return ParentModel.fromJson(json);
+    } else if (role == UserRole.doctor) {
+      return DoctorModel.fromJson(json);
+    }
+    return UserModel.fromJson(json);
+  }
+}
+===== lib/features/community/view_model/community_view_model.dart =====
+import 'package:flutter/material.dart';
+
+import '../../../data/models/post_model.dart';
+import '../../../data/models/comment_model.dart';
+import '../../../data/models/user_model.dart';
+import '../../../data/repositories/community_repository.dart';
+import '../../../shared/providers/auth_provider.dart';
+import '../../../core/di/dependency_injection.dart';
+
+class CommunityViewModel extends ChangeNotifier {
+  final CommunityRepository _repository;
+
+  CommunityViewModel(this._repository);
+
+  bool _isDisposed = false;
+
+  void _safeNotify() {
+    if (!_isDisposed) notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
+  List<PostModel> _posts = [];
+  List<PostModel> _explorePosts = [];
+  List<PostModel> _followingPosts = [];
+  List<PostModel> _myPosts = [];
+  List<CommentModel> _comments = [];
+  List<UserModel> _searchResults = [];
+  List<int> _followedUserIds = [];
+  bool _isLoading = false;
+  bool _isInitialized = false;
+  String? _errorMessage;
+  CommentModel? _replyingToComment;
+  int? _currentUserId;
+
+  List<PostModel> get posts => _posts;
+  List<PostModel> get explorePosts => _explorePosts;
+  List<PostModel> get followingPosts => _followingPosts;
+  List<PostModel> get myPosts => _myPosts;
+  List<CommentModel> get comments => _comments;
+  List<UserModel> get searchResults => _searchResults;
+  bool get isLoading => _isLoading;
+  bool get isInitialized => _isInitialized;
+  String? get errorMessage => _errorMessage;
+  CommentModel? get replyingToComment => _replyingToComment;
+
+  void setReplyingTo(CommentModel? comment) {
+    _replyingToComment = comment;
+    _safeNotify();
+  }
+
+  bool isFollowing(int userId) => _followedUserIds.contains(userId);
+
+  PostModel? findPostById(int id) {
+    // Search in all lists
+    for (var list in [_explorePosts, _posts, _followingPosts, _myPosts]) {
+      final index = list.indexWhere((p) => p.id == id);
+      if (index != -1) return list[index];
+    }
+    return null;
+  }
+
+  // Fetch all posts/feeds
+  Future<void> fetchPosts({bool force = false, int? userId}) async {
+    // 1. Check for User Change
+    if (userId != null && userId != _currentUserId) {
+      _currentUserId = userId;
+      _isInitialized = false;
+      _posts = [];
+      _explorePosts = [];
+      _followingPosts = [];
+      _myPosts = [];
+      force = true; // Force reload for new user
+    } else if (userId != null) {
+      _currentUserId = userId;
+    }
+
+    // 2. If already initialized and not forcing, don't show full loading again
+    if (_isInitialized && !force && _posts.isNotEmpty) {
+      // Background refresh
+      _loadAllFeeds(rethrowError: false);
+      return;
+    }
+
+    // Ensure _isInitialized is false if we are here and force is true
+    if (force) _isInitialized = false;
+
+    _isLoading = true;
+    _errorMessage = null;
+    _safeNotify();
+
+    try {
+      await _loadAllFeeds(rethrowError: true);
+      _isInitialized = true;
+    } catch (e) {
+      _errorMessage = 'فشل تحميل المنشورات: ${e.toString()}';
+    } finally {
+      _isLoading = false;
+      _safeNotify();
+    }
+  }
+
+  // Helper to load all feeds without individual loading states
+  Future<void> _loadAllFeeds({bool rethrowError = false}) async {
+    try {
+      // 1. Load my posts first so they are available for merging into home feed
+      await _loadMyPostsInternal(page: 1);
+      
+      // 2. Load other feeds in parallel
+      await Future.wait([
+        _loadHomeFeedInternal(page: 1), // Legacy /home
+        _loadExploreFeedInternal(page: 1), // New /home/all
+        _loadFollowingFeedInternal(page: 1), // New /home
+      ]);
+    } catch (e) {
+      if (rethrowError) rethrow;
+    }
+  }
+
+  // Internal versions that don't trigger global loading state
+  Future<void> _loadHomeFeedInternal({int page = 1}) async {
+    final feed = await _repository.getHomeFeed(page: page);
+    if (page == 1) {
+      final List<PostModel> merged = [...feed];
+      for (var myPost in _myPosts) {
+        if (!merged.any((p) => p.id == myPost.id)) {
+          merged.insert(0, myPost);
+        }
+      }
+      _posts = merged;
+    } else {
+      _posts.addAll(feed);
+    }
+  }
+
+  Future<void> _loadExploreFeedInternal({int page = 1}) async {
+    final feed = await _repository.getExploreFeed(page: page);
+    if (page == 1) {
+      _explorePosts = feed;
+      // Keep _posts in sync with explore if _posts is used as the default feed
+      _posts = feed;
+    } else {
+      _explorePosts.addAll(feed);
+      _posts.addAll(feed);
+    }
+  }
+
+  Future<void> _loadFollowingFeedInternal({int page = 1}) async {
+    // The backend now provides a filtered /home feed for following
+    final feed = await _repository.getHomeFeed(page: page);
+    
+    if (page == 1) {
+      _followingPosts = feed;
+    } else {
+      _followingPosts.addAll(feed);
+    }
+    _safeNotify();
+  }
+
+  Future<void> _loadMyPostsInternal({int page = 1}) async {
+    final posts = await _repository.getMyPosts(page: page);
+    if (page == 1) {
+      _myPosts = posts;
+    } else {
+      _myPosts.addAll(posts);
+    }
+  }
+
+  // Legacy alias for compatibility if needed
+  Future<void> initCommunity(int? userId, {bool force = false}) async {
+    return fetchPosts(force: force, userId: userId);
+  }
+
+  // Load explore feed
+  Future<void> loadExploreFeed({int page = 1, bool rethrowError = false}) async {
+    _isLoading = true;
+    _errorMessage = null;
+    _safeNotify();
+
+    try {
+      await _loadExploreFeedInternal(page: page);
+      _isLoading = false;
+      _safeNotify();
+    } catch (e) {
+      _errorMessage = 'فشل تحميل الاستكشاف: ${e.toString()}';
+      _isLoading = false;
+      _safeNotify();
+      if (rethrowError) rethrow;
+    }
+  }
+
+  // Alias for task requirement
+  Future<void> fetchExplorePosts() => loadExploreFeed();
+
+  // Load home feed (Legacy/Compatibility)
+  Future<void> loadHomeFeed({int page = 1, bool rethrowError = false}) async {
+    _isLoading = true;
+    _errorMessage = null;
+    _safeNotify();
+
+    try {
+      await _loadHomeFeedInternal(page: page);
+      _isLoading = false;
+      _safeNotify();
+    } catch (e) {
+      _errorMessage = 'فشل تحميل الخلاصة: ${e.toString()}';
+      _isLoading = false;
+      _safeNotify();
+      if (rethrowError) rethrow;
+    }
+  }
+
+  // Load following feed
+  Future<void> loadFollowingFeed({int page = 1, bool rethrowError = false}) async {
+    _isLoading = true;
+    _errorMessage = null;
+    _safeNotify();
+
+    try {
+      await _loadFollowingFeedInternal(page: page);
+      _isLoading = false;
+      _safeNotify();
+    } catch (e) {
+      _errorMessage = 'فشل تحميل منشورات المتابعة: ${e.toString()}';
+      _isLoading = false;
+      _safeNotify();
+      if (rethrowError) rethrow;
+    }
+  }
+
+  // Load my posts
+  Future<void> loadMyPosts({int page = 1, bool rethrowError = false}) async {
+    _isLoading = true;
+    _errorMessage = null;
+    _safeNotify();
+
+    try {
+      await _loadMyPostsInternal(page: page);
+      _isLoading = false;
+      _safeNotify();
+    } catch (e) {
+      _errorMessage = 'فشل تحميل منشوراتي: ${e.toString()}';
+      _isLoading = false;
+      _safeNotify();
+      if (rethrowError) rethrow;
+    }
+  }
+
+  Future<bool> createPost({
+    required String content,
+    String? imagePath,
+    String? currentUserName,
+    String? currentUserAvatar,
+    int? currentUserId,
+  }) async {
+    _currentUserId = currentUserId;
+    _isLoading = true;
+    _errorMessage = null;
+    _safeNotify();
+    try {
+      final postResponse = await _repository.createPost(
+        content: content,
+        imagePath: imagePath,
+      );
+
+      // 1. Get current user from AuthProvider if not provided via arguments
+      String? finalName = currentUserName;
+      String? finalAvatar = currentUserAvatar;
+      int? finalId = currentUserId;
+
+      if (finalName == null || finalId == null) {
+        try {
+          final authProvider = getIt<AuthProvider>();
+          final user = authProvider.currentUser;
+          if (user != null) {
+            finalName ??= user.name;
+            finalAvatar ??= user.avatarUrl;
+            finalId ??= user.id;
+          }
+        } catch (e) {
+          debugPrint('Could not get AuthProvider for post injection: $e');
+        }
+      }
+
+      // 2. Override with local current user info to ensure immediate sync and fix naming issues
+      final post = postResponse.copyWith(
+        userName: (finalName != null && finalName.isNotEmpty) 
+            ? finalName 
+            : (postResponse.userName.isEmpty ? 'مستخدم' : postResponse.userName),
+        userAvatarUrl: finalAvatar ?? postResponse.userAvatarUrl,
+        userId: finalId ?? postResponse.userId,
+      );
+
+      _posts.insert(0, post);
+      _explorePosts.insert(0, post);
+      _myPosts.insert(0, post);
+      _followingPosts.insert(0, post);
+
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      return false;
+    } finally {
+      _isLoading = false;
+      _safeNotify();
+    }
+  }
+
+  // Update author info across all local lists
+  void updateAuthorInfoInPosts(int userId, String name, String? avatarUrl) {
+    void updateList(List<PostModel> list) {
+      for (int i = 0; i < list.length; i++) {
+        if (list[i].userId == userId) {
+          list[i] = list[i].copyWith(userName: name, userAvatarUrl: avatarUrl);
+        }
+      }
+    }
+
+    updateList(_posts);
+    updateList(_followingPosts);
+    updateList(_myPosts);
+    _safeNotify();
+  }
+
+  // Delete Post - Bug 3
+  Future<void> deletePost(int postId) async {
+    try {
+      await _repository.deletePost(postId);
+      _removePostEverywhere(postId);
+    } catch (e) {
+      _errorMessage = 'فشل حذف المنشور';
+      _safeNotify();
+    }
+  }
+
+  // Update Post - Bug 3
+  Future<void> updatePost(int postId, String newContent, {String? imagePath}) async {
+    try {
+      final updated = await _repository.updatePost(postId, content: newContent, imagePath: imagePath);
+      _updatePostEverywhere(updated);
+    } catch (e) {
+      _errorMessage = 'فشل تعديل المنشور';
+      _safeNotify();
+    }
+  }
+  // Toggle Like - Bug 2: Fix logic and double-check counters
+  Future<void> toggleLike(int postId) async {
+    // 1. Find the post in any list
+    PostModel? post = findPostById(postId);
+    if (post == null || _currentUserId == null || _currentUserId == 0) return;
+
+    final wasLiked = post.isLikedBy(_currentUserId!);
+    final List<int> newLikedByUserIds = List.from(post.likedByUserIds);
+    
+    if (wasLiked) {
+      newLikedByUserIds.remove(_currentUserId);
+    } else {
+      if (!newLikedByUserIds.contains(_currentUserId)) {
+        newLikedByUserIds.add(_currentUserId!);
+      }
+    }
+
+    // 2. Optimistic update — flip immediately in UI
+    final int newCount = wasLiked 
+        ? (post.likesCount > 0 ? post.likesCount - 1 : 0) 
+        : post.likesCount + 1;
+
+    final updatedPost = post.copyWith(
+      isLiked: !wasLiked,
+      likesCount: newCount,
+      likedByUserIds: newLikedByUserIds,
+    );
+    _updatePostEverywhere(updatedPost);
+    _safeNotify();
+
+    // 3. Call the API
+    try {
+      await _repository.toggleLike(postId);
+      // API call succeeded — optimistic update stays
+    } catch (e) {
+      // 4. Rollback on failure
+      _updatePostEverywhere(post); // restore original
+      _errorMessage = 'فشل تسجيل الإعجاب، حاول مرة أخرى';
+      _safeNotify();
+    }
+  }
+
+  // Comments
+  Future<void> fetchPostById(int postId) async {
+    _isLoading = true;
+    _safeNotify();
+    try {
+      final post = await _repository.getPostById(postId);
+      _updatePostEverywhere(post); // Update local lists if post is already there or was missing
+      
+      // If the post wasn't in any list, _updatePostEverywhere won't add it.
+      // We should ensure it's at least available for findPostById.
+      if (findPostById(postId) == null) {
+        _posts.add(post);
+      }
+      
+      _isLoading = false;
+      _safeNotify();
+    } catch (e) {
+      _errorMessage = 'فشل تحميل المنشور: ${e.toString()}';
+    } finally {
+      _isLoading = false;
+      _safeNotify();
+    }
+  }
+
+  Future<void> fetchComments(int postId) async {
+    _isLoading = true;
+    _safeNotify();
+    try {
+      _comments = await _repository.getComments(postId);
+      _sortCommentsAsTree();
+    } catch (e) {
+      _errorMessage = 'فشل تحميل التعليقات: ${e.toString()}';
+    } finally {
+      _isLoading = false;
+      _safeNotify();
+    }
+  }
+
+  /// Sort comments into tree order: each parent followed by its replies
+  void _sortCommentsAsTree() {
+    final topLevel = _comments.where((c) => c.isTopLevel).toList();
+    final replies = _comments.where((c) => c.isReply).toList();
+
+    // Group replies by parentCommentId
+    final Map<int, List<CommentModel>> replyMap = {};
+    for (final reply in replies) {
+      final parentId = reply.parentCommentId!;
+      replyMap.putIfAbsent(parentId, () => []);
+      replyMap[parentId]!.add(reply);
+    }
+
+    // Sort each group by createdAt
+    for (final entry in replyMap.entries) {
+      entry.value.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    }
+
+    // Build the final sorted list
+    final List<CommentModel> sorted = [];
+    for (final parent in topLevel) {
+      sorted.add(parent);
+      if (replyMap.containsKey(parent.id)) {
+        sorted.addAll(replyMap[parent.id]!);
+      }
+    }
+
+    // Add any orphaned replies (parent not in current page)
+    for (final reply in replies) {
+      if (!sorted.contains(reply)) {
+        sorted.add(reply);
+      }
+    }
+
+    _comments = sorted;
+  }
+
+  Future<bool> addComment(int postId, String content) async {
+    _isLoading = true;
+    _errorMessage = null;
+    _safeNotify();
+    try {
+      await _repository.addComment(postId, content, parentId: _replyingToComment?.id);
+      
+      // Clear reply state after successful comment
+      _replyingToComment = null;
+
+      // Refresh comments
+      await fetchComments(postId);
+
+      // Update comment count in all post lists
+      final postIndex = _posts.indexWhere((p) => p.id == postId);
+      if (postIndex != -1) {
+        final updatedPost = _posts[postIndex].copyWith(
+          commentsCount: _posts[postIndex].commentsCount + 1,
+        );
+        _updatePostEverywhere(updatedPost);
+      }
+
+      return true;
+    } catch (e) {
+      _errorMessage = 'فشل إضافة التعليق: ${e.toString()}';
+      return false;
+    } finally {
+      _isLoading = false;
+      _safeNotify();
+    }
+  }
+
+  // Toggle Comment Like
+  Future<void> toggleCommentLike(int commentId, int currentUserId) async {
+    final index = _comments.indexWhere((c) => c.id == commentId);
+    if (index == -1) return;
+
+    final comment = _comments[index];
+    final isLiked = comment.isLikedBy(currentUserId);
+    
+    try {
+      // Optimistic Update
+      final updatedComment = comment.copyWith(
+        isLiked: !isLiked,
+        likesCount: !isLiked ? comment.likesCount + 1 : comment.likesCount - 1,
+      );
+      
+      _comments[index] = updatedComment;
+      _safeNotify();
+
+      await _repository.toggleCommentLike(commentId);
+    } catch (e) {
+      _errorMessage = 'فشل التفاعل مع التعليق: ${e.toString()}';
+      
+      // Revert optimistic update
+      _comments[index] = comment;
+      _safeNotify();
+    }
+  }
+
+  // ==================== HELPERS ====================
+
+  void _updatePostEverywhere(PostModel updatedPost) {
+    void updateList(List<PostModel> list) {
+      final index = list.indexWhere((p) => p.id == updatedPost.id);
+      if (index != -1) {
+        list[index] = updatedPost;
+      }
+    }
+
+    updateList(_posts);
+    updateList(_explorePosts);
+    updateList(_followingPosts);
+    updateList(_myPosts);
+    _safeNotify();
+  }
+
+  void _removePostEverywhere(int postId) {
+    void removeFromList(List<PostModel> list) {
+      list.removeWhere((p) => p.id == postId);
+    }
+
+    removeFromList(_posts);
+    removeFromList(_explorePosts);
+    removeFromList(_followingPosts);
+    removeFromList(_myPosts);
+    _safeNotify();
+  }
+
+  // Social
+  Future<void> toggleFollow(int userId, {int? currentUserId}) async {
+    final isFollowing = _followedUserIds.contains(userId);
+    try {
+      // 1. Optimistic update for local list
+      if (isFollowing) {
+        _followedUserIds.remove(userId);
+      } else {
+        _followedUserIds.add(userId);
+      }
+      _safeNotify();
+
+      // 2. Call REST API (with Firebase sync if currentUserId is provided)
+      await _repository.toggleFollow(userId, currentUserId: currentUserId);
+
+      // 3. Delayed background refresh — give backend time to propagate
+      //    Keep a snapshot of the optimistic state so we don't overwrite it
+      final optimisticIds = List<int>.from(_followedUserIds);
+      Future.delayed(const Duration(seconds: 2), () async {
+        if (_isDisposed) return;
+        try {
+          final followingUsers = await _repository.getFollowingUsers();
+          if (_isDisposed) return;
+          final serverIds = followingUsers.map((u) => u.id).toList();
+          
+          // Merge: use server data but preserve any optimistic adds not yet reflected
+          _followedUserIds = serverIds;
+          // If we optimistically added userId and server doesn't have it yet, keep it
+          for (final id in optimisticIds) {
+            if (!_followedUserIds.contains(id)) {
+              _followedUserIds.add(id);
+            }
+          }
+
+          final feed = await _repository.getHomeFeed(page: 1);
+          if (_isDisposed) return;
+          _followingPosts = feed
+              .where((post) =>
+                  _followedUserIds.contains(post.userId) ||
+                  (_currentUserId != null && post.userId == _currentUserId))
+              .toList();
+          _safeNotify();
+        } catch (_) {
+          // Silently fail — the optimistic state is still valid
+        }
+      });
+    } catch (e) {
+      // Revert optimistic update
+      if (isFollowing) {
+        _followedUserIds.add(userId);
+      } else {
+        _followedUserIds.remove(userId);
+      }
+      _errorMessage = 'فشل متابعة المستخدم: ${e.toString()}';
+      _safeNotify();
+    }
+  }
+
+  Future<void> searchUsers(String query, {String? role}) async {
+    _isLoading = true;
+    _safeNotify();
+    try {
+      _searchResults = await _repository.searchUsers(query, role: role);
+      _isLoading = false;
+      _safeNotify();
+    } catch (e) {
+      _errorMessage = 'فشل البحث: ${e.toString()}';
+      _isLoading = false;
+      _safeNotify();
+    }
+  }
+
+  void clearError() {
+    _errorMessage = null;
+    _safeNotify();
+  }
+
+  /// Explicitly reset the state for logout or user change
+  void resetState() {
+    _posts = [];
+    _followingPosts = [];
+    _myPosts = [];
+    _isInitialized = false;
+    _currentUserId = null;
+    _errorMessage = null;
+    _isLoading = false;
+    _safeNotify();
+  }
+}
+===== lib/features/profile/view_model/profile_view_model.dart =====
+import 'package:flutter/material.dart';
+import '../../../data/models/user_model.dart';
+import '../../../data/repositories/profile_repository.dart';
+
+/// Profile View Model - manages profile screen state and logic
+class ProfileViewModel extends ChangeNotifier {
+  final ProfileRepository repository;
+
+  ProfileViewModel({required this.repository});
+
+  UserModel? _user;
+  bool _isLoading = false;
+  bool _isListLoading = false;
+  String? _errorMessage;
+
+  List<UserModel> _followers = [];
+  List<UserModel> _following = [];
+
+  // Getters
+  UserModel? get user => _user;
+  bool get isLoading => _isLoading;
+  bool get isListLoading => _isListLoading;
+  String? get errorMessage => _errorMessage;
+
+  List<UserModel> get followersList => _followers;
+  List<UserModel> get followingList => _following;
+
+  // Computed getters from _user
+  String get userName => _user?.name ?? '';
+  String get userRole => _user?.role.name ?? 'parent';
+  int get followers => _user?.followersCount ?? 0;
+  int get following => _user?.followingCount ?? 0;
+
+  /// Load user profile
+  Future<void> loadProfile(int userId) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final userData = await repository.getUserProfile(userId);
+      if (userData != null) {
+        _user = userData;
+      }
+    } catch (e) {
+      _errorMessage = 'فشل تحميل الملف الشخصي: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Load followers
+  Future<void> loadFollowers(int userId) async {
+    _isListLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _followers = await repository.getFollowers(userId);
+    } catch (e) {
+      _errorMessage = 'فشل تحميل المتابعين: $e';
+    } finally {
+      _isListLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Load following
+  Future<void> loadFollowing(int userId) async {
+    _isListLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _following = await repository.getFollowing(userId);
+    } catch (e) {
+      _errorMessage = 'فشل تحميل قائمة المتابعة: $e';
+    } finally {
+      _isListLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Update user profile
+  Future<void> updateProfile({
+    required int userId,
+    String? name,
+    String? bio,
+    String? phone,
+    String? avatarUrl,
+    String? childName,
+    int? childAge,
+    String? childMedicalCondition,
+    String? childPhotoUrl,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final updatedUser = await repository.updateProfile(
+        userId: userId,
+        name: name,
+        bio: bio,
+        phone: phone,
+        avatarUrl: avatarUrl,
+        childName: childName,
+        childAge: childAge,
+        childMedicalCondition: childMedicalCondition,
+        childPhotoUrl: childPhotoUrl,
+      );
+      _user = updatedUser;
+    } catch (e) {
+      _errorMessage = 'فشل تحديث الملف الشخصي: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Reset state for logout
+  void resetState() {
+    _isLoading = false;
+    _isListLoading = false;
+    _user = null;
+    _errorMessage = null;
+    _followers = [];
+    _following = [];
+    notifyListeners();
+  }
+
+  /// Clear error
+  void clearError() {
+    _errorMessage = null;
+    notifyListeners();
+  }
+}

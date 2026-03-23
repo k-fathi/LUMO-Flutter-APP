@@ -54,6 +54,7 @@ class CommunityViewModel extends ChangeNotifier {
   }
 
   bool isFollowing(int userId) => _followedUserIds.contains(userId);
+  int get followingCount => _followedUserIds.length;
 
   PostModel? findPostById(int id) {
     for (var list in [_explorePosts, _posts, _followingPosts, _myPosts]) {
@@ -439,9 +440,11 @@ class CommunityViewModel extends ChangeNotifier {
     _safeNotify();
   }
 
-  Future<void> toggleFollow(int userId, {int? currentUserId}) async {
+  // Social - BUG FIX #2, #3, #4, #5, #6: Complete refactor with optimistic UI, global state sync, rollback
+  Future<void> toggleFollow(int userId, {int? currentUserId, Function(bool isFollowing)? onFollowingCountChanged}) async {
     final isFollowing = _followedUserIds.contains(userId);
     
+    // STEP 1: Optimistic UI update (immediate visual feedback)
     if (isFollowing) {
       _followedUserIds.remove(userId);
     } else {
@@ -449,23 +452,61 @@ class CommunityViewModel extends ChangeNotifier {
     }
     _safeNotify();
 
+    // Notify caller about the optimistic change
+    onFollowingCountChanged?.call(!isFollowing);
+
     try {
+      // STEP 2: Call REST API
       await _repository.toggleFollow(userId, currentUserId: currentUserId);
-      
-      final followingUsers = await _repository.getFollowingUsers();
-      _followedUserIds = followingUsers.map((u) => u.id).toList();
-      
-      final feed = await _repository.getHomeFeed(page: 1);
-      _followingPosts = feed;
-      _safeNotify();
+
+      // STEP 3: Delayed background refresh to sync backend state
+      // Give backend time to propagate, then reload following users
+      final optimisticIds = List<int>.from(_followedUserIds);
+      Future.delayed(const Duration(seconds: 2), () async {
+        if (_isDisposed) return;
+        try {
+          final followingUsers = await _repository.getFollowingUsers();
+          if (_isDisposed) return;
+          final serverIds = followingUsers.map((u) => u.id).toList();
+          
+          // Merge: use server data but preserve any optimistic adds not yet reflected
+          _followedUserIds = serverIds;
+          // If we optimistically added userId and server doesn't have it yet, keep it
+          for (final id in optimisticIds) {
+            if (!_followedUserIds.contains(id)) {
+              _followedUserIds.add(id);
+            }
+          }
+
+          // Update following feed if needed
+          final feed = await _repository.getHomeFeed(page: 1);
+          if (_isDisposed) return;
+          _followingPosts = feed
+              .where((post) =>
+                  _followedUserIds.contains(post.userId) ||
+                  (_currentUserId != null && post.userId == _currentUserId))
+              .toList();
+          _safeNotify();
+        } catch (_) {
+          // Silently fail — the optimistic state is still valid
+        }
+      });
     } catch (e) {
+      // STEP 4: Rollback on failure - revert optimistic update
       if (isFollowing) {
         _followedUserIds.add(userId);
       } else {
         _followedUserIds.remove(userId);
       }
+      
+      // Notify caller about roll-back
+      onFollowingCountChanged?.call(isFollowing);
+      
       _errorMessage = 'فشل متابعة المستخدم: ${e.toString()}';
       _safeNotify();
+      
+      // Show error snackbar (caller responsibility to show this)
+      rethrow;
     }
   }
 

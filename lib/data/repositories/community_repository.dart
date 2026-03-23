@@ -1,16 +1,12 @@
 import '../datasources/remote/community_remote_data_source.dart';
 import '../models/comment_model.dart';
 import '../models/post_model.dart';
-import 'package:flutter/foundation.dart';
-
 import '../models/user_model.dart';
-import './profile_repository.dart';
 
 class CommunityRepository {
   final CommunityRemoteDataSource _remoteDataSource;
-  final ProfileRepository? _profileRepository;
 
-  CommunityRepository(this._remoteDataSource, [this._profileRepository]);
+  CommunityRepository(this._remoteDataSource);
 
   // ==================== POST OPERATIONS ====================
 
@@ -72,24 +68,6 @@ class CommunityRepository {
   Future<void> toggleFollow(int userId, {int? currentUserId}) async {
     // 1. Toggle in REST API
     await _remoteDataSource.toggleFollow(userId.toString());
-
-    // 2. Sync with Firebase for counters if profile repository is available
-    if (_profileRepository != null && currentUserId != null) {
-      try {
-        // Check if currently following to decide whether to follow or unfollow in Firebase
-        final following = await _remoteDataSource.getFollowingUsers();
-        final isFollowing = following.any((u) => u.id == userId);
-        
-        if (isFollowing) {
-          await _profileRepository!.followUser(currentUserId, userId);
-        } else {
-          await _profileRepository!.unfollowUser(currentUserId, userId);
-        }
-      } catch (e) {
-        // Log error but don't fail the whole operation as REST call succeeded
-        debugPrint('Firebase follow sync error: $e');
-      }
-    }
   }
 
   Future<List<UserModel>> getFollowingUsers() async {

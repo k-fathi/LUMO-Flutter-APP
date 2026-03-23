@@ -1,0 +1,1592 @@
+{
+  "info": {
+    "_postman_id": "9d96ff01-d68f-4136-a926-b8db1dd2389a",
+    "name": "lumo",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "53198225",
+    "_collection_link": "https://go.postman.co/collection/43207555-9d96ff01-d68f-4136-a926-b8db1dd2389a?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "forget password",
+          "item": [
+            {
+              "name": "forgot-password",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "phone",
+                      "value": "01012444678",
+                      "type": "text",
+                      "uuid": "c355ead8-ad08-47ac-a3c5-5bc49473073f"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}auth/forgot-password",
+                  "host": [
+                    "{{base_url}}auth"
+                  ],
+                  "path": [
+                    "forgot-password"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "verify-reset-otp",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "phone",
+                      "value": "01012444678",
+                      "type": "text",
+                      "uuid": "c355ead8-ad08-47ac-a3c5-5bc49473073f"
+                    },
+                    {
+                      "key": "otp",
+                      "value": "1234",
+                      "type": "text",
+                      "uuid": "fd346a8f-2077-4e7f-bdd0-88fe7c9398ae"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}auth/verify-reset-otp",
+                  "host": [
+                    "{{base_url}}auth"
+                  ],
+                  "path": [
+                    "verify-reset-otp"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "reset-password",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "phone",
+                      "value": "01012444678",
+                      "type": "text",
+                      "uuid": "c355ead8-ad08-47ac-a3c5-5bc49473073f"
+                    },
+                    {
+                      "key": "password",
+                      "value": "newpass",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password_confirmation",
+                      "value": "newpass",
+                      "type": "text"
+                    },
+                    {
+                      "key": "otp",
+                      "value": "1234",
+                      "type": "text",
+                      "uuid": "aed06641-06a3-407c-ab80-30c8ad8a5703"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}auth/reset-password",
+                  "host": [
+                    "{{base_url}}auth"
+                  ],
+                  "path": [
+                    "reset-password"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Ahmed Ali\",\r\n  \"email\": \"ahmed141@test.com\",\r\n  \"phone\": \"01012447678\",\r\n  \"password\": \"123456\",\r\n  \"password_confirmation\": \"123456\",\r\n  \"role\": \"patient\",\r\n  \"child_name\": \"Omar\"\r\n  //\"child_age\": null,\r\n  //\"doctor_number\"\r\n  //\"clinic_location\"\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}auth/register",
+              "host": [
+                "{{base_url}}auth"
+              ],
+              "path": [
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "phone",
+                  "value": "01012445678",
+                  "type": "text",
+                  "uuid": "393ff530-8d68-47f4-920d-4284522708d6"
+                },
+                {
+                  "key": "password",
+                  "value": "123456",
+                  "type": "text",
+                  "uuid": "8f64168c-c73a-49f3-b0e9-ed6fd858d153"
+                },
+                {
+                  "key": "fcm_token",
+                  "value": "fcm_example_token_123",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/auth/login",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "verify-otp",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "phone",
+                  "value": "01012444678",
+                  "type": "text",
+                  "uuid": "c355ead8-ad08-47ac-a3c5-5bc49473073f"
+                },
+                {
+                  "key": "otp",
+                  "value": "1234",
+                  "type": "text",
+                  "uuid": "fd346a8f-2077-4e7f-bdd0-88fe7c9398ae"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}auth/verify-otp",
+              "host": [
+                "{{base_url}}auth"
+              ],
+              "path": [
+                "verify-otp"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "resend-otp",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "phone",
+                  "value": "01012444618",
+                  "type": "text",
+                  "uuid": "4db42716-b9f8-4472-95c2-7c6ab624407a"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}auth/resend-otp",
+              "host": [
+                "{{base_url}}auth"
+              ],
+              "path": [
+                "resend-otp"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "logout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "\r\n"
+            },
+            "url": {
+              "raw": "{{base_url}}auth/logout",
+              "host": [
+                "{{base_url}}auth"
+              ],
+              "path": [
+                "logout"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "posts",
+      "item": [
+        {
+          "name": "likes",
+          "item": [
+            {
+              "name": "عمل أو إزالة لايك",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "",
+                    "value": "",
+                    "type": "text",
+                    "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}posts/3/like",
+                  "host": [
+                    "{{base_url}}posts"
+                  ],
+                  "path": [
+                    "3",
+                    "like"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "// جلب كل الإعجابات",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}posts/3/likes",
+                  "host": [
+                    "{{base_url}}posts"
+                  ],
+                  "path": [
+                    "3",
+                    "likes"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "comments",
+          "item": [
+            {
+              "name": "// إضافة تعليق",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "",
+                    "value": "",
+                    "type": "text",
+                    "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"comment\": \"احلا مسا يا كيمو   \",\r\n  \"image\": null\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}posts/3/comments",
+                  "host": [
+                    "{{base_url}}posts"
+                  ],
+                  "path": [
+                    "3",
+                    "comments"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "// جلب التعليقات",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}posts/3/comments",
+                  "host": [
+                    "{{base_url}}posts"
+                  ],
+                  "path": [
+                    "3",
+                    "comments"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "// حذف تعليق",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}posts/comments/1?_method=DELETE",
+                  "host": [
+                    "{{base_url}}posts"
+                  ],
+                  "path": [
+                    "comments",
+                    "1"
+                  ],
+                  "query": [
+                    {
+                      "key": "_method",
+                      "value": "DELETE"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "add new post",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "content",
+                  "value": "jopepoe",
+                  "type": "text",
+                  "uuid": "f0b6e3f4-8d34-435b-9801-e00dd76ed98a"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "uuid": "907dfb51-87e5-4d6f-ae1b-cc6c50675a47",
+                  "src": "postman-cloud:///1f0b048a-87e7-48c0-baad-d10fb6e919dd"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}posts/create",
+              "host": [
+                "{{base_url}}posts"
+              ],
+              "path": [
+                "create"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update post",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "content",
+                  "value": "llllllll",
+                  "type": "text",
+                  "uuid": "f0b6e3f4-8d34-435b-9801-e00dd76ed98a"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "uuid": "907dfb51-87e5-4d6f-ae1b-cc6c50675a47",
+                  "src": "postman-cloud:///1f0b048a-87e7-48c0-baad-d10fb6e919dd",
+                  "disabled": true
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}posts/2/update?_method=PUT",
+              "host": [
+                "{{base_url}}posts"
+              ],
+              "path": [
+                "2",
+                "update"
+              ],
+              "query": [
+                {
+                  "key": "_method",
+                  "value": "PUT"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "show one post",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "",
+                "value": "",
+                "type": "text",
+                "disabled": true
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}posts/2/show",
+              "host": [
+                "{{base_url}}posts"
+              ],
+              "path": [
+                "2",
+                "show"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "delete post",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}posts/2/delete?_method=DELETE",
+              "host": [
+                "{{base_url}}posts"
+              ],
+              "path": [
+                "2",
+                "delete"
+              ],
+              "query": [
+                {
+                  "key": "_method",
+                  "value": "DELETE"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "منشوراتي",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}posts",
+              "host": [
+                "{{base_url}}posts"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Follower",
+      "item": [
+        {
+          "name": "متابعة / إلغاء متابعة",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "",
+                "value": "",
+                "type": "text",
+                "disabled": true
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}user/3/follow",
+              "host": [
+                "{{base_url}}user"
+              ],
+              "path": [
+                "3",
+                "follow"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "// جلب المتابعين",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}user/followers",
+              "host": [
+                "{{base_url}}user"
+              ],
+              "path": [
+                "followers"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "followings",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}user/followings",
+              "host": [
+                "{{base_url}}user"
+              ],
+              "path": [
+                "followings"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Home",
+      "item": [
+        {
+          "name": "home",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}home",
+              "host": [
+                "{{base_url}}home"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "item": [
+        {
+          "name": "show profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}profile",
+              "host": [
+                "{{base_url}}profile"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "eslam",
+                  "type": "text",
+                  "uuid": "8b4dbe49-f281-4d21-95b1-7c9fb1401c64"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}profile?_method=PUT",
+              "host": [
+                "{{base_url}}profile"
+              ],
+              "query": [
+                {
+                  "key": "_method",
+                  "value": "PUT"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "نظام طلبات المرضى والدكتور",
+      "item": [
+        {
+          "name": "// إرسال طلب إضافة مريض",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"patient_id\": 4\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}doctor/patient-request",
+              "host": [
+                "{{base_url}}doctor"
+              ],
+              "path": [
+                "patient-request"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "// قبول طلب",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{base_url}}doctor/patient/request/1/accept",
+              "host": [
+                "{{base_url}}doctor"
+              ],
+              "path": [
+                "patient",
+                "request",
+                "1",
+                "accept"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "رفض الطلب",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{base_url}}doctor/patient/request/1/reject",
+              "host": [
+                "{{base_url}}doctor"
+              ],
+              "path": [
+                "patient",
+                "request",
+                "1",
+                "reject"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "// عرض المرضى المرتبطين بالدكتور",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{base_url}}doctor/patients",
+              "host": [
+                "{{base_url}}doctor"
+              ],
+              "path": [
+                "patients"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "// عرض الطلبات المعلقة للمرضى",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{base_url}}doctor/patient/requests",
+              "host": [
+                "{{base_url}}doctor"
+              ],
+              "path": [
+                "patient",
+                "requests"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "search",
+      "item": [
+        {
+          "name": "// البحث عن مستخدمين",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{base_url}}search/users?query=Conrad&role=doctor",
+              "host": [
+                "{{base_url}}search"
+              ],
+              "path": [
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "Conrad",
+                  "type": "text"
+                },
+                {
+                  "key": "role",
+                  "value": "doctor",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "المحاداثات",
+      "item": [
+        {
+          "name": "token",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}firebase/token",
+              "host": [
+                "{{base_url}}firebase"
+              ],
+              "path": [
+                "token"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "my-chats",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}chat/my-chats",
+              "host": [
+                "{{base_url}}chat"
+              ],
+              "path": [
+                "my-chats"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Start Chat",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n \"receiver_id\": 22\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}chat/start",
+              "host": [
+                "{{base_url}}chat"
+              ],
+              "path": [
+                "start"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "chat/update-last-message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n \"sender_id\": 1,\r\n \"receiver_id\": 2,\r\n \"message\": \"Hello doctor\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}chat/update-last-message",
+              "host": [
+                "{{base_url}}chat"
+              ],
+              "path": [
+                "update-last-message"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "session",
+      "item": [
+        {
+          "name": "start",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n \"receiver_id\": 22\r\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}session/start",
+              "host": [
+                "{{base_url}}session"
+              ],
+              "path": [
+                "start"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "end session",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}session/end",
+              "host": [
+                "{{base_url}}session"
+              ],
+              "path": [
+                "end"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "notifications",
+      "item": [
+        {
+          "name": "عرض الاشعارات",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}notifications",
+              "host": [
+                "{{base_url}}notifications"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "قرائه الاشعارات",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}notifications/read",
+              "host": [
+                "{{base_url}}notifications"
+              ],
+              "path": [
+                "read"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "مسح الاشعارات",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}notifications/destroy?date=2025-11-01",
+              "host": [
+                "{{base_url}}notifications"
+              ],
+              "path": [
+                "destroy"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2025-11-01",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "",
+      "type": "default"
+    }
+  ]
+}

@@ -224,7 +224,7 @@ class CommunityRemoteDataSourceImpl implements CommunityRemoteDataSource {
 
   @override
   Future<List<UserModel>> getFollowingUsers() async {
-    final response = await _dioClient.get(ApiConstants.getFollowing);
+    final response = await _dioClient.get(ApiConstants.getMyFollowings);
     final List<dynamic> data =
         response.data['followings'] ?? response.data['data'] ?? [];
     return data.map((json) => _parseUser(json)).toList();

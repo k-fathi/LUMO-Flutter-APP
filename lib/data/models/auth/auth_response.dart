@@ -17,11 +17,15 @@ class AuthResponse {
   });
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
-    // Robust status parsing (bool or int)
-    final bool statusValue = json['status'] == true ||
-        json['status'] == 1 ||
-        json['status'] == '1' ||
-        json['status'] == 'true';
+    // Robust status parsing (bool, int, or string)
+    final dynamic statusRaw = json['status'];
+    final bool statusValue = statusRaw == true ||
+        statusRaw == 1 ||
+        statusRaw == '1' ||
+        statusRaw == 'true' ||
+        statusRaw == 200 ||
+        statusRaw == 'success' ||
+        statusRaw == 'OK';
 
     final data = json['data'] as Map<String, dynamic>?;
     final userMap = data?['user'] as Map<String, dynamic>?;

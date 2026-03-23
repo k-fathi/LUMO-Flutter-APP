@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../view_model/profile_view_model.dart';
+import '../../community/view_model/community_view_model.dart';
 import '../../../shared/providers/auth_provider.dart';
 import '../../../data/models/user_model.dart';
 import '../../../core/theme/app_colors.dart';
@@ -77,7 +78,7 @@ class _FollowersScreenState extends State<FollowersScreen> {
             color: isDark ? theme.dividerColor : const Color(0xFFE3F2FD)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 4,
             offset: const Offset(0, 1),
           ),
@@ -85,64 +86,85 @@ class _FollowersScreenState extends State<FollowersScreen> {
       ),
       child: Row(
         children: [
-          AvatarWidget(
-            imageUrl: follower.avatarUrl,
-            name: follower.name,
-            size: 56,
+          InkWell(
+            onTap: () => _navigateToProfile(context, follower.id),
+            child: AvatarWidget(
+              imageUrl: follower.avatarUrl,
+              name: follower.name,
+              size: 56,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  follower.name,
-                  style: AppTextStyles.body.copyWith(
-                    color: theme.textTheme.bodyLarge?.color,
-                    fontWeight: FontWeight.w600,
+            child: GestureDetector(
+              onTap: () => _navigateToProfile(context, follower.id),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    follower.name,
+                    style: AppTextStyles.body.copyWith(
+                      color: theme.textTheme.bodyLarge?.color,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  follower.role.name,
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.mutedForeground,
+                  const SizedBox(height: 4),
+                  Text(
+                    follower.role.name,
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.mutedForeground,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-          InkWell(
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('سيتم تفعيل المتابعة قريباً'),
-                  duration: Duration(seconds: 1),
+          Consumer<CommunityViewModel>(
+            builder: (context, viewModel, child) {
+              final isFollowing = viewModel.isFollowing(follower.id);
+              final currentUserId = context.read<AuthProvider>().currentUser?.id;
+              
+              if (follower.id == currentUserId) return const SizedBox.shrink();
+
+              return InkWell(
+                onTap: () async {
+                  await viewModel.toggleFollow(follower.id, currentUserId: currentUserId);
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  height: 36,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: isFollowing ? Colors.transparent : AppColors.primary,
+                    border: Border.all(
+                        color: isFollowing 
+                            ? (isDark ? theme.dividerColor : const Color(0xFFE3F2FD))
+                            : AppColors.primary,
+                        width: 2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    isFollowing ? 'متابع' : 'متابعة',
+                    style: AppTextStyles.caption.copyWith(
+                      color: isFollowing ? AppColors.mutedForeground : Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               );
             },
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              height: 36,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                border: Border.all(
-                    color:
-                        isDark ? theme.dividerColor : const Color(0xFFE3F2FD),
-                    width: 2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                'متابَع',
-                style: AppTextStyles.caption.copyWith(
-                  color: AppColors.mutedForeground,
-                ),
-              ),
-            ),
           ),
         ],
       ),
+    );
+  }
+
+  void _navigateToProfile(BuildContext context, int userId) {
+    Navigator.pushNamed(
+      context,
+      '/profile',
+      arguments: {'userId': userId},
     );
   }
 }

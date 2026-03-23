@@ -1,0 +1,731 @@
+.
+├── analysis_options.yaml
+├── android
+│   ├── app
+│   │   ├── build.gradle.kts
+│   │   ├── google-services.json
+│   │   └── src
+│   │       ├── debug
+│   │       │   └── AndroidManifest.xml
+│   │       ├── main
+│   │       │   ├── AndroidManifest.xml
+│   │       │   ├── java
+│   │       │   │   └── io
+│   │       │   │       └── flutter
+│   │       │   ├── kotlin
+│   │       │   │   └── com
+│   │       │   │       └── example
+│   │       │   └── res
+│   │       │       ├── drawable
+│   │       │       │   └── launch_background.xml
+│   │       │       ├── drawable-v21
+│   │       │       │   └── launch_background.xml
+│   │       │       ├── mipmap-hdpi
+│   │       │       │   ├── ic_launcher.png
+│   │       │       │   └── launcher_icon.png
+│   │       │       ├── mipmap-mdpi
+│   │       │       │   ├── ic_launcher.png
+│   │       │       │   └── launcher_icon.png
+│   │       │       ├── mipmap-xhdpi
+│   │       │       │   ├── ic_launcher.png
+│   │       │       │   └── launcher_icon.png
+│   │       │       ├── mipmap-xxhdpi
+│   │       │       │   ├── ic_launcher.png
+│   │       │       │   └── launcher_icon.png
+│   │       │       ├── mipmap-xxxhdpi
+│   │       │       │   ├── ic_launcher.png
+│   │       │       │   └── launcher_icon.png
+│   │       │       ├── raw
+│   │       │       │   └── keep.xml
+│   │       │       ├── values
+│   │       │       │   └── styles.xml
+│   │       │       └── values-night
+│   │       │           └── styles.xml
+│   │       └── profile
+│   │           └── AndroidManifest.xml
+│   ├── build
+│   │   └── reports
+│   │       └── problems
+│   │           └── problems-report.html
+│   ├── build.gradle.kts
+│   ├── gradle
+│   │   └── wrapper
+│   │       └── gradle-wrapper.properties
+│   ├── gradle.properties
+│   ├── local.properties
+│   └── settings.gradle.kts
+├── app_tree.txt
+├── assets
+│   ├── animations
+│   ├── icons
+│   ├── images
+│   │   ├── ai_avatar.png
+│   │   ├── app_logo.png
+│   │   ├── bot-icon.png
+│   │   ├── first-onboarding-img.png
+│   │   ├── lumo-app-avatar-for-delay-img.png
+│   │   ├── lumo-logo.png
+│   │   ├── second-onboarding-img.png
+│   │   └── third-onboarding-img.png
+│   └── images_from_web
+│       ├── lumo_app_icon.png
+│       ├── lumo_vector_logo.svg
+│       ├── web_bot.png
+│       ├── web_onboarding1.png
+│       ├── web_onboarding2.png
+│       ├── web_onboarding3.png
+│       └── web_splash.png
+├── build
+│   ├── 0dd200f67634af281460f005270e2f2c
+│   │   ├── _composite.stamp
+│   │   ├── gen_dart_plugin_registrant.stamp
+│   │   └── gen_localizations.stamp
+│   ├── 3a5b25016ad9dd712352abf0dc58813d
+│   │   ├── _composite.stamp
+│   │   ├── dart_build.d
+│   │   ├── dart_build_result.json
+│   │   ├── dart_build.stamp
+│   │   ├── gen_dart_plugin_registrant.stamp
+│   │   ├── gen_localizations.stamp
+│   │   └── outputs.json
+│   ├── 8c375f3ed2a48cad9409491eb5bde222
+│   │   ├── gen_localizations.stamp
+│   │   └── outputs.json
+│   ├── fa875cea96ff9eb23bebfb51f104f901.cache.dill.track.dill
+│   ├── flutter_assets
+│   │   ├── AssetManifest.bin
+│   │   ├── AssetManifest.bin.json
+│   │   ├── assets
+│   │   │   ├── images
+│   │   │   │   ├── ai_avatar.png
+│   │   │   │   ├── app_logo.png
+│   │   │   │   ├── bot-icon.png
+│   │   │   │   ├── first-onboarding-img.png
+│   │   │   │   ├── lumo-app-avatar-for-delay-img.png
+│   │   │   │   ├── lumo-logo.png
+│   │   │   │   ├── second-onboarding-img.png
+│   │   │   │   └── third-onboarding-img.png
+│   │   │   └── images_from_web
+│   │   │       ├── lumo_app_icon.png
+│   │   │       ├── lumo_vector_logo.svg
+│   │   │       ├── web_bot.png
+│   │   │       ├── web_onboarding1.png
+│   │   │       ├── web_onboarding2.png
+│   │   │       ├── web_onboarding3.png
+│   │   │       └── web_splash.png
+│   │   ├── FontManifest.json
+│   │   ├── fonts
+│   │   │   └── MaterialIcons-Regular.otf
+│   │   ├── kernel_blob.bin
+│   │   ├── NativeAssetsManifest.json
+│   │   ├── NOTICES
+│   │   ├── NOTICES.Z
+│   │   ├── packages
+│   │   │   ├── cupertino_icons
+│   │   │   │   └── assets
+│   │   │   │       └── CupertinoIcons.ttf
+│   │   │   ├── font_awesome_flutter
+│   │   │   │   └── lib
+│   │   │   │       └── fonts
+│   │   │   │           ├── Font-Awesome-7-Brands-Regular-400.otf
+│   │   │   │           ├── Font-Awesome-7-Free-Regular-400.otf
+│   │   │   │           └── Font-Awesome-7-Free-Solid-900.otf
+│   │   │   └── iconly
+│   │   │       └── fonts
+│   │   │           ├── IconlyBold.ttf
+│   │   │           ├── IconlyBroken.ttf
+│   │   │           └── IconlyLight.ttf
+│   │   ├── shaders
+│   │   │   ├── ink_sparkle.frag
+│   │   │   └── stretch_effect.frag
+│   │   └── version.json
+│   ├── lib
+│   ├── linux
+│   │   └── x64
+│   │       ├── debug
+│   │       │   ├── build.ninja
+│   │       │   ├── bundle
+│   │       │   │   ├── data
+│   │       │   │   │   ├── flutter_assets
+│   │       │   │   │   └── icudtl.dat
+│   │       │   │   ├── kareem_final
+│   │       │   │   └── lib
+│   │       │   │       ├── libfile_selector_linux_plugin.so
+│   │       │   │       ├── libflutter_linux_gtk.so
+│   │       │   │       ├── liburl_launcher_linux_plugin.so
+│   │       │   │       └── native_assets.json
+│   │       │   ├── CMakeCache.txt
+│   │       │   ├── CMakeFiles
+│   │       │   │   ├── 3.28.3
+│   │       │   │   │   ├── CMakeCXXCompiler.cmake
+│   │       │   │   │   ├── CMakeDetermineCompilerABI_CXX.bin
+│   │       │   │   │   ├── CMakeSystem.cmake
+│   │       │   │   │   └── CompilerIdCXX
+│   │       │   │   ├── cmake.check_cache
+│   │       │   │   ├── CMakeConfigureLog.yaml
+│   │       │   │   ├── pkgRedirects
+│   │       │   │   ├── rules.ninja
+│   │       │   │   └── TargetDirectories.txt
+│   │       │   ├── cmake_install.cmake
+│   │       │   ├── flutter
+│   │       │   │   ├── CMakeFiles
+│   │       │   │   └── cmake_install.cmake
+│   │       │   ├── install_manifest.txt
+│   │       │   ├── intermediates_do_not_run
+│   │       │   │   └── kareem_final
+│   │       │   ├── plugins
+│   │       │   │   ├── file_selector_linux
+│   │       │   │   │   ├── CMakeFiles
+│   │       │   │   │   ├── cmake_install.cmake
+│   │       │   │   │   └── libfile_selector_linux_plugin.so
+│   │       │   │   └── url_launcher_linux
+│   │       │   │       ├── CMakeFiles
+│   │       │   │       ├── cmake_install.cmake
+│   │       │   │       └── liburl_launcher_linux_plugin.so
+│   │       │   └── runner
+│   │       │       ├── CMakeFiles
+│   │       │       │   └── kareem_final.dir
+│   │       │       └── cmake_install.cmake
+│   │       └── release
+│   │           ├── build.ninja
+│   │           ├── bundle
+│   │           │   ├── data
+│   │           │   │   ├── flutter_assets
+│   │           │   │   └── icudtl.dat
+│   │           │   ├── kareem_final
+│   │           │   └── lib
+│   │           │       ├── libapp.so
+│   │           │       ├── libfile_selector_linux_plugin.so
+│   │           │       ├── libflutter_linux_gtk.so
+│   │           │       └── liburl_launcher_linux_plugin.so
+│   │           ├── CMakeCache.txt
+│   │           ├── CMakeFiles
+│   │           │   ├── 3.28.3
+│   │           │   │   ├── CMakeCXXCompiler.cmake
+│   │           │   │   ├── CMakeDetermineCompilerABI_CXX.bin
+│   │           │   │   ├── CMakeSystem.cmake
+│   │           │   │   └── CompilerIdCXX
+│   │           │   ├── cmake.check_cache
+│   │           │   ├── CMakeConfigureLog.yaml
+│   │           │   ├── CMakeScratch
+│   │           │   ├── pkgRedirects
+│   │           │   ├── rules.ninja
+│   │           │   └── TargetDirectories.txt
+│   │           ├── cmake_install.cmake
+│   │           ├── flutter
+│   │           │   ├── CMakeFiles
+│   │           │   └── cmake_install.cmake
+│   │           ├── install_manifest.txt
+│   │           ├── intermediates_do_not_run
+│   │           │   └── kareem_final
+│   │           ├── plugins
+│   │           │   ├── file_selector_linux
+│   │           │   │   ├── CMakeFiles
+│   │           │   │   ├── cmake_install.cmake
+│   │           │   │   └── libfile_selector_linux_plugin.so
+│   │           │   └── url_launcher_linux
+│   │           │       ├── CMakeFiles
+│   │           │       ├── cmake_install.cmake
+│   │           │       └── liburl_launcher_linux_plugin.so
+│   │           └── runner
+│   │               ├── CMakeFiles
+│   │               │   └── kareem_final.dir
+│   │               └── cmake_install.cmake
+│   ├── native_assets
+│   │   ├── flutter-tester
+│   │   └── linux
+│   │       └── native_assets.json
+│   ├── native_hooks
+│   ├── test_cache
+│   │   └── build
+│   │       └── fa875cea96ff9eb23bebfb51f104f901.cache.dill.track.dill
+│   └── unit_test_assets
+│       ├── AssetManifest.bin
+│       ├── assets
+│       │   ├── images
+│       │   │   ├── ai_avatar.png
+│       │   │   ├── app_logo.png
+│       │   │   ├── bot-icon.png
+│       │   │   ├── first-onboarding-img.png
+│       │   │   ├── lumo-app-avatar-for-delay-img.png
+│       │   │   ├── lumo-logo.png
+│       │   │   ├── second-onboarding-img.png
+│       │   │   └── third-onboarding-img.png
+│       │   └── images_from_web
+│       │       ├── lumo_app_icon.png
+│       │       ├── lumo_vector_logo.svg
+│       │       ├── web_bot.png
+│       │       ├── web_onboarding1.png
+│       │       ├── web_onboarding2.png
+│       │       ├── web_onboarding3.png
+│       │       └── web_splash.png
+│       ├── FontManifest.json
+│       ├── fonts
+│       │   └── MaterialIcons-Regular.otf
+│       ├── NativeAssetsManifest.json
+│       ├── NOTICES.Z
+│       ├── packages
+│       │   ├── cupertino_icons
+│       │   │   └── assets
+│       │   │       └── CupertinoIcons.ttf
+│       │   ├── font_awesome_flutter
+│       │   │   └── lib
+│       │   │       └── fonts
+│       │   │           ├── Font-Awesome-7-Brands-Regular-400.otf
+│       │   │           ├── Font-Awesome-7-Free-Regular-400.otf
+│       │   │           └── Font-Awesome-7-Free-Solid-900.otf
+│       │   ├── golden_toolkit
+│       │   │   └── fonts
+│       │   │       └── Roboto-Regular.ttf
+│       │   └── iconly
+│       │       └── fonts
+│       │           ├── IconlyBold.ttf
+│       │           ├── IconlyBroken.ttf
+│       │           └── IconlyLight.ttf
+│       └── shaders
+│           ├── ink_sparkle.frag
+│           └── stretch_effect.frag
+├── devtools_options.yaml
+├── ios
+│   ├── Flutter
+│   │   ├── AppFrameworkInfo.plist
+│   │   ├── Debug.xcconfig
+│   │   ├── ephemeral
+│   │   │   ├── flutter_lldb_helper.py
+│   │   │   └── flutter_lldbinit
+│   │   ├── flutter_export_environment.sh
+│   │   ├── Generated.xcconfig
+│   │   └── Release.xcconfig
+│   ├── Runner
+│   │   ├── AppDelegate.swift
+│   │   ├── Assets.xcassets
+│   │   │   ├── AppIcon.appiconset
+│   │   │   │   ├── Contents.json
+│   │   │   │   ├── Icon-App-1024x1024@1x.png
+│   │   │   │   ├── Icon-App-20x20@1x.png
+│   │   │   │   ├── Icon-App-20x20@2x.png
+│   │   │   │   ├── Icon-App-20x20@3x.png
+│   │   │   │   ├── Icon-App-29x29@1x.png
+│   │   │   │   ├── Icon-App-29x29@2x.png
+│   │   │   │   ├── Icon-App-29x29@3x.png
+│   │   │   │   ├── Icon-App-40x40@1x.png
+│   │   │   │   ├── Icon-App-40x40@2x.png
+│   │   │   │   ├── Icon-App-40x40@3x.png
+│   │   │   │   ├── Icon-App-50x50@1x.png
+│   │   │   │   ├── Icon-App-50x50@2x.png
+│   │   │   │   ├── Icon-App-57x57@1x.png
+│   │   │   │   ├── Icon-App-57x57@2x.png
+│   │   │   │   ├── Icon-App-60x60@2x.png
+│   │   │   │   ├── Icon-App-60x60@3x.png
+│   │   │   │   ├── Icon-App-72x72@1x.png
+│   │   │   │   ├── Icon-App-72x72@2x.png
+│   │   │   │   ├── Icon-App-76x76@1x.png
+│   │   │   │   ├── Icon-App-76x76@2x.png
+│   │   │   │   └── Icon-App-83.5x83.5@2x.png
+│   │   │   └── LaunchImage.imageset
+│   │   │       ├── Contents.json
+│   │   │       ├── LaunchImage@2x.png
+│   │   │       ├── LaunchImage@3x.png
+│   │   │       ├── LaunchImage.png
+│   │   │       └── README.md
+│   │   ├── Base.lproj
+│   │   │   ├── LaunchScreen.storyboard
+│   │   │   └── Main.storyboard
+│   │   ├── GeneratedPluginRegistrant.h
+│   │   ├── GeneratedPluginRegistrant.m
+│   │   ├── Info.plist
+│   │   └── Runner-Bridging-Header.h
+│   ├── RunnerTests
+│   │   └── RunnerTests.swift
+│   ├── Runner.xcodeproj
+│   │   ├── project.pbxproj
+│   │   ├── project.xcworkspace
+│   │   │   ├── contents.xcworkspacedata
+│   │   │   └── xcshareddata
+│   │   │       ├── IDEWorkspaceChecks.plist
+│   │   │       └── WorkspaceSettings.xcsettings
+│   │   └── xcshareddata
+│   │       └── xcschemes
+│   │           └── Runner.xcscheme
+│   └── Runner.xcworkspace
+│       ├── contents.xcworkspacedata
+│       └── xcshareddata
+│           ├── IDEWorkspaceChecks.plist
+│           └── WorkspaceSettings.xcsettings
+├── lib
+│   ├── app.dart
+│   ├── core
+│   │   ├── controllers
+│   │   │   └── app_controller.dart
+│   │   ├── di
+│   │   │   └── dependency_injection.dart
+│   │   ├── enums
+│   │   │   ├── child_state.dart
+│   │   │   ├── connection_status.dart
+│   │   │   ├── message_status.dart
+│   │   │   ├── post_status.dart
+│   │   │   └── user_role.dart
+│   │   ├── localization
+│   │   │   ├── l10n.dart
+│   │   │   └── language_controller.dart
+│   │   ├── network
+│   │   │   ├── api_constants.dart
+│   │   │   ├── api_exception.dart
+│   │   │   └── dio_client.dart
+│   │   ├── router
+│   │   │   ├── app_routes.dart
+│   │   │   ├── route_names.dart
+│   │   │   └── route_transitions.dart
+│   │   ├── services
+│   │   │   ├── firebase_auth_service.dart
+│   │   │   ├── firebase_firestore_service.dart
+│   │   │   ├── firebase_storage_service.dart
+│   │   │   ├── local_storage_service.dart
+│   │   │   ├── mock_api_service.dart
+│   │   │   ├── notification_service.dart
+│   │   │   └── shared_preferences_service.dart
+│   │   ├── theme
+│   │   │   ├── app_colors.dart
+│   │   │   ├── app_text_styles.dart
+│   │   │   └── app_theme.dart
+│   │   └── utils
+│   │       ├── app_constants.dart
+│   │       ├── date_formatter.dart
+│   │       ├── extensions.dart
+│   │       ├── firebase_collections.dart
+│   │       ├── initializer.dart
+│   │       ├── mock_accounts.dart
+│   │       ├── mock_delay.dart
+│   │       └── validators.dart
+│   ├── data
+│   │   ├── datasources
+│   │   │   ├── firebase_data_source.dart
+│   │   │   ├── local_data_source.dart
+│   │   │   ├── mock_data_source.dart
+│   │   │   ├── remote
+│   │   │   │   ├── auth_remote_data_source.dart
+│   │   │   │   ├── chat_remote_data_source.dart
+│   │   │   │   ├── community_remote_data_source.dart
+│   │   │   │   ├── notification_remote_data_source.dart
+│   │   │   │   ├── patient_remote_data_source.dart
+│   │   │   │   ├── profile_remote_data_source.dart
+│   │   │   │   └── session_remote_data_source.dart
+│   │   │   └── remote_data_source.dart
+│   │   ├── models
+│   │   │   ├── ai_message_model.dart
+│   │   │   ├── auth
+│   │   │   │   ├── auth_models.dart
+│   │   │   │   ├── auth_response.dart
+│   │   │   │   ├── forgot_password_request.dart
+│   │   │   │   ├── login_request.dart
+│   │   │   │   ├── message_response.dart
+│   │   │   │   ├── register_request.dart
+│   │   │   │   ├── resend_otp_request.dart
+│   │   │   │   ├── reset_password_request.dart
+│   │   │   │   └── verify_otp_request.dart
+│   │   │   ├── chat_room_model.dart
+│   │   │   ├── child_analysis_model.dart
+│   │   │   ├── comment_model.dart
+│   │   │   ├── connection_request_model.dart
+│   │   │   ├── doctor_code_model.dart
+│   │   │   ├── doctor_model.dart
+│   │   │   ├── message_model.dart
+│   │   │   ├── notification_model.dart
+│   │   │   ├── onboarding_model.dart
+│   │   │   ├── parent_model.dart
+│   │   │   ├── post_model.dart
+│   │   │   └── user_model.dart
+│   │   └── repositories
+│   │       ├── ai_repository.dart
+│   │       ├── analysis_repository.dart
+│   │       ├── auth_repository.dart
+│   │       ├── chat_repository.dart
+│   │       ├── community_repository.dart
+│   │       ├── notification_repository.dart
+│   │       ├── patient_repository.dart
+│   │       ├── profile_repository.dart
+│   │       └── session_repository.dart
+│   ├── features
+│   │   ├── ai_helper
+│   │   │   ├── view
+│   │   │   │   ├── ai_chat_screen.dart
+│   │   │   │   └── ai_message_bubble.dart
+│   │   │   └── view_model
+│   │   │       └── ai_view_model.dart
+│   │   ├── analysis
+│   │   │   ├── view
+│   │   │   │   ├── analysis_card_widget.dart
+│   │   │   │   ├── doctor_patient_detail.dart
+│   │   │   │   ├── doctor_patients_screen.dart
+│   │   │   │   ├── edit_analysis_dialog.dart
+│   │   │   │   ├── parent_analysis_screen.dart
+│   │   │   │   ├── patient_details_screen.dart
+│   │   │   │   ├── session_config_bottom_sheet.dart
+│   │   │   │   ├── session_detail_placeholder_screen.dart
+│   │   │   │   └── state_bullet_widget.dart
+│   │   │   ├── view_model
+│   │   │   │   └── analysis_view_model.dart
+│   │   │   └── widgets
+│   │   │       └── emotion_bar.dart
+│   │   ├── auth
+│   │   │   ├── view
+│   │   │   │   ├── auth_wrapper.dart
+│   │   │   │   ├── forgot_password_screen.dart
+│   │   │   │   ├── login_screen.dart
+│   │   │   │   ├── otp_verification_screen.dart
+│   │   │   │   ├── reset_password_screen.dart
+│   │   │   │   ├── role_selection_screen.dart
+│   │   │   │   ├── sign_in_screen.dart
+│   │   │   │   ├── sign_up_screen.dart
+│   │   │   │   └── signup_screen.dart
+│   │   │   └── view_model
+│   │   │       └── auth_view_model.dart
+│   │   ├── chat
+│   │   │   ├── view
+│   │   │   │   ├── chatbot_screen.dart
+│   │   │   │   ├── chat_input_widget.dart
+│   │   │   │   ├── chat_room_screen.dart
+│   │   │   │   ├── chat_screen.dart
+│   │   │   │   ├── chats_list_screen.dart
+│   │   │   │   ├── message_bubble.dart
+│   │   │   │   └── new_chat_dialog.dart
+│   │   │   ├── view_model
+│   │   │   │   └── chat_view_model.dart
+│   │   │   └── widgets
+│   │   │       ├── chat_avatar.dart
+│   │   │       ├── chat_input_bar.dart
+│   │   │       ├── message_bubble.dart
+│   │   │       └── typing_indicator.dart
+│   │   ├── community
+│   │   │   ├── models
+│   │   │   │   └── mock_post.dart
+│   │   │   ├── view
+│   │   │   │   ├── comment_input_widget.dart
+│   │   │   │   ├── comments_screen.dart
+│   │   │   │   ├── community_screen.dart
+│   │   │   │   ├── create_post_screen.dart
+│   │   │   │   ├── edit_post_screen.dart
+│   │   │   │   ├── notifications_screen.dart
+│   │   │   │   ├── post_detail_screen.dart
+│   │   │   │   └── posts_feed_widget.dart
+│   │   │   ├── view_model
+│   │   │   │   └── community_view_model.dart
+│   │   │   └── widgets
+│   │   │       ├── community_header.dart
+│   │   │       ├── post_card.dart
+│   │   │       └── quick_post_widget.dart
+│   │   ├── home
+│   │   │   ├── view
+│   │   │   │   ├── home_screen.dart
+│   │   │   │   └── main_layout.dart
+│   │   │   └── view_model
+│   │   │       └── home_view_model.dart
+│   │   ├── loading
+│   │   │   ├── view
+│   │   │   │   └── loading_screen.dart
+│   │   │   └── view_model
+│   │   │       └── loading_view_model.dart
+│   │   ├── onboarding
+│   │   │   ├── view
+│   │   │   │   ├── onboarding_page.dart
+│   │   │   │   └── onboarding_screen.dart
+│   │   │   └── view_model
+│   │   │       └── onboarding_view_model.dart
+│   │   ├── profile
+│   │   │   ├── models
+│   │   │   │   └── mock_child_data.dart
+│   │   │   ├── view
+│   │   │   │   ├── change_password_screen.dart
+│   │   │   │   ├── child_profile_screen.dart
+│   │   │   │   ├── edit_child_profile_screen.dart
+│   │   │   │   ├── edit_profile_screen.dart
+│   │   │   │   ├── followers_following_screens.dart
+│   │   │   │   ├── followers_screen.dart
+│   │   │   │   ├── following_screen.dart
+│   │   │   │   ├── profile_header_widget.dart
+│   │   │   │   └── profile_screen.dart
+│   │   │   └── view_model
+│   │   │       └── profile_view_model.dart
+│   │   ├── session
+│   │   │   ├── models
+│   │   │   │   └── session_part.dart
+│   │   │   ├── view
+│   │   │   │   └── floating_timer_overlay.dart
+│   │   │   └── view_model
+│   │   │       └── session_view_model.dart
+│   │   ├── settings
+│   │   │   └── view
+│   │   │       └── settings_screen.dart
+│   │   └── splash
+│   │       ├── view
+│   │       │   └── splash_screen.dart
+│   │       └── view_model
+│   │           └── splash_view_model.dart
+│   ├── firebase_options.dart
+│   ├── l10n
+│   │   ├── app_ar.arb
+│   │   ├── app_en.arb
+│   │   ├── app_localizations_ar.dart
+│   │   ├── app_localizations.dart
+│   │   └── app_localizations_en.dart
+│   ├── main.dart
+│   ├── shared
+│   │   ├── mixins
+│   │   │   ├── form_validation_mixin.dart
+│   │   │   └── scroll_behavior_mixin.dart
+│   │   ├── providers
+│   │   │   ├── auth_provider.dart
+│   │   │   ├── community_provider.dart
+│   │   │   ├── locale_provider.dart
+│   │   │   ├── notification_provider.dart
+│   │   │   ├── patient_provider.dart
+│   │   │   ├── theme_provider.dart
+│   │   │   └── user_provider.dart
+│   │   └── widgets
+│   │       ├── app_button.dart
+│   │       ├── app_text_field.dart
+│   │       ├── avatar_widget.dart
+│   │       ├── bottom_nav_bar.dart
+│   │       ├── comment_card.dart
+│   │       ├── custom_app_bar.dart
+│   │       ├── custom_button.dart
+│   │       ├── delete_confirmation_dialog.dart
+│   │       ├── doctor_request_dialog.dart
+│   │       ├── elevated_card.dart
+│   │       ├── empty_state.dart
+│   │       ├── gradient_app_bar.dart
+│   │       ├── loading_indicator.dart
+│   │       ├── shimmer_loading.dart
+│   │       ├── state_badge.dart
+│   │       └── user_chip_widget.dart
+│   └── test_api.dart
+├── linux
+│   ├── CMakeLists.txt
+│   ├── flutter
+│   │   ├── CMakeLists.txt
+│   │   ├── ephemeral
+│   │   │   ├── flutter_linux
+│   │   │   │   ├── fl_application.h
+│   │   │   │   ├── fl_basic_message_channel.h
+│   │   │   │   ├── fl_binary_codec.h
+│   │   │   │   ├── fl_binary_messenger.h
+│   │   │   │   ├── fl_dart_project.h
+│   │   │   │   ├── fl_engine.h
+│   │   │   │   ├── fl_event_channel.h
+│   │   │   │   ├── fl_json_message_codec.h
+│   │   │   │   ├── fl_json_method_codec.h
+│   │   │   │   ├── fl_message_codec.h
+│   │   │   │   ├── fl_method_call.h
+│   │   │   │   ├── fl_method_channel.h
+│   │   │   │   ├── fl_method_codec.h
+│   │   │   │   ├── fl_method_response.h
+│   │   │   │   ├── fl_pixel_buffer_texture.h
+│   │   │   │   ├── fl_plugin_registrar.h
+│   │   │   │   ├── fl_plugin_registry.h
+│   │   │   │   ├── fl_standard_message_codec.h
+│   │   │   │   ├── fl_standard_method_codec.h
+│   │   │   │   ├── fl_string_codec.h
+│   │   │   │   ├── fl_texture_gl.h
+│   │   │   │   ├── fl_texture.h
+│   │   │   │   ├── fl_texture_registrar.h
+│   │   │   │   ├── flutter_linux.h
+│   │   │   │   ├── fl_value.h
+│   │   │   │   └── fl_view.h
+│   │   │   ├── generated_config.cmake
+│   │   │   ├── icudtl.dat
+│   │   │   └── libflutter_linux_gtk.so
+│   │   ├── generated_plugin_registrant.cc
+│   │   ├── generated_plugin_registrant.h
+│   │   └── generated_plugins.cmake
+│   └── runner
+│       ├── CMakeLists.txt
+│       ├── main.cc
+│       ├── my_application.cc
+│       └── my_application.h
+├── lumo_ai.iml
+├── lumo.postman_collection.json
+├── macos
+│   ├── Flutter
+│   │   ├── ephemeral
+│   │   │   ├── flutter_export_environment.sh
+│   │   │   └── Flutter-Generated.xcconfig
+│   │   ├── Flutter-Debug.xcconfig
+│   │   ├── Flutter-Release.xcconfig
+│   │   └── GeneratedPluginRegistrant.swift
+│   ├── Runner
+│   │   ├── AppDelegate.swift
+│   │   ├── Assets.xcassets
+│   │   │   └── AppIcon.appiconset
+│   │   │       ├── app_icon_1024.png
+│   │   │       ├── app_icon_128.png
+│   │   │       ├── app_icon_16.png
+│   │   │       ├── app_icon_256.png
+│   │   │       ├── app_icon_32.png
+│   │   │       ├── app_icon_512.png
+│   │   │       ├── app_icon_64.png
+│   │   │       └── Contents.json
+│   │   ├── Base.lproj
+│   │   │   └── MainMenu.xib
+│   │   ├── Configs
+│   │   │   ├── AppInfo.xcconfig
+│   │   │   ├── Debug.xcconfig
+│   │   │   ├── Release.xcconfig
+│   │   │   └── Warnings.xcconfig
+│   │   ├── DebugProfile.entitlements
+│   │   ├── Info.plist
+│   │   ├── MainFlutterWindow.swift
+│   │   └── Release.entitlements
+│   ├── RunnerTests
+│   │   └── RunnerTests.swift
+│   ├── Runner.xcodeproj
+│   │   ├── project.pbxproj
+│   │   ├── project.xcworkspace
+│   │   │   └── xcshareddata
+│   │   │       └── IDEWorkspaceChecks.plist
+│   │   └── xcshareddata
+│   │       └── xcschemes
+│   │           └── Runner.xcscheme
+│   └── Runner.xcworkspace
+│       ├── contents.xcworkspacedata
+│       └── xcshareddata
+│           └── IDEWorkspaceChecks.plist
+├── pubspec.lock
+├── pubspec.yaml
+├── README.md
+├── test
+│   └── widget_test.dart
+├── test_post.dart
+├── test_search.dart
+├── web
+│   ├── favicon.png
+│   ├── icons
+│   │   ├── Icon-192.png
+│   │   ├── Icon-512.png
+│   │   ├── Icon-maskable-192.png
+│   │   └── Icon-maskable-512.png
+│   ├── index.html
+│   └── manifest.json
+└── windows
+    ├── CMakeLists.txt
+    ├── flutter
+    │   ├── CMakeLists.txt
+    │   ├── ephemeral
+    │   ├── generated_plugin_registrant.cc
+    │   ├── generated_plugin_registrant.h
+    │   └── generated_plugins.cmake
+    └── runner
+        ├── CMakeLists.txt
+        ├── flutter_window.cpp
+        ├── flutter_window.h
+        ├── main.cpp
+        ├── resource.h
+        ├── resources
+        │   └── app_icon.ico
+        ├── runner.exe.manifest
+        ├── Runner.rc
+        ├── utils.cpp
+        ├── utils.h
+        ├── win32_window.cpp
+        └── win32_window.h
+
+227 directories, 502 files

@@ -128,6 +128,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 await context
                     .read<ProfileViewModel>()
                     .loadProfile(targetUserId);
+                if (!context.mounted) return;
               }
               await context.read<CommunityViewModel>().loadMyPosts();
             },
@@ -152,48 +153,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         final wasFollowing =
                             communityViewModel.isFollowing(targetUserId);
 
-                        setState(() {
-                          _followersDelta += wasFollowing ? -1 : 1;
-                        });
-
                         try {
                           await context.read<CommunityViewModel>().toggleFollow(
-                              targetUserId,
-                              currentUserId: currentUserId);
+                            targetUserId,
+                            currentUserId: currentUserId,
+                            onFollowingCountChanged: (nowFollowing) {
+                              if (mounted) {
+                                setState(() {
+                                  _followersDelta = nowFollowing ? (wasFollowing ? 0 : 1) : (wasFollowing ? -1 : 0);
+                                });
+                              }
+                            },
+                          );
+
+                          if (!context.mounted) return;
 
                           if (!wasFollowing) {
-                            context
-                                .read<NotificationProvider>()
-                                .sendFollowNotification(
-                                  targetUserId: targetUserId,
-                                  followerName: context
-                                          .read<AuthProvider>()
-                                          .currentUser
-                                          ?.name ??
-                                      '',
-                                );
+                            context.read<NotificationProvider>().fetchNotifications();
                           }
 
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(!wasFollowing
-                                    ? 'تم متابعة ${user?.name}'
-                                    : 'تم إلغاء متابعة ${user?.name}'),
-                                duration: const Duration(seconds: 2),
-                              ),
-                            );
-                          }
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(!wasFollowing
+                                  ? 'تم متابعة ${user?.name}'
+                                  : 'تم إلغاء متابعة ${user?.name}'),
+                              duration: const Duration(seconds: 2),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
 
-                          if (mounted) {
-                            context
-                                .read<ProfileViewModel>()
-                                .loadProfile(targetUserId);
-                          }
+                          // Still reload profile to get absolute truth from server
+                          await context.read<ProfileViewModel>().loadProfile(targetUserId);
+                          if (mounted) setState(() => _followersDelta = 0);
                         } catch (e) {
-                          setState(() {
-                            _followersDelta -= wasFollowing ? -1 : 1;
-                          });
+                          if (!context.mounted) return;
+                          
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text('فشل تغيير حالة المتابعة، حاول مرة أخرى'),
+                              duration: const Duration(seconds: 3),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
                         }
                       }
                     },

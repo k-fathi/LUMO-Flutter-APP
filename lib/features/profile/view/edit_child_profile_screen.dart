@@ -74,11 +74,10 @@ class _EditChildProfileScreenState extends State<EditChildProfileScreen> {
         });
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('فشل اختيار الصورة: $e')),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('فشل اختيار الصورة: $e')),
+      );
     }
   }
 
@@ -196,25 +195,26 @@ class _EditChildProfileScreenState extends State<EditChildProfileScreen> {
                                 childPhotoUrl: _childImage?.path,
                               );
 
-                              if (mounted) {
-                                if (profileVM.errorMessage == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('تم حفظ التعديلات بنجاح'),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
-                                  // Refresh auth provider user if needed
-                                  await auth.init();
-                                  if (mounted) Navigator.pop(context);
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(profileVM.errorMessage!),
-                                      backgroundColor: AppColors.destructive,
-                                    ),
-                                  );
-                                }
+                              if (!context.mounted) return;
+
+                              if (profileVM.errorMessage == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('تم حفظ التعديلات بنجاح'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                                // Refresh auth provider user if needed
+                                await auth.init();
+                                if (!context.mounted) return;
+                                Navigator.pop(context);
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(profileVM.errorMessage!),
+                                    backgroundColor: AppColors.destructive,
+                                  ),
+                                );
                               }
                             }
                           },

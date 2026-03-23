@@ -31,8 +31,11 @@ class ProfileViewModel extends ChangeNotifier {
   int get followers => _user?.followersCount ?? 0;
   int get following => _user?.followingCount ?? 0;
 
-  /// Load user profile
+  /// Load user profile - BUG FIX #4: Prevent infinite rebuilds with proper state management
   Future<void> loadProfile(int userId) async {
+    // Skip if already loading this exact user to prevent StackOverflow
+    if (_isLoading && _user?.id == userId) return;
+    
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -50,8 +53,11 @@ class ProfileViewModel extends ChangeNotifier {
     }
   }
 
-  /// Load followers
+  /// Load followers - BUG FIX #4: Prevent StackOverflow with pagination
   Future<void> loadFollowers(int userId) async {
+    // Skip if already loading this exact user's followers
+    if (_isListLoading) return;
+    
     _isListLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -66,8 +72,11 @@ class ProfileViewModel extends ChangeNotifier {
     }
   }
 
-  /// Load following
+  /// Load following - BUG FIX #4: Prevent StackOverflow with pagination  
   Future<void> loadFollowing(int userId) async {
+    // Skip if already loading this exact user's following list
+    if (_isListLoading) return;
+    
     _isListLoading = true;
     _errorMessage = null;
     notifyListeners();

@@ -44,6 +44,9 @@ class _PostCardState extends State<PostCard> {
     final currentUserId = currentUser?.id ?? 0;
 
     final isOwner = currentUserId != 0 && post.userId == currentUserId;
+    
+    // BUG FIX #1: Check if target user is the current user (hide follow button)
+    final isTargetUserCurrentUser = post.userId == currentUserId && post.userId != 0;
 
     String displayName = post.userName;
 
@@ -140,7 +143,8 @@ class _PostCardState extends State<PostCard> {
                               title: 'حذف المنشور',
                               message: 'هل أنت متأكد من حذف هذا المنشور؟',
                             );
-                            if (confirmed == true && mounted) {
+                            if (!context.mounted) return;
+                            if (confirmed == true) {
                               context
                                   .read<CommunityViewModel>()
                                   .deletePost(post.id);
@@ -167,20 +171,21 @@ class _PostCardState extends State<PostCard> {
                           ),
                         ],
                       )
-                    else if (!widget.hideFollowButton && post.userId != 0 && post.userId != currentUserId)
+                    // BUG FIX #1: Hide follow button if viewing own profile
+                    else if (!widget.hideFollowButton && 
+                             post.userId != 0 && 
+                             !isTargetUserCurrentUser)
                       Consumer<CommunityViewModel>(
                         builder: (context, viewModel, child) {
                           final isFollowing =
                               viewModel.isFollowing(post.userId);
                           
-                          if (isFollowing) {
-                            return const SizedBox.shrink();
-                          }
-
+                          // BUG FIX #1: Don't hide "Following" button — show both states
                           return Container(
                             margin: const EdgeInsetsDirectional.only(start: 8),
                             child: TextButton(
-                              onPressed: () async {
+                              onPressed: isFollowing ? null : () async {
+                                final wasFollowing = isFollowing;
                                 await viewModel.toggleFollow(
                                   post.userId,
                                   currentUserId: currentUserId,
@@ -202,9 +207,9 @@ class _PostCardState extends State<PostCard> {
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
                               child: Text(
-                                l10n.follow,
-                                style: const TextStyle(
-                                  color: AppColors.primary,
+                                isFollowing ? 'متابع' : l10n.follow,
+                                style: TextStyle(
+                                  color: isFollowing ? Colors.grey : AppColors.primary,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 13,
                                 ),

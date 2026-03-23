@@ -54,6 +54,16 @@ class _LoginScreenState extends State<LoginScreen> with FormValidationMixin {
     setState(() => _isLoading = false);
 
     if (success) {
+      if (!mounted) return;
+      
+      // ✅ Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم تسجيل الدخول بنجاح'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
       // If login was successful but user is null, it means OTP is required (unverified account)
       if (authProvider.currentUser == null) {
         Navigator.pushNamed(
@@ -72,6 +82,7 @@ class _LoginScreenState extends State<LoginScreen> with FormValidationMixin {
         );
       }
     } else {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.errorMessage ?? 'فشل تسجيل الدخول'),

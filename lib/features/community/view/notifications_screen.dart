@@ -30,54 +30,58 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _handleAccept(ConnectionRequestModel request) async {
+    final scaffoldContext = ScaffoldMessenger.of(context);
+    final patientProvider = context.read<PatientProvider>();
+    final notificationProvider = context.read<NotificationProvider>();
+    
     try {
-      await context.read<PatientProvider>().acceptPatientRequest(request);
-      if (mounted) {
-        // Send a simulated urgent notification to the doctor
-        context.read<NotificationProvider>().sendConnectionAcceptedNotification(
-          doctorId: int.tryParse(request.doctorId.toString()) ?? 0,
-          patientName: request.childName,
-        );
+      await patientProvider.acceptPatientRequest(request);
+      if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.requestAccepted(request.doctorName)),
-            backgroundColor: const Color(0xFF10B981),
-          ),
-        );
-      }
+      // Send a simulated urgent notification to the doctor
+      notificationProvider.sendConnectionAcceptedNotification(
+        doctorId: int.tryParse(request.doctorId.toString()) ?? 0,
+        patientName: request.childName,
+      );
+
+      scaffoldContext.showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.requestAccepted(request.doctorName)),
+          backgroundColor: const Color(0xFF10B981),
+        ),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: AppColors.destructive,
-          ),
-        );
-      }
+      if (!mounted) return;
+      scaffoldContext.showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: AppColors.destructive,
+        ),
+      );
     }
   }
 
   Future<void> _handleReject(ConnectionRequestModel request) async {
+    final scaffoldContext = ScaffoldMessenger.of(context);
+    final patientProvider = context.read<PatientProvider>();
+    
     try {
-      await context.read<PatientProvider>().rejectPatientRequest(request);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.requestRejected(request.doctorName)),
-            backgroundColor: AppColors.destructive,
-          ),
-        );
-      }
+      await patientProvider.rejectPatientRequest(request);
+      if (!mounted) return;
+      scaffoldContext.showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.requestRejected(request.doctorName)),
+          backgroundColor: AppColors.destructive,
+        ),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: AppColors.destructive,
-          ),
-        );
-      }
+      if (!mounted) return;
+      scaffoldContext.showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: AppColors.destructive,
+        ),
+      );
     }
   }
 
@@ -111,8 +115,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await context.read<PatientProvider>().fetchRequests();
-          await context.read<NotificationProvider>().fetchNotifications();
+          final patientProvider = context.read<PatientProvider>();
+          final notificationProvider = context.read<NotificationProvider>();
+          
+          await patientProvider.fetchRequests();
+          if (!mounted) return;
+          await notificationProvider.fetchNotifications();
         },
         child: isLoading && requests.isEmpty && generalNotifications.isEmpty
             ? const Center(child: CircularProgressIndicator())

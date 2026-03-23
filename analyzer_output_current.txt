@@ -1,0 +1,25 @@
+Analyzing LUMO-Flutter-App...                                   
+
+   info • Missing type annotation • lib/features/chat/view_model/chat_view_model.dart:266:5 • strict_top_level_inference
+  error • 'catch' can't be used as an identifier because it's a keyword • lib/features/chat/view_model/chat_view_model.dart:266:5 • expected_identifier_but_got_keyword
+   info • Missing type annotation • lib/features/chat/view_model/chat_view_model.dart:266:12 • strict_top_level_inference
+  error • Undefined name '_errorMessage' • lib/features/chat/view_model/chat_view_model.dart:267:7 • undefined_identifier
+  error • Undefined name '_isSending' • lib/features/chat/view_model/chat_view_model.dart:268:7 • undefined_identifier
+  error • The function '_safeNotifyListeners' isn't defined • lib/features/chat/view_model/chat_view_model.dart:269:7 • undefined_function
+  error • Undefined name '_errorMessage' • lib/features/chat/view_model/chat_view_model.dart:275:5 • undefined_identifier
+  error • The function '_safeNotifyListeners' isn't defined • lib/features/chat/view_model/chat_view_model.dart:276:5 • undefined_function
+  error • Undefined name '_chatRooms' • lib/features/chat/view_model/chat_view_model.dart:280:5 • undefined_identifier
+  error • Undefined name '_messages' • lib/features/chat/view_model/chat_view_model.dart:281:5 • undefined_identifier
+  error • Undefined name '_messagesSubscription' • lib/features/chat/view_model/chat_view_model.dart:282:5 • undefined_identifier
+  error • Undefined name '_messagesSubscription' • lib/features/chat/view_model/chat_view_model.dart:283:5 • undefined_identifier
+  error • Undefined name '_roomSubscription' • lib/features/chat/view_model/chat_view_model.dart:284:5 • undefined_identifier
+  error • Undefined name '_roomSubscription' • lib/features/chat/view_model/chat_view_model.dart:285:5 • undefined_identifier
+  error • Undefined name '_roomsSubscription' • lib/features/chat/view_model/chat_view_model.dart:286:5 • undefined_identifier
+  error • Undefined name '_roomsSubscription' • lib/features/chat/view_model/chat_view_model.dart:287:5 • undefined_identifier
+  error • Undefined name '_errorMessage' • lib/features/chat/view_model/chat_view_model.dart:288:5 • undefined_identifier
+  error • Undefined name '_isLoading' • lib/features/chat/view_model/chat_view_model.dart:289:5 • undefined_identifier
+  error • Undefined name '_isSending' • lib/features/chat/view_model/chat_view_model.dart:290:5 • undefined_identifier
+  error • The function '_safeNotifyListeners' isn't defined • lib/features/chat/view_model/chat_view_model.dart:291:5 • undefined_function
+  error • Expected a method, getter, setter or operator declaration • lib/features/chat/view_model/chat_view_model.dart:293:1 • expected_executable
+
+21 issues found. (ran in 9.5s)

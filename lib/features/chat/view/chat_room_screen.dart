@@ -40,10 +40,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   void initState() {
     super.initState();
     _viewModel = context.read<ChatViewModel>();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _viewModel.authenticateFirebase();
-      _viewModel.loadMessages(widget.chatRoomId);
-    });
+    _initChat();
+  }
+
+  Future<void> _initChat() async {
+    // Await Firebase authentication before loading messages to prevent empty screen/errors
+    final authenticated = await _viewModel.authenticateFirebase();
+    if (authenticated && mounted) {
+      await _viewModel.loadMessages(widget.chatRoomId);
+      _scheduleAutoScroll();
+    }
   }
 
   @override
@@ -53,25 +59,32 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     super.dispose();
   }
 
-  void _scrollToBottom({bool animated = true}) {
-    if (!mounted) return;
-    if (!_scrollController.hasClients) return;
-
+  /// BUG FIX #9: Auto-scroll to newest message with safety checks
+  void _scheduleAutoScroll() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      if (!_scrollController.hasClients) return;
-      
-      final position = _scrollController.position.maxScrollExtent;
-      if (animated) {
-        _scrollController.animateTo(
-          position,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      } else {
-        _scrollController.jumpTo(position);
-      }
+      _scrollToBottom();
     });
+  }
+
+  /// BUG FIX #9: Safe scroll with mounted check and hasClients validation
+  void _scrollToBottom() {
+    if (!mounted) return;
+    if (!_scrollController.hasClients) {
+      // Schedule retry if scroll controller not ready
+      Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
+      return;
+    }
+
+    try {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    } catch (e) {
+      debugPrint('Scroll error: $e');
+    }
   }
 
   void _handleSend() {
@@ -89,11 +102,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       senderName: currentUser.name,
       senderAvatarUrl: currentUser.avatarUrl,
       content: content,
-    ).then((success) {
-      if (success) {
-        _scrollToBottom();
-      }
-    });
+    );
+
+    // BUG FIX #9: Auto-scroll after sending message
+    _scheduleAutoScroll();
   }
 
   void _navigateToProfile() {
@@ -228,6 +240,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             ),
           ),
 
+          // Messages Area - BUG FIX #8, #9: Proper stream listening and auto-scroll
           Expanded(
             child: Consumer<ChatViewModel>(
               builder: (context, viewModel, child) {
@@ -249,14 +262,20 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   );
                 }
 
-                // Trigger scroll to bottom when new messages arrive
-                _scrollToBottom();
+                // Schedule auto-scroll when messages update
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && viewModel.messages.isNotEmpty) {
+                    _scrollToBottom();
+                  }
+                });
 
                 return ColoredBox(
                   color: messagesBackground,
+                  // BUG FIX #9: Reverse ListView for proper message display (newest at bottom)
                   child: ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    reverse: true,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     itemCount: viewModel.messages.length,
                     itemBuilder: (context, index) {
                       final message = viewModel.messages[index];
