@@ -53,19 +53,24 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     super.dispose();
   }
 
-  // ✅ إصلاح: mounted check قبل الـ animate
-  void _scrollToBottom() {
+  void _scrollToBottom({bool animated = true}) {
     if (!mounted) return;
     if (!_scrollController.hasClients) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (!_scrollController.hasClients) return;
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+      
+      final position = _scrollController.position.maxScrollExtent;
+      if (animated) {
+        _scrollController.animateTo(
+          position,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      } else {
+        _scrollController.jumpTo(position);
+      }
     });
   }
 
@@ -84,9 +89,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       senderName: currentUser.name,
       senderAvatarUrl: currentUser.avatarUrl,
       content: content,
-    );
-
-    _scrollToBottom();
+    ).then((success) {
+      if (success) {
+        _scrollToBottom();
+      }
+    });
   }
 
   void _navigateToProfile() {
@@ -105,7 +112,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     final authProvider = context.watch<AuthProvider>();
     final currentUserId = authProvider.currentUser?.id.toString() ?? '';
 
-    // ✅ إصلاح: لون الـ messages area من الـ theme بدل hardcoded
     final messagesBackground = theme.brightness == Brightness.light
         ? const Color(0xFFE3F2FD)
         : theme.colorScheme.surfaceContainerLow;
@@ -113,7 +119,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     return Scaffold(
       body: Column(
         children: [
-          // Header
           Container(
             padding: EdgeInsets.only(
               top: MediaQuery.of(context).padding.top + 16,
@@ -223,13 +228,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             ),
           ),
 
-          // Messages Area
           Expanded(
             child: Consumer<ChatViewModel>(
               builder: (context, viewModel, child) {
                 if (viewModel.isLoading && viewModel.messages.isEmpty) {
                   return ColoredBox(
-                    color: messagesBackground, // ✅ theme-aware
+                    color: messagesBackground,
                     child: const Center(child: CircularProgressIndicator()),
                   );
                 }
@@ -244,6 +248,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     ),
                   );
                 }
+
+                // Trigger scroll to bottom when new messages arrive
+                _scrollToBottom();
 
                 return ColoredBox(
                   color: messagesBackground,
@@ -262,7 +269,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             ),
           ),
 
-          // Chat Input
           Consumer<ChatViewModel>(
             builder: (context, viewModel, child) {
               return ChatInputWidget(
