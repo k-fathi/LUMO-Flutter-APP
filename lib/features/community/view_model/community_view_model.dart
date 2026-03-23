@@ -56,7 +56,6 @@ class CommunityViewModel extends ChangeNotifier {
   bool isFollowing(int userId) => _followedUserIds.contains(userId);
 
   PostModel? findPostById(int id) {
-    // Search in all lists
     for (var list in [_explorePosts, _posts, _followingPosts, _myPosts]) {
       final index = list.indexWhere((p) => p.id == id);
       if (index != -1) return list[index];
@@ -64,9 +63,7 @@ class CommunityViewModel extends ChangeNotifier {
     return null;
   }
 
-  // Fetch all posts/feeds
   Future<void> fetchPosts({bool force = false, int? userId}) async {
-    // 1. Check for User Change
     if (userId != null && userId != _currentUserId) {
       _currentUserId = userId;
       _isInitialized = false;
@@ -74,19 +71,17 @@ class CommunityViewModel extends ChangeNotifier {
       _explorePosts = [];
       _followingPosts = [];
       _myPosts = [];
-      force = true; // Force reload for new user
+      _followedUserIds = [];
+      force = true;
     } else if (userId != null) {
       _currentUserId = userId;
     }
 
-    // 2. If already initialized and not forcing, don't show full loading again
     if (_isInitialized && !force && _posts.isNotEmpty) {
-      // Background refresh
       _loadAllFeeds(rethrowError: false);
       return;
     }
 
-    // Ensure _isInitialized is false if we are here and force is true
     if (force) _isInitialized = false;
 
     _isLoading = true;
@@ -104,24 +99,31 @@ class CommunityViewModel extends ChangeNotifier {
     }
   }
 
-  // Helper to load all feeds without individual loading states
   Future<void> _loadAllFeeds({bool rethrowError = false}) async {
     try {
-      // 1. Load my posts first so they are available for merging into home feed
       await _loadMyPostsInternal(page: 1);
       
-      // 2. Load other feeds in parallel
       await Future.wait([
-        _loadHomeFeedInternal(page: 1), // Legacy /home
-        _loadExploreFeedInternal(page: 1), // New /home/all
-        _loadFollowingFeedInternal(page: 1), // New /home
+        _loadHomeFeedInternal(page: 1),
+        _loadExploreFeedInternal(page: 1),
+        _loadFollowingFeedInternal(page: 1),
+        _loadFollowingIdsInternal(),
       ]);
     } catch (e) {
       if (rethrowError) rethrow;
     }
   }
 
-  // Internal versions that don't trigger global loading state
+  Future<void> _loadFollowingIdsInternal() async {
+    try {
+      final followingUsers = await _repository.getFollowingUsers();
+      _followedUserIds = followingUsers.map((u) => u.id).toList();
+      _safeNotify();
+    } catch (e) {
+      debugPrint('Error loading following IDs: $e');
+    }
+  }
+
   Future<void> _loadHomeFeedInternal({int page = 1}) async {
     final feed = await _repository.getHomeFeed(page: page);
     if (page == 1) {
@@ -141,7 +143,6 @@ class CommunityViewModel extends ChangeNotifier {
     final feed = await _repository.getExploreFeed(page: page);
     if (page == 1) {
       _explorePosts = feed;
-      // Keep _posts in sync with explore if _posts is used as the default feed
       _posts = feed;
     } else {
       _explorePosts.addAll(feed);
@@ -150,9 +151,7 @@ class CommunityViewModel extends ChangeNotifier {
   }
 
   Future<void> _loadFollowingFeedInternal({int page = 1}) async {
-    // The backend now provides a filtered /home feed for following
     final feed = await _repository.getHomeFeed(page: page);
-    
     if (page == 1) {
       _followingPosts = feed;
     } else {
@@ -170,12 +169,10 @@ class CommunityViewModel extends ChangeNotifier {
     }
   }
 
-  // Legacy alias for compatibility if needed
   Future<void> initCommunity(int? userId, {bool force = false}) async {
     return fetchPosts(force: force, userId: userId);
   }
 
-  // Load explore feed
   Future<void> loadExploreFeed({int page = 1, bool rethrowError = false}) async {
     _isLoading = true;
     _errorMessage = null;
@@ -193,10 +190,8 @@ class CommunityViewModel extends ChangeNotifier {
     }
   }
 
-  // Alias for task requirement
   Future<void> fetchExplorePosts() => loadExploreFeed();
 
-  // Load home feed (Legacy/Compatibility)
   Future<void> loadHomeFeed({int page = 1, bool rethrowError = false}) async {
     _isLoading = true;
     _errorMessage = null;
@@ -214,7 +209,6 @@ class CommunityViewModel extends ChangeNotifier {
     }
   }
 
-  // Load following feed
   Future<void> loadFollowingFeed({int page = 1, bool rethrowError = false}) async {
     _isLoading = true;
     _errorMessage = null;
@@ -232,7 +226,6 @@ class CommunityViewModel extends ChangeNotifier {
     }
   }
 
-  // Load my posts
   Future<void> loadMyPosts({int page = 1, bool rethrowError = false}) async {
     _isLoading = true;
     _errorMessage = null;
@@ -267,7 +260,6 @@ class CommunityViewModel extends ChangeNotifier {
         imagePath: imagePath,
       );
 
-      // 1. Get current user from AuthProvider if not provided via arguments
       String? finalName = currentUserName;
       String? finalAvatar = currentUserAvatar;
       int? finalId = currentUserId;
@@ -286,7 +278,6 @@ class CommunityViewModel extends ChangeNotifier {
         }
       }
 
-      // 2. Override with local current user info to ensure immediate sync and fix naming issues
       final post = postResponse.copyWith(
         userName: (finalName != null && finalName.isNotEmpty) 
             ? finalName 
@@ -310,7 +301,6 @@ class CommunityViewModel extends ChangeNotifier {
     }
   }
 
-  // Update author info across all local lists
   void updateAuthorInfoInPosts(int userId, String name, String? avatarUrl) {
     void updateList(List<PostModel> list) {
       for (int i = 0; i < list.length; i++) {
@@ -326,7 +316,6 @@ class CommunityViewModel extends ChangeNotifier {
     _safeNotify();
   }
 
-  // Delete Post - Bug 3
   Future<void> deletePost(int postId) async {
     try {
       await _repository.deletePost(postId);
@@ -337,78 +326,33 @@ class CommunityViewModel extends ChangeNotifier {
     }
   }
 
-  // Update Post - Bug 3
   Future<void> updatePost(int postId, String newContent, {String? imagePath}) async {
     try {
       final updated = await _repository.updatePost(postId, content: newContent, imagePath: imagePath);
       _updatePostEverywhere(updated);
     } catch (e) {
-      _errorMessage = 'فشل تعديل المنشور';
+      _errorMessage = 'فشل تحديث المنشور';
       _safeNotify();
     }
   }
-  // Toggle Like - Bug 2: Fix logic and double-check counters
+
   Future<void> toggleLike(int postId) async {
-    // 1. Find the post in any list
-    PostModel? post = findPostById(postId);
-    if (post == null || _currentUserId == null || _currentUserId == 0) return;
+    final post = findPostById(postId);
+    if (post == null) return;
 
-    final wasLiked = post.isLikedBy(_currentUserId!);
-    final List<int> newLikedByUserIds = List.from(post.likedByUserIds);
-    
-    if (wasLiked) {
-      newLikedByUserIds.remove(_currentUserId);
-    } else {
-      if (!newLikedByUserIds.contains(_currentUserId)) {
-        newLikedByUserIds.add(_currentUserId!);
-      }
-    }
-
-    // 2. Optimistic update — flip immediately in UI
-    final int newCount = wasLiked 
-        ? (post.likesCount > 0 ? post.likesCount - 1 : 0) 
-        : post.likesCount + 1;
-
+    final isLiked = post.isLiked;
     final updatedPost = post.copyWith(
-      isLiked: !wasLiked,
-      likesCount: newCount,
-      likedByUserIds: newLikedByUserIds,
+      isLiked: !isLiked,
+      likesCount: !isLiked ? post.likesCount + 1 : post.likesCount - 1,
     );
-    _updatePostEverywhere(updatedPost);
-    _safeNotify();
 
-    // 3. Call the API
+    _updatePostEverywhere(updatedPost);
+
     try {
       await _repository.toggleLike(postId);
-      // API call succeeded — optimistic update stays
     } catch (e) {
-      // 4. Rollback on failure
-      _updatePostEverywhere(post); // restore original
-      _errorMessage = 'فشل تسجيل الإعجاب، حاول مرة أخرى';
-      _safeNotify();
-    }
-  }
-
-  // Comments
-  Future<void> fetchPostById(int postId) async {
-    _isLoading = true;
-    _safeNotify();
-    try {
-      final post = await _repository.getPostById(postId);
-      _updatePostEverywhere(post); // Update local lists if post is already there or was missing
-      
-      // If the post wasn't in any list, _updatePostEverywhere won't add it.
-      // We should ensure it's at least available for findPostById.
-      if (findPostById(postId) == null) {
-        _posts.add(post);
-      }
-      
-      _isLoading = false;
-      _safeNotify();
-    } catch (e) {
-      _errorMessage = 'فشل تحميل المنشور: ${e.toString()}';
-    } finally {
-      _isLoading = false;
+      _updatePostEverywhere(post);
+      _errorMessage = 'فشل التفاعل مع المنشور';
       _safeNotify();
     }
   }
@@ -418,86 +362,33 @@ class CommunityViewModel extends ChangeNotifier {
     _safeNotify();
     try {
       _comments = await _repository.getComments(postId);
-      _sortCommentsAsTree();
+      _isLoading = false;
+      _safeNotify();
     } catch (e) {
-      _errorMessage = 'فشل تحميل التعليقات: ${e.toString()}';
-    } finally {
+      _errorMessage = 'فشل تحميل التعليقات';
       _isLoading = false;
       _safeNotify();
     }
   }
 
-  /// Sort comments into tree order: each parent followed by its replies
-  void _sortCommentsAsTree() {
-    final topLevel = _comments.where((c) => c.isTopLevel).toList();
-    final replies = _comments.where((c) => c.isReply).toList();
-
-    // Group replies by parentCommentId
-    final Map<int, List<CommentModel>> replyMap = {};
-    for (final reply in replies) {
-      final parentId = reply.parentCommentId!;
-      replyMap.putIfAbsent(parentId, () => []);
-      replyMap[parentId]!.add(reply);
-    }
-
-    // Sort each group by createdAt
-    for (final entry in replyMap.entries) {
-      entry.value.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-    }
-
-    // Build the final sorted list
-    final List<CommentModel> sorted = [];
-    for (final parent in topLevel) {
-      sorted.add(parent);
-      if (replyMap.containsKey(parent.id)) {
-        sorted.addAll(replyMap[parent.id]!);
-      }
-    }
-
-    // Add any orphaned replies (parent not in current page)
-    for (final reply in replies) {
-      if (!sorted.contains(reply)) {
-        sorted.add(reply);
-      }
-    }
-
-    _comments = sorted;
-  }
-
-  Future<bool> addComment(int postId, String content) async {
-    _isLoading = true;
-    _errorMessage = null;
-    _safeNotify();
+  Future<void> addComment(int postId, String content, {int? parentId}) async {
     try {
-      await _repository.addComment(postId, content, parentId: _replyingToComment?.id);
+      final comment = await _repository.addComment(postId, content, parentId: parentId);
+      _comments.add(comment);
       
-      // Clear reply state after successful comment
-      _replyingToComment = null;
-
-      // Refresh comments
-      await fetchComments(postId);
-
-      // Update comment count in all post lists
-      final postIndex = _posts.indexWhere((p) => p.id == postId);
-      if (postIndex != -1) {
-        final updatedPost = _posts[postIndex].copyWith(
-          commentsCount: _posts[postIndex].commentsCount + 1,
-        );
-        _updatePostEverywhere(updatedPost);
+      final post = findPostById(postId);
+      if (post != null) {
+        _updatePostEverywhere(post.copyWith(commentsCount: post.commentsCount + 1));
       }
-
-      return true;
+      
+      _safeNotify();
     } catch (e) {
-      _errorMessage = 'فشل إضافة التعليق: ${e.toString()}';
-      return false;
-    } finally {
-      _isLoading = false;
+      _errorMessage = 'فشل إضافة التعليق';
       _safeNotify();
     }
   }
 
-  // Toggle Comment Like
-  Future<void> toggleCommentLike(int commentId, int currentUserId) async {
+  Future<void> toggleCommentLike(int commentId, {int? currentUserId}) async {
     final index = _comments.indexWhere((c) => c.id == commentId);
     if (index == -1) return;
 
@@ -505,7 +396,6 @@ class CommunityViewModel extends ChangeNotifier {
     final isLiked = comment.isLikedBy(currentUserId);
     
     try {
-      // Optimistic Update
       final updatedComment = comment.copyWith(
         isLiked: !isLiked,
         likesCount: !isLiked ? comment.likesCount + 1 : comment.likesCount - 1,
@@ -517,14 +407,10 @@ class CommunityViewModel extends ChangeNotifier {
       await _repository.toggleCommentLike(commentId);
     } catch (e) {
       _errorMessage = 'فشل التفاعل مع التعليق: ${e.toString()}';
-      
-      // Revert optimistic update
       _comments[index] = comment;
       _safeNotify();
     }
   }
-
-  // ==================== HELPERS ====================
 
   void _updatePostEverywhere(PostModel updatedPost) {
     void updateList(List<PostModel> list) {
@@ -553,54 +439,26 @@ class CommunityViewModel extends ChangeNotifier {
     _safeNotify();
   }
 
-  // Social
   Future<void> toggleFollow(int userId, {int? currentUserId}) async {
     final isFollowing = _followedUserIds.contains(userId);
+    
+    if (isFollowing) {
+      _followedUserIds.remove(userId);
+    } else {
+      _followedUserIds.add(userId);
+    }
+    _safeNotify();
+
     try {
-      // 1. Optimistic update for local list
-      if (isFollowing) {
-        _followedUserIds.remove(userId);
-      } else {
-        _followedUserIds.add(userId);
-      }
-      _safeNotify();
-
-      // 2. Call REST API (with Firebase sync if currentUserId is provided)
       await _repository.toggleFollow(userId, currentUserId: currentUserId);
-
-      // 3. Delayed background refresh — give backend time to propagate
-      //    Keep a snapshot of the optimistic state so we don't overwrite it
-      final optimisticIds = List<int>.from(_followedUserIds);
-      Future.delayed(const Duration(seconds: 2), () async {
-        if (_isDisposed) return;
-        try {
-          final followingUsers = await _repository.getFollowingUsers();
-          if (_isDisposed) return;
-          final serverIds = followingUsers.map((u) => u.id).toList();
-          
-          // Merge: use server data but preserve any optimistic adds not yet reflected
-          _followedUserIds = serverIds;
-          // If we optimistically added userId and server doesn't have it yet, keep it
-          for (final id in optimisticIds) {
-            if (!_followedUserIds.contains(id)) {
-              _followedUserIds.add(id);
-            }
-          }
-
-          final feed = await _repository.getHomeFeed(page: 1);
-          if (_isDisposed) return;
-          _followingPosts = feed
-              .where((post) =>
-                  _followedUserIds.contains(post.userId) ||
-                  (_currentUserId != null && post.userId == _currentUserId))
-              .toList();
-          _safeNotify();
-        } catch (_) {
-          // Silently fail — the optimistic state is still valid
-        }
-      });
+      
+      final followingUsers = await _repository.getFollowingUsers();
+      _followedUserIds = followingUsers.map((u) => u.id).toList();
+      
+      final feed = await _repository.getHomeFeed(page: 1);
+      _followingPosts = feed;
+      _safeNotify();
     } catch (e) {
-      // Revert optimistic update
       if (isFollowing) {
         _followedUserIds.add(userId);
       } else {
@@ -630,11 +488,11 @@ class CommunityViewModel extends ChangeNotifier {
     _safeNotify();
   }
 
-  /// Explicitly reset the state for logout or user change
   void resetState() {
     _posts = [];
     _followingPosts = [];
     _myPosts = [];
+    _followedUserIds = [];
     _isInitialized = false;
     _currentUserId = null;
     _errorMessage = null;
