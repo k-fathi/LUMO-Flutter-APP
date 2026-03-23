@@ -6,17 +6,6 @@ import '../../../data/models/chat_room_model.dart';
 import '../../../data/models/message_model.dart';
 import '../../../core/services/firebase_auth_service.dart';
 
-/// Chat ViewModel - Production-Ready Implementation
-/// 
-/// BUG FIXES IMPLEMENTED:
-/// - Bug #7: Messages now properly saved to Firebase RTDB with retry logic
-/// - Bug #8: Persistent stream listeners ensure messages visible on refresh
-/// - Bug #9: Auto-scroll implemented in ChatScreen
-/// - Bug #10: Last message sync guaranteed before next message
-/// - Bug #11: ChatsListScreen display properly sorted
-/// - Bug #12: Relationship check implemented at repository level
-/// - Bug #13: ChatViewModel provided globally in main.dart
-///
 class ChatViewModel extends ChangeNotifier {
   final ChatRepository _chatRepository;
   final FirebaseAuthService _firebaseAuthService;
@@ -66,7 +55,6 @@ class ChatViewModel extends ChangeNotifier {
   bool get isSending => _isSending;
   String? get errorMessage => _errorMessage;
 
-  /// Authenticate with Firebase using Laravel custom token
   Future<bool> authenticateFirebase() async {
     _isLoading = true;
     _errorMessage = null;
@@ -86,19 +74,16 @@ class ChatViewModel extends ChangeNotifier {
     }
   }
 
-  /// BUG FIX #7, #8, #12: Load chat rooms with relationship validation and persistent stream
   Future<void> loadChatRooms([int? userId]) async {
     _isLoading = true;
     if (userId != null) _userId = userId;
     _safeNotifyListeners();
 
     try {
-      // 1. Load initial set via API (validates relationships on backend)
       final rooms = await _chatRepository.getMyChats();
       _chatRooms.clear();
       _chatRooms.addAll(rooms);
       
-      // Sort by latest message timestamp
       _chatRooms.sort((a, b) {
         final aTime = a.lastMessageTimestamp ?? a.updatedAt;
         final bTime = b.lastMessageTimestamp ?? b.updatedAt;
@@ -108,14 +93,12 @@ class ChatViewModel extends ChangeNotifier {
       _isLoading = false;
       _safeNotifyListeners();
 
-      // 2. Start persistent real-time stream if userId is provided
       if (userId != null) {
         await _roomsSubscription?.cancel();
         _roomsSubscription = _chatRepository.streamUserChats(userId).listen(
           (updatedRooms) {
             _chatRooms.clear();
             _chatRooms.addAll(updatedRooms);
-            // Sort by latest message
             _chatRooms.sort((a, b) {
               final aTime = a.lastMessageTimestamp ?? a.updatedAt;
               final bTime = b.lastMessageTimestamp ?? b.updatedAt;
@@ -136,12 +119,10 @@ class ChatViewModel extends ChangeNotifier {
     }
   }
 
-  /// BUG FIX #8, #9: Load messages with persistent stream listener for refresh persistence
   Future<void> loadMessages(String chatRoomId) async {
     _isLoading = true;
     _errorMessage = null;
 
-    // Only clear if switching rooms
     if (_messages.isNotEmpty && _messages.first.chatRoomId != chatRoomId) {
       _messages.clear();
       _messages.addAll(_chatRepository.getCachedMessages(chatRoomId));
@@ -152,18 +133,14 @@ class ChatViewModel extends ChangeNotifier {
     _safeNotifyListeners();
 
     try {
-      // BUG FIX #8: Stream Room Metadata (typing, etc) - persistent listener
       await _roomSubscription?.cancel();
       _roomSubscription = _chatRepository.streamChatRoom(chatRoomId).listen(
         (room) {
           _currentChatRoom = room;
-
-          // Update this room in the general list too (for the last message and unread count)
           final index = _chatRooms.indexWhere((r) => r.id == chatRoomId);
           if (index != -1 && room != null) {
             _chatRooms[index] = room;
           }
-
           _safeNotifyListeners();
         },
         onError: (e) {
@@ -172,22 +149,14 @@ class ChatViewModel extends ChangeNotifier {
         },
       );
 
-      // BUG FIX #8, #9: Stream Messages - persistent listener that survives refresh
       await _messagesSubscription?.cancel();
       _messagesSubscription = _chatRepository.streamMessages(chatRoomId).listen(
         (messagesList) {
           _messages.clear();
           _messages.addAll(messagesList);
-
-          // Keep messages in ascending order (oldest -> newest).
-          // ListView in ChatRoomScreen uses `reverse: true` so newest appears at the bottom.
           _messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-
           _isLoading = false;
           _safeNotifyListeners();
-
-          // BUG FIX #9: Trigger auto-scroll after messages loaded
-          // (ChatRoomScreen will implement the scroll in its State)
         },
         onError: (e) {
           _errorMessage = e.toString();
@@ -202,7 +171,6 @@ class ChatViewModel extends ChangeNotifier {
     }
   }
 
-  /// BUG FIX #7, #10: Send message with guaranteed Firebase write and backend sync
   Future<bool> sendMessage({
     required String chatRoomId,
     required int senderId,
@@ -215,7 +183,6 @@ class ChatViewModel extends ChangeNotifier {
     _safeNotifyListeners();
 
     try {
-      // BUG FIX #7: Call repository which ensures Firebase write and Laravel sync
       final message = await _chatRepository.sendMessage(
         chatRoomId: chatRoomId,
         senderId: senderId,
@@ -224,12 +191,10 @@ class ChatViewModel extends ChangeNotifier {
         content: content,
       );
 
-      // Immediate UI feedback: append to the end (messages are ascending)
       if (!_messages.any((m) => m.id == message.id)) {
         _messages.add(message);
       }
 
-      // BUG FIX #10: Update lastMessage in the chat rooms list optimistically
       final roomIndex = _chatRooms.indexWhere((r) => r.id == chatRoomId);
       if (roomIndex != -1) {
         _chatRooms[roomIndex] = _chatRooms[roomIndex].copyWith(
@@ -238,7 +203,6 @@ class ChatViewModel extends ChangeNotifier {
           lastMessageTimestamp: DateTime.now(),
         );
 
-        // Re-sort rooms by last message time
         _chatRooms.sort((a, b) {
           final aTime = a.lastMessageTimestamp ?? a.updatedAt;
           final bTime = b.lastMessageTimestamp ?? b.updatedAt;
