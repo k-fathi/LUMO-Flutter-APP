@@ -31,6 +31,7 @@ class CommunityViewModel extends ChangeNotifier {
   List<CommentModel> _comments = [];
   List<UserModel> _searchResults = [];
   List<int> _followedUserIds = [];
+  List<UserModel> _followingUsers = [];
   bool _isLoading = false;
   bool _isInitialized = false;
   String? _errorMessage;
@@ -43,6 +44,7 @@ class CommunityViewModel extends ChangeNotifier {
   List<PostModel> get myPosts => _myPosts;
   List<CommentModel> get comments => _comments;
   List<UserModel> get searchResults => _searchResults;
+  List<UserModel> get followingUsers => _followingUsers;
   bool get isLoading => _isLoading;
   bool get isInitialized => _isInitialized;
   String? get errorMessage => _errorMessage;
@@ -117,8 +119,8 @@ class CommunityViewModel extends ChangeNotifier {
 
   Future<void> _loadFollowingIdsInternal() async {
     try {
-      final followingUsers = await _repository.getFollowingUsers();
-      _followedUserIds = followingUsers.map((u) => u.id).toList();
+      _followingUsers = await _repository.getFollowingUsers();
+      _followedUserIds = _followingUsers.map((u) => u.id).toList();
       _safeNotify();
     } catch (e) {
       debugPrint('Error loading following IDs: $e');
@@ -457,7 +459,7 @@ class CommunityViewModel extends ChangeNotifier {
 
     try {
       // STEP 2: Call REST API
-      await _repository.toggleFollow(userId, currentUserId: currentUserId);
+      await _repository.toggleFollow(userId, currentUserId: currentUserId, isFollowing: isFollowing);
 
       // STEP 3: Delayed background refresh to sync backend state
       // Give backend time to propagate, then reload following users
