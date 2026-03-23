@@ -185,7 +185,6 @@ class _PostCardState extends State<PostCard> {
                             margin: const EdgeInsetsDirectional.only(start: 8),
                             child: TextButton(
                               onPressed: isFollowing ? null : () async {
-                                final wasFollowing = isFollowing;
                                 await viewModel.toggleFollow(
                                   post.userId,
                                   currentUserId: currentUserId,

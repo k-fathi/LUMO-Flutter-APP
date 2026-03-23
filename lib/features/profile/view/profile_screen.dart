@@ -496,7 +496,7 @@ class _ProfileHeader extends StatelessWidget {
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: BorderRadius.circular(12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
                 ),
                 child: Text(l10n.editProfile),
@@ -514,7 +514,7 @@ class _ProfileHeader extends StatelessWidget {
                       foregroundColor:
                           isFollowing ? theme.textTheme.bodyLarge?.color : Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: BorderRadius.circular(12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
                     child: Text(isFollowing ? 'متابع' : l10n.follow),
@@ -539,7 +539,7 @@ class _ProfileHeader extends StatelessWidget {
                     },
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: BorderRadius.circular(12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       side: const BorderSide(color: AppColors.primary),
                     ),
                     child: Text(l10n.message),

@@ -33,6 +33,7 @@ class RouteNames {
 
   // Analysis
   static const String parentAnalysis = '/parent-analysis';
+  static const String analyses = '/parent-analysis';
   static const String doctorPatients = '/doctor-patients';
   static const String doctorPatientDetail = '/doctor-patient-detail';
   static const String sessionDetailPlaceholder = '/session-detail-placeholder';

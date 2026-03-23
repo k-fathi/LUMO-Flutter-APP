@@ -66,11 +66,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final scaffoldContext = ScaffoldMessenger.of(context);
     final notificationProvider = context.read<NotificationProvider>();
     
-    final success = await viewModel.addComment(widget.postId, content);
-
-    if (!mounted) return;
-
-    if (success) {
+    await viewModel.addComment(widget.postId, content);
+    
+    // Since addComment returns void, we check if there's an error message
+    if (viewModel.errorMessage == null) {
       // 1. Send Notification
       final postOwnerId = viewModel.findPostById(widget.postId)?.userId ?? 0;
       notificationProvider.sendCommentNotification(
@@ -467,7 +466,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                 children: [
                                                   const SizedBox(width: 8),
                                                   GestureDetector(
-                                                    onTap: () => viewModel.toggleCommentLike(comment.id, currentUserId),
+                                                    onTap: () => viewModel.toggleCommentLike(comment.id, currentUserId: currentUserId),
                                                     child: Text(
                                                       'إعجاب',
                                                       style: TextStyle(

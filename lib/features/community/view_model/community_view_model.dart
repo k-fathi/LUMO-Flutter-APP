@@ -360,6 +360,17 @@ class CommunityViewModel extends ChangeNotifier {
     }
   }
 
+  Future<PostModel?> fetchPostById(int postId) async {
+    try {
+      final post = await _repository.getPostById(postId);
+      _updatePostEverywhere(post);
+      return post;
+    } catch (e) {
+      debugPrint('Error fetching post by ID: $e');
+      return null;
+    }
+  }
+
   Future<void> fetchComments(int postId) async {
     _isLoading = true;
     _safeNotify();
@@ -376,8 +387,9 @@ class CommunityViewModel extends ChangeNotifier {
 
   Future<void> addComment(int postId, String content, {int? parentId}) async {
     try {
-      final comment = await _repository.addComment(postId, content, parentId: parentId);
-      _comments.add(comment);
+      await _repository.addComment(postId, content, parentId: parentId);
+      // Since repository returns void, we refresh comments to show the new one
+      await fetchComments(postId);
       
       final post = findPostById(postId);
       if (post != null) {

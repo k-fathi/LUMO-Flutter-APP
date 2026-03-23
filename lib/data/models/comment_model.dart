@@ -130,7 +130,7 @@ class CommentModel {
   }
 
   // Helper methods
-  bool isLikedBy(int userId) => isLiked || likedByUserIds.contains(userId);
+  bool isLikedBy(int? userId) => userId != null && (isLiked || likedByUserIds.contains(userId));
   bool get isReply => parentCommentId != null;
   bool get isTopLevel => parentCommentId == null;
 

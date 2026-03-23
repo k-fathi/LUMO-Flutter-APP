@@ -469,9 +469,15 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                         List<UserModel> pool = [];
                         if (activeTab == 0) {
                           final Map<int, UserModel> allMap = {};
-                          for (final u in connected) allMap[u.id] = u;
-                          for (final u in following) allMap[u.id] = u;
-                          for (final u in recent) allMap[u.id] = u;
+                          for (final u in connected) {
+                            allMap[u.id] = u;
+                          }
+                          for (final u in following) {
+                            allMap[u.id] = u;
+                          }
+                          for (final u in recent) {
+                            allMap[u.id] = u;
+                          }
                           pool = allMap.values.toList();
                         } else if (activeTab == 1) {
                           pool = connected;

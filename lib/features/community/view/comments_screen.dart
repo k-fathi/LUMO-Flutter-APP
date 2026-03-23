@@ -47,9 +47,10 @@ class _CommentsScreenState extends State<CommentsScreen> {
     if (text.isEmpty) return;
 
     final viewModel = context.read<CommunityViewModel>();
-    final success = await viewModel.addComment(widget.postId, text);
-
-    if (success && mounted) {
+    await viewModel.addComment(widget.postId, text);
+    
+    // Since addComment returns void, we check if there's an error message
+    if (viewModel.errorMessage == null && mounted) {
       _controller.clear();
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -309,7 +310,7 @@ class _CommentTile extends StatelessWidget {
                 icon: isLiked ? Icons.favorite_rounded : Icons.favorite_outline_rounded,
                 label: comment.likesCount > 0 ? '${comment.likesCount}' : 'إعجاب',
                 color: isLiked ? Colors.red : AppColors.mutedForeground,
-                onTap: () => viewModel.toggleCommentLike(comment.id, currentUserId),
+                onTap: () => viewModel.toggleCommentLike(comment.id, currentUserId: currentUserId),
               ),
               const SizedBox(width: 16),
               _CommentActionButton(
