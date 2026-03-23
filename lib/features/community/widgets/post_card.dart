@@ -43,23 +43,19 @@ class _PostCardState extends State<PostCard> {
     final currentUser = authProvider.currentUser;
     final currentUserId = currentUser?.id ?? 0;
 
-    // تأكيد إنك صاحب البوست عشان يظهرلك زرار التعديل والحذف
     final isOwner = currentUserId != 0 && post.userId == currentUserId;
 
-    // --- الفلتر الذكي الصارم ---
     String displayName = post.userName;
 
-    // لو الباك إند باعت null كنص أو باعتها فاضية أو القيمة الاحتياطية "مستخدم"
     if (displayName.toLowerCase().contains('null') ||
         displayName.trim().isEmpty ||
         displayName == 'مستخدم') {
       if (isOwner && currentUser != null && currentUser.name.isNotEmpty) {
-        displayName = currentUser.name; // خد اسمك من البروفايل بتاعك إنت
+        displayName = currentUser.name;
       } else {
-        displayName = 'مستخدم'; // لو بوست بتاع حد تاني ومعندوش اسم
+        displayName = 'مستخدم';
       }
     } else if (isOwner && currentUser != null && currentUser.name.isNotEmpty) {
-      // حتى لو فيه اسم، لو أنا صاحب البوست، دايمًا استخدم اسمي اللي في الـ Auth عشان لو غيرته يظهر فورًا
       displayName = currentUser.name;
     }
 
@@ -67,7 +63,6 @@ class _PostCardState extends State<PostCard> {
         (isOwner && (post.userAvatarUrl == null || post.userAvatarUrl!.isEmpty))
             ? currentUser?.avatarUrl
             : post.userAvatarUrl;
-    // ----------------------------
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -94,14 +89,13 @@ class _PostCardState extends State<PostCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
                 child: Row(
                   children: [
                     AvatarWidget(
                       size: 40,
-                      imageUrl: displayAvatar, // تم استخدام المتغير الذكي
+                      imageUrl: displayAvatar,
                       onTap: () => _navigateToProfile(context, post),
                     ),
                     const SizedBox(width: 12),
@@ -113,7 +107,7 @@ class _PostCardState extends State<PostCard> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              displayName, // تم استخدام المتغير الذكي
+                              displayName,
                               style: AppTextStyles.label.copyWith(
                                 fontWeight: FontWeight.w600,
                               ),
@@ -129,7 +123,6 @@ class _PostCardState extends State<PostCard> {
                       ),
                     ),
 
-                    // قائمة الخيارات (تظهر للكل بخيارات مختلفة)
                     if (isOwner)
                       PopupMenuButton<String>(
                         icon: const Icon(Icons.more_horiz_rounded, color: Colors.grey),
@@ -174,7 +167,7 @@ class _PostCardState extends State<PostCard> {
                           ),
                         ],
                       )
-                    else if (!widget.hideFollowButton && post.userId != 0)
+                    else if (!widget.hideFollowButton && post.userId != 0 && post.userId != currentUserId)
                       Consumer<CommunityViewModel>(
                         builder: (context, viewModel, child) {
                           final isFollowing =
@@ -188,24 +181,19 @@ class _PostCardState extends State<PostCard> {
                             margin: const EdgeInsetsDirectional.only(start: 8),
                             child: TextButton(
                               onPressed: () async {
-                                final wasFollowing = isFollowing;
                                 await viewModel.toggleFollow(
                                   post.userId,
                                   currentUserId: currentUserId,
                                 );
-                                if (!wasFollowing && post.userId != 0) {
-                                  Future.microtask(() {
-                                    if (context.mounted) {
-                                      context
-                                          .read<NotificationProvider>()
-                                          .sendFollowNotification(
-                                            targetUserId: post.userId,
-                                            followerName:
-                                                authProvider.currentUser?.name ??
-                                                    '',
-                                          );
-                                    }
-                                  });
+                                if (context.mounted) {
+                                  context
+                                      .read<NotificationProvider>()
+                                      .sendFollowNotification(
+                                        targetUserId: post.userId,
+                                        followerName:
+                                            authProvider.currentUser?.name ??
+                                                '',
+                                      );
                                 }
                               },
                               style: TextButton.styleFrom(
@@ -264,52 +252,32 @@ class _PostCardState extends State<PostCard> {
                 ),
               ),
 
-              const SizedBox(height: 8),
-              const Divider(height: 1),
-
-              // Footer — reads fresh from ViewModel to fix likes scoping per user
-              Consumer<CommunityViewModel>(
-                builder: (context, viewModel, child) {
-                  final livePost = viewModel.findPostById(post.id) ?? post;
-                  final liveIsLiked = livePost.isLikedBy(currentUserId);
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: Row(
-                      children: [
-                        _ActionButton(
-                          icon: liveIsLiked
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_outline_rounded,
-                          label: '${livePost.likesCount}',
-                          color: liveIsLiked ? Colors.red : Colors.grey,
-                          onTap: () {
-                            final wasLiked = livePost.isLikedBy(currentUserId);
-                            viewModel.toggleLike(post.id);
-
-                            if (!wasLiked &&
-                                post.userId != currentUserId &&
-                                post.userId != 0) {
-                              context.read<NotificationProvider>().sendPostLikeNotification(
-                                    postId: post.id,
-                                    postOwnerId: post.userId,
-                                    likerName: currentUser?.name ?? 'مستخدم',
-                                  );
-                            }
-                          },
-                        ),
-                        _ActionButton(
-                          icon: Icons.chat_bubble_outline_rounded,
-                          label: '${livePost.commentsCount}',
-                          color: Colors.grey,
-                          onTap: () {
-                            Navigator.pushNamed(context, RouteNames.postDetail,
-                                arguments: livePost);
-                          },
-                        ),
-                      ],
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Row(
+                  children: [
+                    _ActionButton(
+                      icon: post.isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                      color: post.isLiked ? Colors.red : Colors.grey,
+                      label: post.likesCount.toString(),
+                      onTap: () => context.read<CommunityViewModel>().toggleLike(post.id),
                     ),
-                  );
-                },
+                    _ActionButton(
+                      icon: Icons.chat_bubble_outline_rounded,
+                      color: Colors.grey,
+                      label: post.commentsCount.toString(),
+                      onTap: () {
+                        Navigator.pushNamed(context, RouteNames.postDetail,
+                            arguments: post);
+                      },
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.share_outlined, size: 20, color: Colors.grey),
+                      onPressed: () {},
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -319,47 +287,58 @@ class _PostCardState extends State<PostCard> {
   }
 
   Widget _buildTextContent(String content, AppLocalizations l10n) {
-    if (!_isExpanded && content.length > 150) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('${content.substring(0, 150)}...', style: AppTextStyles.body),
-          InkWell(
-            onTap: () => setState(() => _isExpanded = true),
-            child: Text(
-              l10n.readMore,
-              style: const TextStyle(
-                  color: AppColors.primary, fontWeight: FontWeight.bold),
+    final isLong = content.length > 150;
+    final displayContent = isLong && !_isExpanded
+        ? '${content.substring(0, 150)}...'
+        : content;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          displayContent,
+          style: AppTextStyles.body,
+        ),
+        if (isLong)
+          GestureDetector(
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                _isExpanded ? l10n.showLess : l10n.showMore,
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
             ),
           ),
-        ],
-      );
-    }
-    return Text(content, style: AppTextStyles.body);
+      ],
+    );
   }
 
   void _navigateToProfile(BuildContext context, PostModel post) {
     Navigator.pushNamed(
       context,
       RouteNames.profile,
-      arguments: {
-        'userId': post.userId,
-      },
+      arguments: {'userId': post.userId},
     );
   }
 }
 
 class _ActionButton extends StatelessWidget {
   final IconData icon;
-  final String label;
   final Color color;
+  final String label;
   final VoidCallback onTap;
 
-  const _ActionButton(
-      {required this.icon,
-      required this.label,
-      required this.color,
-      required this.onTap});
+  const _ActionButton({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -371,9 +350,14 @@ class _ActionButton extends StatelessWidget {
         child: Row(
           children: [
             Icon(icon, size: 20, color: color),
-            const SizedBox(width: 4),
-            Text(label,
-                style: TextStyle(color: color, fontWeight: FontWeight.w500)),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: AppTextStyles.caption.copyWith(
+                color: color,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
       ),
