@@ -13,9 +13,8 @@ import '../../../shared/providers/auth_provider.dart';
 import '../view_model/chat_view_model.dart';
 import 'chat_room_screen.dart';
 import '../../ai_helper/view/ai_chat_screen.dart';
-import '../widgets/chat_avatar.dart';
+import '../../../shared/widgets/avatar_widget.dart';
 
-/// ChatsListScreen (Tab 3) - Figma Screen 9
 ///
 /// ListView of conversation threads.
 /// Each item: Avatar (Green Dot online), Name, Last Message, Time, Unread Badge.
@@ -33,7 +32,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ChatViewModel>().loadChatRooms();
+      final userId = context.read<AuthProvider>().currentUser?.id;
+      context.read<ChatViewModel>().loadChatRooms(userId);
       final auth = context.read<AuthProvider>();
       if (auth.currentUser?.role == UserRole.doctor) {
         context.read<PatientProvider>().fetchPatients();
@@ -51,14 +51,15 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 
     if (currentUser.role == UserRole.doctor) {
       // For Doctors: Show active chats, but also show connected patients who haven't started a chat yet
-      final activePatientIds = rooms.map((r) => r.getOtherParticipantId(currentUserIdStr)).toList();
-      
+      final activePatientIds =
+          rooms.map((r) => r.getOtherParticipantId(currentUserIdStr)).toList();
+
       // 1. Active Chats
       items.addAll(rooms);
-      
+
       // 2. Add AI Bot (optional but good for consistency)
       items.add('AI_BOT');
-      
+
       // 3. Connected patients not yet in active chats
       for (final patient in patients) {
         if (!activePatientIds.contains(patient.id.toString())) {
@@ -69,11 +70,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       // For Parents: Primary Doctor -> AI Bot -> Others
       final parent = currentUser is ParentModel ? currentUser : null;
       final connectedDoctorIds = parent?.connectedDoctorIds ?? [];
-      
+
       // Separate doctor rooms from others
       final doctorRooms = <ChatRoomModel>[];
       final otherRooms = <ChatRoomModel>[];
-      
+
       for (final room in rooms) {
         final otherId = room.getOtherParticipantId(currentUserIdStr);
         if (connectedDoctorIds.contains(otherId)) {
@@ -82,18 +83,18 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           otherRooms.add(room);
         }
       }
-      
+
       // 1. Doctor Chats
       items.addAll(doctorRooms);
-      
+
       // 2. AI Bot (Always second or first if no doctor chat)
-      items.insert(items.length >= 1 ? 1 : 0, 'AI_BOT');
-      
+      items.insert(items.isNotEmpty ? 1 : 0, 'AI_BOT');
+
       // 3. Other Chats
       items.addAll(otherRooms);
-      
+
       // 4. Also show connected doctors who haven't chatted yet (if any)
-      // Note: We don't have full doctor models here typically, 
+      // Note: We don't have full doctor models here typically,
       // but if we did, we would add them.
     }
 
@@ -129,7 +130,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         ),
       ),
       body: Consumer3<ChatViewModel, AuthProvider, PatientProvider>(
-        builder: (context, chatViewModel, authProvider, patientProvider, child) {
+        builder:
+            (context, chatViewModel, authProvider, patientProvider, child) {
           final currentUser = authProvider.currentUser;
           if (currentUser == null) return const SizedBox.shrink();
 
@@ -236,11 +238,12 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   Widget _buildChatRoomTile(BuildContext context, ChatRoomModel room,
       UserModel currentUser, ThemeData theme) {
     final otherName = room.getOtherParticipantName(currentUser.id.toString());
-    final otherAvatar = room.getOtherParticipantAvatar(currentUser.id.toString());
+    final otherAvatar =
+        room.getOtherParticipantAvatar(currentUser.id.toString());
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: ChatAvatar(
+      leading: AvatarWidget(
         name: otherName,
         imageUrl: otherAvatar,
         size: 50,
@@ -283,7 +286,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
               chatRoomId: room.id,
               otherUserName: otherName,
               otherUserAvatar: otherAvatar,
-              otherUserId: room.getOtherParticipantId(currentUser.id.toString()),
+              otherUserId:
+                  room.getOtherParticipantId(currentUser.id.toString()),
             ),
           ),
         );
@@ -295,16 +299,20 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       UserModel currentUser, ThemeData theme) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: ChatAvatar(
+      leading: AvatarWidget(
         name: user.name,
         imageUrl: user.profileImage ?? user.avatarUrl,
         size: 50,
       ),
       title: Text(user.name, style: AppTextStyles.label),
-      subtitle: const Text('بدء محادثة جديدة', style: TextStyle(fontStyle: FontStyle.italic)),
+      subtitle: const Text('بدء محادثة جديدة',
+          style: TextStyle(fontStyle: FontStyle.italic)),
       onTap: () {
         // Deterministic chat ID
-        final List<String> ids = [currentUser.id.toString(), user.id.toString()];
+        final List<String> ids = [
+          currentUser.id.toString(),
+          user.id.toString()
+        ];
         ids.sort();
         final String chatRoomId = ids.join('_');
 
@@ -364,8 +372,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       patientProvider.fetchPatients();
     }
 
-    final List<UserModel> contacts = isDoctor 
-        ? patientProvider.patients 
+    final List<UserModel> contacts = isDoctor
+        ? patientProvider.patients
         : []; // For parents, maybe show followed users later
 
     showModalBottomSheet(
@@ -459,7 +467,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       textDirection: TextDirection.rtl,
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-        leading: ChatAvatar(
+        leading: AvatarWidget(
           name: name,
           imageUrl: contact.avatarUrl,
           size: 50,

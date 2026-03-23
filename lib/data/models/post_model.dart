@@ -40,44 +40,48 @@ class PostModel {
 
   // Factory constructor from JSON
   factory PostModel.fromJson(Map<String, dynamic> json) {
-    // Robust parsing for user data (handles nested objects like 'user' or 'author')
-    final userMap = json['user'] is Map<String, dynamic>
+    final Map<String, dynamic>? userMap = json['user'] is Map<String, dynamic>
         ? json['user']
-        : (json['author'] is Map<String, dynamic>
-            ? json['author']
-            : (json['creator'] is Map<String, dynamic> ? json['creator'] : null));
+        : (json['author'] is Map<String, dynamic> ? json['author'] : null);
+
+    final int parsedId = int.tryParse(json['id']?.toString() ?? '0') ?? 0;
+    final int parsedUserId = int.tryParse(
+            json['user_id']?.toString() ?? userMap?['id']?.toString() ?? '0') ??
+        0;
+
+    // --- الفلتر السحري لتنظيف الاسم من الـ null ---
+    String rawName = json['user_name']?.toString() ??
+        userMap?['name']?.toString() ??
+        userMap?['full_name']?.toString() ??
+        json['name']?.toString() ??
+        '';
+
+    // بنمسح كلمة null لو الباك إند باعت كنص أو أي قيم تانية غير مرغوب فيها
+    rawName = rawName.replaceAll('null', '').replaceAll('NULL', '').trim();
+    if (rawName.isEmpty || rawName == 'مستخدم') {
+      rawName = 'مستخدم'; // القيمة الاحتياطية النضيفة
+    }
+    // ------------------------------------------------
 
     return PostModel(
-      id: json['id'] is int
-          ? json['id']
-          : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
-      userId: json['user_id'] is int
-          ? json['user_id']
-          : int.tryParse(json['user_id']?.toString() ??
-              json['author_id']?.toString() ??
-              json['owner_id']?.toString() ??
-              userMap?['id']?.toString() ??
-              '0') ?? 0,
-      userName: json['user_name']?.toString() ?? 
-                userMap?['name']?.toString() ?? 
-                'مستخدم',
-      userAvatarUrl: json['user_avatar_url']?.toString() ?? 
-                     userMap?['avatar_url']?.toString() ?? 
-                     userMap?['profile_image']?.toString(),
-      content: (json['content'] ?? json['body'] ?? json['text'])?.toString() ?? '',
+      id: parsedId,
+      userId: parsedUserId,
+      userName: rawName,
+      userAvatarUrl: json['user_avatar_url']?.toString() ??
+          userMap?['avatar_url']?.toString() ??
+          userMap?['profile_image']?.toString(),
+      content:
+          (json['content'] ?? json['body'] ?? json['text'])?.toString() ?? '',
       imageUrl: json['image_url']?.toString() ?? json['image']?.toString(),
       status: PostStatus.fromString(json['status']?.toString() ?? 'published'),
-      createdAt: DateFormatter.parseServerDateTime(json['created_at']?.toString()),
-      updatedAt: DateFormatter.parseServerDateTime(json['updated_at']?.toString()),
-      likesCount: json['likes_count'] is int
-          ? json['likes_count']
-          : int.tryParse(json['likes_count']?.toString() ?? '0') ?? 0,
-      commentsCount: json['comments_count'] is int
-          ? json['comments_count']
-          : int.tryParse(json['comments_count']?.toString() ?? '0') ?? 0,
-      sharesCount: json['shares_count'] is int
-          ? json['shares_count']
-          : int.tryParse(json['shares_count']?.toString() ?? '0') ?? 0,
+      createdAt:
+          DateFormatter.parseServerDateTime(json['created_at']?.toString()),
+      updatedAt:
+          DateFormatter.parseServerDateTime(json['updated_at']?.toString()),
+      likesCount: int.tryParse(json['likes_count']?.toString() ?? '0') ?? 0,
+      commentsCount:
+          int.tryParse(json['comments_count']?.toString() ?? '0') ?? 0,
+      sharesCount: int.tryParse(json['shares_count']?.toString() ?? '0') ?? 0,
       likedByUserIds: json['liked_by_user_ids'] is List
           ? (json['liked_by_user_ids'] as List)
               .map((e) => int.tryParse(e.toString()) ?? 0)
@@ -86,14 +90,15 @@ class PostModel {
       tags: json['tags'] is List
           ? (json['tags'] as List).map((e) => e.toString()).toList()
           : [],
-      isPinned: json['is_pinned'] == true ||
+      isPinned: json['is_pinned']?.toString() == 'true' ||
           json['is_pinned'] == 1 ||
-          json['is_pinned']?.toString() == 'true',
-      isLiked: json['is_liked'] == true ||
-          json['liked'] == true ||
-          json['has_liked'] == true ||
+          json['is_pinned'] == true,
+      isLiked: json['is_liked']?.toString() == 'true' ||
           json['is_liked'] == 1 ||
-          json['is_liked']?.toString() == 'true',
+          json['is_liked'] == true ||
+          json['liked_by_me']?.toString() == 'true' ||
+          json['liked_by_me'] == 1 ||
+          json['liked_by_me'] == true,
     );
   }
 
@@ -165,6 +170,7 @@ class PostModel {
     }
     return isLiked;
   }
+
   bool get hasImage => imageUrl != null && imageUrl!.isNotEmpty;
   bool get hasTags => tags.isNotEmpty;
   bool get isPublished => status.isPublished;

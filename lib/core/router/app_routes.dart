@@ -13,6 +13,7 @@ import '../../features/auth/view/otp_verification_screen.dart';
 import '../../features/auth/view/reset_password_screen.dart';
 import '../../features/home/view/main_layout.dart';
 import '../../features/community/view/create_post_screen.dart';
+import '../../features/community/view/edit_post_screen.dart';
 import '../../features/community/view/post_detail_screen.dart';
 import '../../features/chat/view/chats_list_screen.dart';
 import '../../features/chat/view/chat_room_screen.dart';
@@ -32,21 +33,19 @@ import '../../features/settings/view/settings_screen.dart';
 import 'route_names.dart';
 import 'route_transitions.dart';
 
-import 'package:provider/provider.dart';
 import '../../core/di/dependency_injection.dart';
 import '../../features/home/view_model/home_view_model.dart';
-import '../../features/analysis/view_model/analysis_view_model.dart';
 import '../../features/chat/view_model/chat_view_model.dart';
+import '../../features/ai_helper/view_model/ai_view_model.dart';
+import '../../features/analysis/view_model/analysis_view_model.dart';
 import '../../features/profile/view_model/profile_view_model.dart';
-
+import 'package:provider/provider.dart';
 
 class AppRoutes {
   const AppRoutes._();
 
-  // Initial route
   static String get initialRoute => RouteNames.splash;
 
-  // Route generator
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
       // ==================== SPLASH & ONBOARDING ====================
@@ -106,14 +105,11 @@ class AppRoutes {
       case RouteNames.createPost:
         return RouteTransitions.slideBottom(const CreatePostScreen());
 
+      // ✅ إصلاح: editPost يفتح EditPostScreen مش CreatePostScreen
       case RouteNames.editPost:
-        final args = settings.arguments as Map<String, dynamic>?;
+        final post = settings.arguments as PostModel;
         return RouteTransitions.slideBottom(
-          CreatePostScreen(
-            postId: args?['id'] as int?,
-            initialContent: args?['content'] as String?,
-            initialImageUrl: args?['imageUrl'] as String?,
-          ),
+          EditPostScreen(post: post),
         );
 
       case RouteNames.postDetail:
@@ -144,14 +140,20 @@ class AppRoutes {
                   (args['otherUserName'] ?? args['contactName'] ?? 'مستخدم')
                       .toString(),
               otherUserAvatar: args['otherUserAvatar'] as String?,
+              otherUserId:
+                  (args['otherUserId'] ?? args['contactId'])?.toString(),
             ),
           ),
         );
-      
 
-// ==================== AI HELPER ====================
+      // ==================== AI HELPER ====================
       case RouteNames.aiChat:
-        return RouteTransitions.slideRight(const AIChatScreen());
+        return RouteTransitions.slideRight(
+          ChangeNotifierProvider(
+            create: (_) => getIt<AIViewModel>(),
+            child: const AIChatScreen(),
+          ),
+        );
 
       // ==================== ANALYSIS ====================
       case RouteNames.parentAnalysis:
@@ -162,8 +164,14 @@ class AppRoutes {
           ),
         );
 
+      // ✅ إصلاح: DoctorPatientsScreen بياخد AnalysisViewModel
       case RouteNames.doctorPatients:
-        return RouteTransitions.slideRight(const DoctorPatientsScreen());
+        return RouteTransitions.slideRight(
+          ChangeNotifierProvider(
+            create: (_) => getIt<AnalysisViewModel>(),
+            child: const DoctorPatientsScreen(),
+          ),
+        );
 
       case RouteNames.doctorPatientDetail:
         final args = settings.arguments as Map<String, dynamic>;
@@ -177,6 +185,10 @@ class AppRoutes {
             ),
           ),
         );
+
+      case RouteNames.sessionDetailPlaceholder:
+        return RouteTransitions.slideRight(
+            const SessionDetailPlaceholderScreen());
 
       // ==================== PROFILE ====================
       case RouteNames.profile:
@@ -194,33 +206,55 @@ class AppRoutes {
         );
 
       case RouteNames.editProfile:
-        return RouteTransitions.slideRight(const EditProfileScreen());
+        return RouteTransitions.slideRight(
+          ChangeNotifierProvider(
+            create: (_) => getIt<ProfileViewModel>(),
+            child: const EditProfileScreen(),
+          ),
+        );
 
       case RouteNames.followers:
-        return RouteTransitions.slideRight(const FollowersScreen());
+        final userId = settings.arguments as int?;
+        return RouteTransitions.slideRight(
+          ChangeNotifierProvider(
+            create: (_) => getIt<ProfileViewModel>(),
+            child: FollowersScreen(userId: userId),
+          ),
+        );
 
       case RouteNames.following:
-        return RouteTransitions.slideRight(const FollowingScreen());
-
-      // Removed legacy doctorRequest and doctorCodeGenerator routes.
+        final userId = settings.arguments as int?;
+        return RouteTransitions.slideRight(
+          ChangeNotifierProvider(
+            create: (_) => getIt<ProfileViewModel>(),
+            child: FollowingScreen(userId: userId),
+          ),
+        );
 
       case RouteNames.changePassword:
         return RouteTransitions.fade(const ChangePasswordScreen());
 
       case RouteNames.childProfile:
-        // You can use the mock data here if needed, or pass arguments
-        // ignore: unused_local_variable
-        // Since we import child_profile_screen.dart, we'll just push it.
-        // If we want to strictly type it, we need to import mock_child_data.dart
-        return RouteTransitions.slideRight(const ChildProfileScreen());
+        final args = settings.arguments as Map<String, dynamic>?;
+        return RouteTransitions.slideRight(
+          ChangeNotifierProvider(
+            create: (_) => getIt<ProfileViewModel>(),
+            child: ChildProfileScreen(
+              childData: args?['childData'],
+            ),
+          ),
+        );
 
       case RouteNames.editChildProfile:
-        return RouteTransitions.slideRight(const EditChildProfileScreen());
-
-      // ==================== SESSION HISTORY ====================
-      case RouteNames.sessionDetailPlaceholder:
+        final args = settings.arguments as Map<String, dynamic>?;
         return RouteTransitions.slideRight(
-            const SessionDetailPlaceholderScreen());
+          ChangeNotifierProvider(
+            create: (_) => getIt<ProfileViewModel>(),
+            child: EditChildProfileScreen(
+              childData: args?['childData'],
+            ),
+          ),
+        );
 
       // ==================== SETTINGS ====================
       case RouteNames.settings:
@@ -232,7 +266,6 @@ class AppRoutes {
     }
   }
 
-  // Error route
   static Route<dynamic> _errorRoute(String? routeName) {
     return MaterialPageRoute(
       builder: (_) => Scaffold(
@@ -250,11 +283,7 @@ class AppRoutes {
     String routeName, {
     Object? arguments,
   }) {
-    return Navigator.pushNamed<T>(
-      context,
-      routeName,
-      arguments: arguments,
-    );
+    return Navigator.pushNamed<T>(context, routeName, arguments: arguments);
   }
 
   static Future<T?> navigateToReplacement<T>(
@@ -262,11 +291,8 @@ class AppRoutes {
     String routeName, {
     Object? arguments,
   }) {
-    return Navigator.pushReplacementNamed<T, void>(
-      context,
-      routeName,
-      arguments: arguments,
-    );
+    return Navigator.pushReplacementNamed<T, void>(context, routeName,
+        arguments: arguments);
   }
 
   static Future<T?> navigateToAndRemoveUntil<T>(

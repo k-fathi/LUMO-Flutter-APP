@@ -58,9 +58,14 @@ class NotificationService {
       presentSound: true,
     );
 
+    const linuxDetails = LinuxNotificationDetails(
+      icon: null, // Default system icon
+    );
+
     const notificationDetails = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
+      linux: linuxDetails,
     );
 
     await _flutterLocalNotificationsPlugin.show(

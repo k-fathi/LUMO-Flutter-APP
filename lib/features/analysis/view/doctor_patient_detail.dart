@@ -93,7 +93,7 @@ class _DoctorPatientDetailState extends State<DoctorPatientDetail> {
                       borderRadius: BorderRadius.circular(28),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
@@ -105,7 +105,7 @@ class _DoctorPatientDetailState extends State<DoctorPatientDetail> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: AppColors.destructive.withOpacity(0.1),
+                            color: AppColors.destructive.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(

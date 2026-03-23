@@ -8,7 +8,6 @@ import '../../../shared/providers/patient_provider.dart';
 
 import '../view/notifications_screen.dart';
 
-/// CommunityHeader - Figma Screen 6 Spec
 ///
 /// Title: "Community" (المجتمع)
 /// Action: Search Button (Circular gradient background)

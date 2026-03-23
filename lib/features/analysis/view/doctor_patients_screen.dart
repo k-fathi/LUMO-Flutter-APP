@@ -20,7 +20,6 @@ class DoctorPatientsScreen extends StatefulWidget {
 }
 
 class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
-  final _patientsListKey = GlobalKey();
 
   @override
   void initState() {
@@ -79,16 +78,7 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
                       trendValue: patientProvider.patientsTrend,
                       icon: Icons.people_alt_rounded,
                       color: AppColors.primary,
-                      onTap: () {
-                        final listCtx = _patientsListKey.currentContext;
-                        if (listCtx != null) {
-                          Scrollable.ensureVisible(
-                            listCtx,
-                            duration: const Duration(milliseconds: 600),
-                            curve: Curves.easeInOut,
-                          );
-                        }
-                      },
+                      onTap: () {},
                     ),
                   ),
                 ),
@@ -108,9 +98,9 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
                 margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
+                  color: Colors.red.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.red.withOpacity(0.5)),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.5)),
                 ),
                 child: Row(
                   children: [
@@ -143,7 +133,6 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
 
               // ── 3. Patient List Title ────────────────────────
               Row(
-                key: _patientsListKey,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
@@ -212,12 +201,12 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
         decoration: BoxDecoration(
           color: theme.cardColor,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: theme.dividerColor.withOpacity(0.8)),
+          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.8)),
           boxShadow: [
             BoxShadow(
               color: theme.brightness == Brightness.light
-                  ? color.withOpacity(0.1)
-                  : Colors.black.withOpacity(0.3),
+                  ? color.withValues(alpha: 0.1)
+                  : Colors.black.withValues(alpha: 0.3),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -233,7 +222,7 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(icon, color: color, size: 28),
@@ -244,7 +233,7 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: (trendValue >= 0 ? Colors.green : Colors.red)
-                          .withOpacity(0.1),
+                          .withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: IntrinsicWidth(
@@ -294,7 +283,7 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
                     ),
                     Icon(
                       Icons.arrow_forward_rounded,
-                      color: theme.iconTheme.color?.withOpacity(0.3),
+                      color: theme.iconTheme.color?.withValues(alpha: 0.3),
                       size: 16,
                     ),
                   ],
@@ -325,8 +314,8 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
           boxShadow: [
             BoxShadow(
               color: theme.brightness == Brightness.light
-                  ? const Color(0xFF2563EB).withOpacity(0.3)
-                  : Colors.black.withOpacity(0.4),
+                  ? const Color(0xFF2563EB).withValues(alpha: 0.3)
+                  : Colors.black.withValues(alpha: 0.4),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -339,7 +328,7 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -366,7 +355,7 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
                     Text(
                       l10n.searchPatient,
                       style: AppTextStyles.caption.copyWith(
-                        color: Colors.white.withOpacity(0.85),
+                        color: Colors.white.withValues(alpha: 0.85),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -719,10 +708,10 @@ class _SearchResultTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: theme.dividerColor.withOpacity(0.8)),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.8)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -746,7 +735,7 @@ class _SearchResultTile extends StatelessWidget {
                 Text(
                   subtitle,
                   style: AppTextStyles.caption.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                   ),
                 ),
               ],

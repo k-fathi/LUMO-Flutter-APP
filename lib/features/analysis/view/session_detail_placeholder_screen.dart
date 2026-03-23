@@ -2,41 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../data/models/session_analysis_model.dart';
 
-// --- Data Models for Visual Summary ---
-class EmotionData {
-  final String id;
-  final String emoji;
-  final String label;
-  final double percentage; // 0.0 to 1.0
-  final Color color;
-
-  EmotionData(this.id, this.emoji, this.label, this.percentage, this.color);
-}
-
-class SessionAnalysisData {
-  final String id;
-  final String title;
-  final String summary;
-  final String duration;
-  final String engagementLevel;
-  final List<String> recommendations;
-  final List<EmotionData> emotionDistribution;
-  final double focusedPercentage;
-  final double notFocusedPercentage;
-
-  SessionAnalysisData({
-    required this.id,
-    required this.title,
-    required this.summary,
-    required this.duration,
-    required this.engagementLevel,
-    required this.recommendations,
-    required this.emotionDistribution,
-    required this.focusedPercentage,
-    required this.notFocusedPercentage,
-  });
-}
 
 class SessionDetailPlaceholderScreen extends StatefulWidget {
   const SessionDetailPlaceholderScreen({super.key});
@@ -53,7 +20,7 @@ class _SessionDetailPlaceholderScreenState
   int _chartType = 0; // 0 = Bars, 1 = Pie
 
   // Mock Session Data for Visuals
-  late final SessionAnalysisData _sessionData;
+  late final SessionAnalysisModel _sessionData;
 
   @override
   void initState() {
@@ -61,7 +28,7 @@ class _SessionDetailPlaceholderScreenState
     _tabController = TabController(length: 2, vsync: this);
 
     // Derived from Gamified Screen
-    _sessionData = SessionAnalysisData(
+    _sessionData = SessionAnalysisModel(
       id: 'session_1',
       title: 'جلسة #1 - تقييم الروبوت التلقائي',
       summary:

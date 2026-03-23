@@ -43,7 +43,7 @@ class CommentModel {
     final userName = json['user_name']?.toString() ??
         userMap?['name']?.toString() ??
         userMap?['full_name']?.toString() ??
-        'مستخدم';
+        '';
 
     final userAvatarUrl = json['user_avatar_url']?.toString() ??
         userMap?['avatar_url']?.toString() ??
@@ -58,7 +58,7 @@ class CommentModel {
           ? json['post_id']
           : int.tryParse(json['post_id']?.toString() ?? '0') ?? 0,
       userId: json['user_id'] ?? json['author_id'] ?? userMap?['id'] ?? 0,
-      userName: userName.isNotEmpty ? userName : 'مستخدم',
+      userName: userName.isNotEmpty ? userName : '',
       userAvatarUrl: userAvatarUrl,
       content: (json['content'] ?? json['comment'])?.toString() ?? '',
       createdAt: DateFormatter.parseServerDateTime(json['created_at']?.toString()),

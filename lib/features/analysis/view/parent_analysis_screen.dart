@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/router/route_names.dart';
 import '../../../shared/providers/auth_provider.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../view_model/analysis_view_model.dart';
@@ -22,11 +23,14 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
     });
   }
 
-  void _loadData() {
+  // ✅ إصلاح: Future<void> بدل void عشان onRefresh يشتغل صح
+  Future<void> _loadData() async {
     final authProvider = context.read<AuthProvider>();
     final currentUser = authProvider.currentUser;
     if (currentUser != null) {
-      context.read<AnalysisViewModel>().loadParentAnalyses(currentUser.id);
+      await context
+          .read<AnalysisViewModel>()
+          .loadParentAnalyses(currentUser.id);
     }
   }
 
@@ -53,8 +57,10 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(viewModel.errorMessage!,
-                      style: const TextStyle(color: Colors.red)),
+                  Text(
+                    viewModel.errorMessage!,
+                    style: const TextStyle(color: Colors.red),
+                  ),
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: _loadData,
@@ -73,8 +79,9 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
             );
           }
 
+          // ✅ إصلاح: onRefresh بيـawait _loadData فعلاً
           return RefreshIndicator(
-            onRefresh: () async => _loadData(),
+            onRefresh: _loadData,
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: viewModel.analyses.length,
@@ -85,11 +92,14 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
                   child: AnalysisCardWidget(
                     analysis: analysis,
                     onTap: () {
-                      // Navigate to detail if needed
+                      // ✅ إصلاح: شاشة تفاصيل التحليل للـ parent
+                      // مش شاشة الدكتور (doctorPatientDetail)
+                      // ✅ إصلاح: RouteNames بدل hardcoded string
                       Navigator.pushNamed(
                         context,
-                        '/doctor-patient-detail',
+                        RouteNames.sessionDetailPlaceholder,
                         arguments: {
+                          'analysisId': analysis.id,
                           'parentId': analysis.parentId,
                           'parentName': analysis.parentName,
                           'childName': analysis.childName,

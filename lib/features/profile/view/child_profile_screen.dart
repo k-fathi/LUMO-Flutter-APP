@@ -8,6 +8,7 @@ import '../models/mock_child_data.dart';
 import '../../../data/models/parent_model.dart';
 import '../../../shared/providers/auth_provider.dart';
 import 'package:provider/provider.dart';
+import '../../../core/router/route_names.dart';
 
 class ChildProfileScreen extends StatelessWidget {
   final MockChildData? childData;
@@ -98,7 +99,7 @@ class ChildProfileScreen extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () {
-                  Navigator.pushNamed(context, '/edit-child-profile');
+                  Navigator.pushNamed(context, RouteNames.editChildProfile);
                 },
                 icon: const Icon(Icons.edit_outlined),
                 label: Text(l10n.editChildInfo),

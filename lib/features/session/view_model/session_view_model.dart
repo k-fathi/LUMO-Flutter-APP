@@ -140,4 +140,15 @@ class SessionViewModel extends ChangeNotifier {
     _stopTimer();
     super.dispose();
   }
+
+  void resetState() {
+    _stopTimer();
+    _isActive = false;
+    _parts = [];
+    _currentPartIndex = 0;
+    _secondsRemainingInPart = 0;
+    _isLoading = false;
+    _errorMessage = null;
+    notifyListeners();
+  }
 }

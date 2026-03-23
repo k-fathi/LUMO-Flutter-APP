@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -68,10 +70,25 @@ class MessageBubble extends StatelessWidget {
                       if (message.hasImage)
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            message.imageUrl!,
+                          child: CachedNetworkImage(
+                            imageUrl: message.imageUrl!,
                             width: 200,
                             fit: BoxFit.cover,
+                            placeholder: (context, url) => Shimmer.fromColors(
+                              baseColor: Colors.grey[300]!,
+                              highlightColor: Colors.grey[100]!,
+                              child: Container(
+                                width: 200,
+                                height: 150,
+                                color: Colors.white,
+                              ),
+                            ),
+                            errorWidget: (context, url, error) => Container(
+                              width: 200,
+                              height: 150,
+                              color: Colors.grey[200],
+                              child: const Icon(Icons.broken_image),
+                            ),
                           ),
                         ),
                       if (message.hasFile)

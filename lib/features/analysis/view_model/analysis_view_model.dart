@@ -145,4 +145,11 @@ class AnalysisViewModel extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
   }
+
+  void resetState() {
+    _analyses = [];
+    _isLoading = false;
+    _errorMessage = null;
+    notifyListeners();
+  }
 }

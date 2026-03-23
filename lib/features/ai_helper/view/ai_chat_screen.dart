@@ -24,10 +24,13 @@ class _AIChatScreenState extends State<AIChatScreen> {
   void initState() {
     super.initState();
     _viewModel = context.read<AIViewModel>();
-    final authProvider = context.read<AuthProvider>();
-    final userId = authProvider.currentUser?.id ?? 0;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _viewModel.loadChatHistory(userId);
+      // ✅ إصلاح: لو مفيش user — مش بنحمل حاجة
+      final userId = context.read<AuthProvider>().currentUser?.id;
+      if (userId != null) {
+        _viewModel.loadChatHistory(userId);
+      }
     });
   }
 
@@ -38,27 +41,31 @@ class _AIChatScreenState extends State<AIChatScreen> {
     super.dispose();
   }
 
+  // ✅ إصلاح: mounted check بدل Future.delayed
   void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      Future.delayed(const Duration(milliseconds: 100), () {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      });
-    }
+    if (!mounted) return;
+    if (!_scrollController.hasClients) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   Future<void> _handleSend() async {
     final message = _messageController.text.trim();
     if (message.isEmpty) return;
 
-    final authProvider = context.read<AuthProvider>();
-    final userId = authProvider.currentUser?.id ?? 0;
+    // ✅ إصلاح: لو مفيش user — مش بنبعت
+    final userId = context.read<AuthProvider>().currentUser?.id;
+    if (userId == null) return;
 
     _messageController.clear();
-
     await _viewModel.sendMessage(userId, message);
     _scrollToBottom();
   }
@@ -66,18 +73,17 @@ class _AIChatScreenState extends State<AIChatScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: CustomAppBar(
         title: 'المساعد الطبي الذكي',
-        showBackButton: false,
+        showBackButton: true, // ✅ إصلاح: true عشان المستخدم يقدر يرجع
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert_rounded),
             onSelected: (value) {
-              if (value == 'clear') {
-                _showClearDialog();
-              }
+              if (value == 'clear') _showClearDialog();
             },
             itemBuilder: (context) => [
               const PopupMenuItem(
@@ -104,7 +110,6 @@ class _AIChatScreenState extends State<AIChatScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // LUMO Robot - real asset image
                         Image.asset(
                           'assets/images/ai_avatar.png',
                           width: 200,
@@ -112,24 +117,23 @@ class _AIChatScreenState extends State<AIChatScreen> {
                           fit: BoxFit.contain,
                         ),
                         const SizedBox(height: 24),
-                        // CONNECT - React: text-4xl font-bold text-[#2196F3]
-                        const Text(
-                          'CONNECT',
+                        // ✅ إصلاح: AppColors بدل hardcoded color
+                        Text(
+                          'كونكت',
                           style: TextStyle(
                             fontSize: 36,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF2196F3),
+                            color: AppColors.primary, // ✅ من الـ theme
                             letterSpacing: 4,
                           ),
                         ),
                         const SizedBox(height: 6),
-                        // React: text-[#2196F3] opacity-80
+                        // ✅ إصلاح: نص عربي بدل English
                         Text(
-                          'Your AI Assistant.',
+                          'مساعدك الطبي الذكي',
                           style: TextStyle(
                             fontSize: 16,
-                            color:
-                                const Color(0xFF2196F3).withValues(alpha: 0.8),
+                            color: AppColors.primary.withValues(alpha: 0.8),
                           ),
                         ),
                       ],
@@ -184,7 +188,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
-              child: Container(
+              child: ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 120),
                 child: AppTextField(
                   controller: _messageController,
@@ -208,9 +212,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
                     : const Icon(Icons.send_rounded),
@@ -226,7 +229,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
   void _showClearDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
@@ -234,15 +237,17 @@ class _AIChatScreenState extends State<AIChatScreen> {
         content: const Text('هل أنت متأكد من مسح جميع الرسائل؟'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(ctx),
             child: const Text('إلغاء'),
           ),
           TextButton(
             onPressed: () {
-              final authProvider = context.read<AuthProvider>();
-              final userId = authProvider.currentUser?.id ?? 0;
-              _viewModel.clearChatHistory(userId);
-              Navigator.pop(context);
+              // ✅ إصلاح: تحقق من userId قبل المسح
+              final userId = context.read<AuthProvider>().currentUser?.id;
+              if (userId != null) {
+                _viewModel.clearChatHistory(userId);
+              }
+              Navigator.pop(ctx);
             },
             style: TextButton.styleFrom(
               foregroundColor: AppColors.destructive,

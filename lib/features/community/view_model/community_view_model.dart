@@ -4,13 +4,28 @@ import '../../../data/models/post_model.dart';
 import '../../../data/models/comment_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/repositories/community_repository.dart';
+import '../../../shared/providers/auth_provider.dart';
+import '../../../core/di/dependency_injection.dart';
 
 class CommunityViewModel extends ChangeNotifier {
   final CommunityRepository _repository;
 
   CommunityViewModel(this._repository);
 
+  bool _isDisposed = false;
+
+  void _safeNotify() {
+    if (!_isDisposed) notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
   List<PostModel> _posts = [];
+  List<PostModel> _explorePosts = [];
   List<PostModel> _followingPosts = [];
   List<PostModel> _myPosts = [];
   List<CommentModel> _comments = [];
@@ -23,6 +38,7 @@ class CommunityViewModel extends ChangeNotifier {
   int? _currentUserId;
 
   List<PostModel> get posts => _posts;
+  List<PostModel> get explorePosts => _explorePosts;
   List<PostModel> get followingPosts => _followingPosts;
   List<PostModel> get myPosts => _myPosts;
   List<CommentModel> get comments => _comments;
@@ -34,14 +50,14 @@ class CommunityViewModel extends ChangeNotifier {
 
   void setReplyingTo(CommentModel? comment) {
     _replyingToComment = comment;
-    notifyListeners();
+    _safeNotify();
   }
 
   bool isFollowing(int userId) => _followedUserIds.contains(userId);
 
   PostModel? findPostById(int id) {
     // Search in all lists
-    for (var list in [_posts, _followingPosts, _myPosts]) {
+    for (var list in [_explorePosts, _posts, _followingPosts, _myPosts]) {
       final index = list.indexWhere((p) => p.id == id);
       if (index != -1) return list[index];
     }
@@ -55,6 +71,7 @@ class CommunityViewModel extends ChangeNotifier {
       _currentUserId = userId;
       _isInitialized = false;
       _posts = [];
+      _explorePosts = [];
       _followingPosts = [];
       _myPosts = [];
       force = true; // Force reload for new user
@@ -74,7 +91,7 @@ class CommunityViewModel extends ChangeNotifier {
 
     _isLoading = true;
     _errorMessage = null;
-    notifyListeners();
+    _safeNotify();
 
     try {
       await _loadAllFeeds(rethrowError: true);
@@ -83,7 +100,7 @@ class CommunityViewModel extends ChangeNotifier {
       _errorMessage = 'فشل تحميل المنشورات: ${e.toString()}';
     } finally {
       _isLoading = false;
-      notifyListeners();
+      _safeNotify();
     }
   }
 
@@ -95,8 +112,9 @@ class CommunityViewModel extends ChangeNotifier {
       
       // 2. Load other feeds in parallel
       await Future.wait([
-        _loadHomeFeedInternal(page: 1),
-        _loadFollowingFeedInternal(page: 1),
+        _loadHomeFeedInternal(page: 1), // Legacy /home
+        _loadExploreFeedInternal(page: 1), // New /home/all
+        _loadFollowingFeedInternal(page: 1), // New /home
       ]);
     } catch (e) {
       if (rethrowError) rethrow;
@@ -119,22 +137,28 @@ class CommunityViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> _loadFollowingFeedInternal({int page = 1}) async {
-    final followingUsers = await _repository.getFollowingUsers();
-    _followedUserIds = followingUsers.map((u) => u.id).toList();
-
-    final feed = await _repository.getHomeFeed(page: page);
-    final followingOnly = feed
-        .where((post) =>
-            _followedUserIds.contains(post.userId) ||
-            (_currentUserId != null && post.userId == _currentUserId))
-        .toList();
-
+  Future<void> _loadExploreFeedInternal({int page = 1}) async {
+    final feed = await _repository.getExploreFeed(page: page);
     if (page == 1) {
-      _followingPosts = followingOnly;
+      _explorePosts = feed;
+      // Keep _posts in sync with explore if _posts is used as the default feed
+      _posts = feed;
     } else {
-      _followingPosts.addAll(followingOnly);
+      _explorePosts.addAll(feed);
+      _posts.addAll(feed);
     }
+  }
+
+  Future<void> _loadFollowingFeedInternal({int page = 1}) async {
+    // The backend now provides a filtered /home feed for following
+    final feed = await _repository.getHomeFeed(page: page);
+    
+    if (page == 1) {
+      _followingPosts = feed;
+    } else {
+      _followingPosts.addAll(feed);
+    }
+    _safeNotify();
   }
 
   Future<void> _loadMyPostsInternal({int page = 1}) async {
@@ -151,20 +175,41 @@ class CommunityViewModel extends ChangeNotifier {
     return fetchPosts(force: force, userId: userId);
   }
 
-  // Load home feed
+  // Load explore feed
+  Future<void> loadExploreFeed({int page = 1, bool rethrowError = false}) async {
+    _isLoading = true;
+    _errorMessage = null;
+    _safeNotify();
+
+    try {
+      await _loadExploreFeedInternal(page: page);
+      _isLoading = false;
+      _safeNotify();
+    } catch (e) {
+      _errorMessage = 'فشل تحميل الاستكشاف: ${e.toString()}';
+      _isLoading = false;
+      _safeNotify();
+      if (rethrowError) rethrow;
+    }
+  }
+
+  // Alias for task requirement
+  Future<void> fetchExplorePosts() => loadExploreFeed();
+
+  // Load home feed (Legacy/Compatibility)
   Future<void> loadHomeFeed({int page = 1, bool rethrowError = false}) async {
     _isLoading = true;
     _errorMessage = null;
-    notifyListeners();
+    _safeNotify();
 
     try {
       await _loadHomeFeedInternal(page: page);
       _isLoading = false;
-      notifyListeners();
+      _safeNotify();
     } catch (e) {
       _errorMessage = 'فشل تحميل الخلاصة: ${e.toString()}';
       _isLoading = false;
-      notifyListeners();
+      _safeNotify();
       if (rethrowError) rethrow;
     }
   }
@@ -173,16 +218,16 @@ class CommunityViewModel extends ChangeNotifier {
   Future<void> loadFollowingFeed({int page = 1, bool rethrowError = false}) async {
     _isLoading = true;
     _errorMessage = null;
-    notifyListeners();
+    _safeNotify();
 
     try {
       await _loadFollowingFeedInternal(page: page);
       _isLoading = false;
-      notifyListeners();
+      _safeNotify();
     } catch (e) {
       _errorMessage = 'فشل تحميل منشورات المتابعة: ${e.toString()}';
       _isLoading = false;
-      notifyListeners();
+      _safeNotify();
       if (rethrowError) rethrow;
     }
   }
@@ -191,16 +236,16 @@ class CommunityViewModel extends ChangeNotifier {
   Future<void> loadMyPosts({int page = 1, bool rethrowError = false}) async {
     _isLoading = true;
     _errorMessage = null;
-    notifyListeners();
+    _safeNotify();
 
     try {
       await _loadMyPostsInternal(page: page);
       _isLoading = false;
-      notifyListeners();
+      _safeNotify();
     } catch (e) {
       _errorMessage = 'فشل تحميل منشوراتي: ${e.toString()}';
       _isLoading = false;
-      notifyListeners();
+      _safeNotify();
       if (rethrowError) rethrow;
     }
   }
@@ -215,24 +260,44 @@ class CommunityViewModel extends ChangeNotifier {
     _currentUserId = currentUserId;
     _isLoading = true;
     _errorMessage = null;
-    notifyListeners();
+    _safeNotify();
     try {
       final postResponse = await _repository.createPost(
         content: content,
         imagePath: imagePath,
       );
 
-      // Override with local current user info if provided, to ensure immediate sync
+      // 1. Get current user from AuthProvider if not provided via arguments
+      String? finalName = currentUserName;
+      String? finalAvatar = currentUserAvatar;
+      int? finalId = currentUserId;
+
+      if (finalName == null || finalId == null) {
+        try {
+          final authProvider = getIt<AuthProvider>();
+          final user = authProvider.currentUser;
+          if (user != null) {
+            finalName ??= user.name;
+            finalAvatar ??= user.avatarUrl;
+            finalId ??= user.id;
+          }
+        } catch (e) {
+          debugPrint('Could not get AuthProvider for post injection: $e');
+        }
+      }
+
+      // 2. Override with local current user info to ensure immediate sync and fix naming issues
       final post = postResponse.copyWith(
-        userName: currentUserName ?? postResponse.userName,
-        userAvatarUrl: currentUserAvatar ?? postResponse.userAvatarUrl,
-        userId: currentUserId ?? postResponse.userId,
+        userName: (finalName != null && finalName.isNotEmpty) 
+            ? finalName 
+            : (postResponse.userName.isEmpty ? 'مستخدم' : postResponse.userName),
+        userAvatarUrl: finalAvatar ?? postResponse.userAvatarUrl,
+        userId: finalId ?? postResponse.userId,
       );
 
       _posts.insert(0, post);
+      _explorePosts.insert(0, post);
       _myPosts.insert(0, post);
-
-      // Also add to following feed (which includes own posts)
       _followingPosts.insert(0, post);
 
       return true;
@@ -241,7 +306,7 @@ class CommunityViewModel extends ChangeNotifier {
       return false;
     } finally {
       _isLoading = false;
-      notifyListeners();
+      _safeNotify();
     }
   }
 
@@ -258,7 +323,7 @@ class CommunityViewModel extends ChangeNotifier {
     updateList(_posts);
     updateList(_followingPosts);
     updateList(_myPosts);
-    notifyListeners();
+    _safeNotify();
   }
 
   // Delete Post - Bug 3
@@ -268,7 +333,7 @@ class CommunityViewModel extends ChangeNotifier {
       _removePostEverywhere(postId);
     } catch (e) {
       _errorMessage = 'فشل حذف المنشور';
-      notifyListeners();
+      _safeNotify();
     }
   }
 
@@ -279,14 +344,14 @@ class CommunityViewModel extends ChangeNotifier {
       _updatePostEverywhere(updated);
     } catch (e) {
       _errorMessage = 'فشل تعديل المنشور';
-      notifyListeners();
+      _safeNotify();
     }
   }
-  // Toggle Like - Bug 2
+  // Toggle Like - Bug 2: Fix logic and double-check counters
   Future<void> toggleLike(int postId) async {
     // 1. Find the post in any list
     PostModel? post = findPostById(postId);
-    if (post == null || _currentUserId == null) return;
+    if (post == null || _currentUserId == null || _currentUserId == 0) return;
 
     final wasLiked = post.isLikedBy(_currentUserId!);
     final List<int> newLikedByUserIds = List.from(post.likedByUserIds);
@@ -294,17 +359,23 @@ class CommunityViewModel extends ChangeNotifier {
     if (wasLiked) {
       newLikedByUserIds.remove(_currentUserId);
     } else {
-      newLikedByUserIds.add(_currentUserId!);
+      if (!newLikedByUserIds.contains(_currentUserId)) {
+        newLikedByUserIds.add(_currentUserId!);
+      }
     }
 
     // 2. Optimistic update — flip immediately in UI
+    final int newCount = wasLiked 
+        ? (post.likesCount > 0 ? post.likesCount - 1 : 0) 
+        : post.likesCount + 1;
+
     final updatedPost = post.copyWith(
       isLiked: !wasLiked,
-      likesCount: wasLiked ? post.likesCount - 1 : post.likesCount + 1,
+      likesCount: newCount,
       likedByUserIds: newLikedByUserIds,
     );
     _updatePostEverywhere(updatedPost);
-    notifyListeners();
+    _safeNotify();
 
     // 3. Call the API
     try {
@@ -314,14 +385,14 @@ class CommunityViewModel extends ChangeNotifier {
       // 4. Rollback on failure
       _updatePostEverywhere(post); // restore original
       _errorMessage = 'فشل تسجيل الإعجاب، حاول مرة أخرى';
-      notifyListeners();
+      _safeNotify();
     }
   }
 
   // Comments
   Future<void> fetchPostById(int postId) async {
     _isLoading = true;
-    notifyListeners();
+    _safeNotify();
     try {
       final post = await _repository.getPostById(postId);
       _updatePostEverywhere(post); // Update local lists if post is already there or was missing
@@ -333,32 +404,70 @@ class CommunityViewModel extends ChangeNotifier {
       }
       
       _isLoading = false;
-      notifyListeners();
+      _safeNotify();
     } catch (e) {
       _errorMessage = 'فشل تحميل المنشور: ${e.toString()}';
     } finally {
       _isLoading = false;
-      notifyListeners();
+      _safeNotify();
     }
   }
 
   Future<void> fetchComments(int postId) async {
     _isLoading = true;
-    notifyListeners();
+    _safeNotify();
     try {
       _comments = await _repository.getComments(postId);
+      _sortCommentsAsTree();
     } catch (e) {
       _errorMessage = 'فشل تحميل التعليقات: ${e.toString()}';
     } finally {
       _isLoading = false;
-      notifyListeners();
+      _safeNotify();
     }
+  }
+
+  /// Sort comments into tree order: each parent followed by its replies
+  void _sortCommentsAsTree() {
+    final topLevel = _comments.where((c) => c.isTopLevel).toList();
+    final replies = _comments.where((c) => c.isReply).toList();
+
+    // Group replies by parentCommentId
+    final Map<int, List<CommentModel>> replyMap = {};
+    for (final reply in replies) {
+      final parentId = reply.parentCommentId!;
+      replyMap.putIfAbsent(parentId, () => []);
+      replyMap[parentId]!.add(reply);
+    }
+
+    // Sort each group by createdAt
+    for (final entry in replyMap.entries) {
+      entry.value.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    }
+
+    // Build the final sorted list
+    final List<CommentModel> sorted = [];
+    for (final parent in topLevel) {
+      sorted.add(parent);
+      if (replyMap.containsKey(parent.id)) {
+        sorted.addAll(replyMap[parent.id]!);
+      }
+    }
+
+    // Add any orphaned replies (parent not in current page)
+    for (final reply in replies) {
+      if (!sorted.contains(reply)) {
+        sorted.add(reply);
+      }
+    }
+
+    _comments = sorted;
   }
 
   Future<bool> addComment(int postId, String content) async {
     _isLoading = true;
     _errorMessage = null;
-    notifyListeners();
+    _safeNotify();
     try {
       await _repository.addComment(postId, content, parentId: _replyingToComment?.id);
       
@@ -383,7 +492,7 @@ class CommunityViewModel extends ChangeNotifier {
       return false;
     } finally {
       _isLoading = false;
-      notifyListeners();
+      _safeNotify();
     }
   }
 
@@ -403,7 +512,7 @@ class CommunityViewModel extends ChangeNotifier {
       );
       
       _comments[index] = updatedComment;
-      notifyListeners();
+      _safeNotify();
 
       await _repository.toggleCommentLike(commentId);
     } catch (e) {
@@ -411,7 +520,7 @@ class CommunityViewModel extends ChangeNotifier {
       
       // Revert optimistic update
       _comments[index] = comment;
-      notifyListeners();
+      _safeNotify();
     }
   }
 
@@ -426,9 +535,10 @@ class CommunityViewModel extends ChangeNotifier {
     }
 
     updateList(_posts);
+    updateList(_explorePosts);
     updateList(_followingPosts);
     updateList(_myPosts);
-    notifyListeners();
+    _safeNotify();
   }
 
   void _removePostEverywhere(int postId) {
@@ -437,9 +547,10 @@ class CommunityViewModel extends ChangeNotifier {
     }
 
     removeFromList(_posts);
+    removeFromList(_explorePosts);
     removeFromList(_followingPosts);
     removeFromList(_myPosts);
-    notifyListeners();
+    _safeNotify();
   }
 
   // Social
@@ -452,13 +563,42 @@ class CommunityViewModel extends ChangeNotifier {
       } else {
         _followedUserIds.add(userId);
       }
-      notifyListeners();
+      _safeNotify();
 
       // 2. Call REST API (with Firebase sync if currentUserId is provided)
       await _repository.toggleFollow(userId, currentUserId: currentUserId);
 
-      // 3. Background refresh of following feed to ensure UI consistency
-      _loadFollowingFeedInternal(page: 1);
+      // 3. Delayed background refresh — give backend time to propagate
+      //    Keep a snapshot of the optimistic state so we don't overwrite it
+      final optimisticIds = List<int>.from(_followedUserIds);
+      Future.delayed(const Duration(seconds: 2), () async {
+        if (_isDisposed) return;
+        try {
+          final followingUsers = await _repository.getFollowingUsers();
+          if (_isDisposed) return;
+          final serverIds = followingUsers.map((u) => u.id).toList();
+          
+          // Merge: use server data but preserve any optimistic adds not yet reflected
+          _followedUserIds = serverIds;
+          // If we optimistically added userId and server doesn't have it yet, keep it
+          for (final id in optimisticIds) {
+            if (!_followedUserIds.contains(id)) {
+              _followedUserIds.add(id);
+            }
+          }
+
+          final feed = await _repository.getHomeFeed(page: 1);
+          if (_isDisposed) return;
+          _followingPosts = feed
+              .where((post) =>
+                  _followedUserIds.contains(post.userId) ||
+                  (_currentUserId != null && post.userId == _currentUserId))
+              .toList();
+          _safeNotify();
+        } catch (_) {
+          // Silently fail — the optimistic state is still valid
+        }
+      });
     } catch (e) {
       // Revert optimistic update
       if (isFollowing) {
@@ -467,26 +607,38 @@ class CommunityViewModel extends ChangeNotifier {
         _followedUserIds.remove(userId);
       }
       _errorMessage = 'فشل متابعة المستخدم: ${e.toString()}';
-      notifyListeners();
+      _safeNotify();
     }
   }
 
   Future<void> searchUsers(String query, {String? role}) async {
     _isLoading = true;
-    notifyListeners();
+    _safeNotify();
     try {
       _searchResults = await _repository.searchUsers(query, role: role);
       _isLoading = false;
-      notifyListeners();
+      _safeNotify();
     } catch (e) {
       _errorMessage = 'فشل البحث: ${e.toString()}';
       _isLoading = false;
-      notifyListeners();
+      _safeNotify();
     }
   }
 
   void clearError() {
     _errorMessage = null;
-    notifyListeners();
+    _safeNotify();
+  }
+
+  /// Explicitly reset the state for logout or user change
+  void resetState() {
+    _posts = [];
+    _followingPosts = [];
+    _myPosts = [];
+    _isInitialized = false;
+    _currentUserId = null;
+    _errorMessage = null;
+    _isLoading = false;
+    _safeNotify();
   }
 }

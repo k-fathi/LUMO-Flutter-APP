@@ -51,4 +51,14 @@ class HomeViewModel extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
   }
+
+  void resetState() {
+    _postsCount = 0;
+    _chatsCount = 0;
+    _analysesCount = 0;
+    _followersCount = 0;
+    _isLoading = false;
+    _errorMessage = null;
+    notifyListeners();
+  }
 }

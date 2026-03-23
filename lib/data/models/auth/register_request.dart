@@ -9,6 +9,8 @@ class RegisterRequest {
   final int? childAge;
   final String? doctorNumber;
   final String? clinicLocation;
+  final String? avatarFilePath;
+  final String? childPhotoPath;
 
   const RegisterRequest({
     required this.name,
@@ -21,6 +23,8 @@ class RegisterRequest {
     this.childAge,
     this.doctorNumber,
     this.clinicLocation,
+    this.avatarFilePath,
+    this.childPhotoPath,
   });
 
   Map<String, dynamic> toJson() {

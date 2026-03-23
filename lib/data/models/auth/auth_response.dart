@@ -4,7 +4,7 @@ import '../doctor_model.dart';
 import '../../../core/enums/user_role.dart';
 
 class AuthResponse {
-  final int status;
+  final bool status;
   final String message;
   final String? token;
   final UserModel? user;
@@ -17,6 +17,12 @@ class AuthResponse {
   });
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
+    // Robust status parsing (bool or int)
+    final bool statusValue = json['status'] == true ||
+        json['status'] == 1 ||
+        json['status'] == '1' ||
+        json['status'] == 'true';
+
     final data = json['data'] as Map<String, dynamic>?;
     final userMap = data?['user'] as Map<String, dynamic>?;
 
@@ -34,7 +40,7 @@ class AuthResponse {
     }
 
     return AuthResponse(
-      status: json['status'] is int ? json['status'] : 0,
+      status: statusValue,
       message: json['msg']?.toString() ?? json['message']?.toString() ?? '',
       token: data?['token']?.toString(),
       user: parsedUser,

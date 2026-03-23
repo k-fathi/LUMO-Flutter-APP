@@ -33,7 +33,8 @@ class SessionConfigBottomSheet extends StatefulWidget {
   }
 
   @override
-  State<SessionConfigBottomSheet> createState() => _SessionConfigBottomSheetState();
+  State<SessionConfigBottomSheet> createState() =>
+      _SessionConfigBottomSheetState();
 }
 
 class _SessionConfigBottomSheetState extends State<SessionConfigBottomSheet> {
@@ -120,7 +121,8 @@ class _SessionConfigBottomSheetState extends State<SessionConfigBottomSheet> {
           // Header
           Row(
             children: [
-              const Icon(Icons.playlist_add_rounded, color: AppColors.primary, size: 28),
+              const Icon(Icons.playlist_add_rounded,
+                  color: AppColors.primary, size: 28),
               const SizedBox(width: 12),
               Expanded(
                 child: Text('بناء تسلسل الجلسة', style: AppTextStyles.h3),
@@ -154,12 +156,14 @@ class _SessionConfigBottomSheetState extends State<SessionConfigBottomSheet> {
           OutlinedButton.icon(
             onPressed: _addPart,
             icon: const Icon(Icons.add_rounded),
-            label: const Text('إضافة جزء جديد للجلسة', style: TextStyle(fontFamily: 'Cairo')),
+            label: const Text('إضافة جزء جديد للجلسة',
+                style: TextStyle(fontFamily: 'Cairo')),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
               side: const BorderSide(color: AppColors.primary),
               foregroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
           ),
 
@@ -186,11 +190,13 @@ class _SessionConfigBottomSheetState extends State<SessionConfigBottomSheet> {
       ),
       child: Column(
         children: [
-          Icon(Icons.layers_clear_outlined, size: 48, color: AppColors.primary.withValues(alpha: 0.5)),
+          Icon(Icons.layers_clear_outlined,
+              size: 48, color: AppColors.primary.withValues(alpha: 0.5)),
           const SizedBox(height: 16),
           Text(
             'لا يوجد أجزاء مضافة بعد',
-            style: AppTextStyles.body.copyWith(color: AppColors.mutedForeground),
+            style:
+                AppTextStyles.body.copyWith(color: AppColors.mutedForeground),
           ),
         ],
       ),
@@ -214,21 +220,28 @@ class _SessionConfigBottomSheetState extends State<SessionConfigBottomSheet> {
               color: AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text('${index + 1}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+            child: Text('${index + 1}',
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, color: AppColors.primary)),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(part.typeLabel, style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold)),
-                Text('${part.durationMinutes} دقيقة', style: AppTextStyles.bodySmall.copyWith(color: AppColors.mutedForeground)),
+                Text(part.typeLabel,
+                    style: AppTextStyles.body
+                        .copyWith(fontWeight: FontWeight.bold)),
+                Text('${part.durationMinutes} دقيقة',
+                    style: AppTextStyles.bodySmall
+                        .copyWith(color: AppColors.mutedForeground)),
               ],
             ),
           ),
           IconButton(
             onPressed: () => setState(() => _tempParts.removeAt(index)),
-            icon: const Icon(Icons.delete_outline_rounded, color: AppColors.destructive),
+            icon: const Icon(Icons.delete_outline_rounded,
+                color: AppColors.destructive),
           ),
         ],
       ),
@@ -250,34 +263,56 @@ class _AddPartDialogState extends State<_AddPartDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('إضافة جزء للجلسة', textAlign: TextAlign.right, style: TextStyle(fontFamily: 'Cairo')),
+      title: const Text('إضافة جزء للجلسة',
+          textAlign: TextAlign.right, style: TextStyle(fontFamily: 'Cairo')),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           DropdownButtonFormField<String>(
-            value: _selectedType,
-            decoration: const InputDecoration(labelText: 'النوع', labelStyle: TextStyle(fontFamily: 'Cairo')),
+            initialValue: _selectedType,
+            decoration: const InputDecoration(
+                labelText: 'النوع', labelStyle: TextStyle(fontFamily: 'Cairo')),
             items: const [
-              DropdownMenuItem(value: 'games', child: Text('ألعاب', style: TextStyle(fontFamily: 'Cairo'))),
-              DropdownMenuItem(value: 'stories', child: Text('قصص', style: TextStyle(fontFamily: 'Cairo'))),
-              DropdownMenuItem(value: 'education', child: Text('تعليم', style: TextStyle(fontFamily: 'Cairo'))),
+              DropdownMenuItem(
+                  value: 'games',
+                  child: Text('ألعاب', style: TextStyle(fontFamily: 'Cairo'))),
+              DropdownMenuItem(
+                  value: 'stories',
+                  child: Text('قصص', style: TextStyle(fontFamily: 'Cairo'))),
+              DropdownMenuItem(
+                  value: 'education',
+                  child: Text('تعليم', style: TextStyle(fontFamily: 'Cairo'))),
             ],
             onChanged: (val) => setState(() => _selectedType = val!),
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<int>(
-            value: _selectedDuration,
-            decoration: const InputDecoration(labelText: 'المدة (بالدقائق)', labelStyle: TextStyle(fontFamily: 'Cairo')),
-            items: [5, 10, 15, 20, 30].map((d) => DropdownMenuItem(value: d, child: Text('$d دقيقة', style: const TextStyle(fontFamily: 'Cairo')))).toList(),
+            initialValue: _selectedDuration,
+            decoration: const InputDecoration(
+                labelText: 'المدة (بالدقائق)',
+                labelStyle: TextStyle(fontFamily: 'Cairo')),
+            items: [5, 10, 15, 20, 30]
+                .map((d) => DropdownMenuItem(
+                    value: d,
+                    child: Text('$d دقيقة',
+                        style: const TextStyle(fontFamily: 'Cairo'))))
+                .toList(),
             onChanged: (val) => setState(() => _selectedDuration = val!),
           ),
         ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إلغاء')),
         ElevatedButton(
-          onPressed: () => Navigator.pop(context, SessionPart(type: _selectedType, durationMinutes: _selectedDuration)),
-          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+          onPressed: () => Navigator.pop(
+              context,
+              SessionPart(
+                  type: _selectedType, durationMinutes: _selectedDuration)),
+          style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white),
           child: const Text('إضافة'),
         ),
       ],

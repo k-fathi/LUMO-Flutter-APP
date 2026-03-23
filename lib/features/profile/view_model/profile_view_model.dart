@@ -9,21 +9,27 @@ class ProfileViewModel extends ChangeNotifier {
   ProfileViewModel({required this.repository});
 
   UserModel? _user;
-  String _userName = '';
-  String _userRole = 'parent';
-  int _followers = 0;
-  int _following = 0;
   bool _isLoading = false;
+  bool _isListLoading = false;
   String? _errorMessage;
+
+  List<UserModel> _followers = [];
+  List<UserModel> _following = [];
 
   // Getters
   UserModel? get user => _user;
-  String get userName => _userName;
-  String get userRole => _userRole;
-  int get followers => _followers;
-  int get following => _following;
   bool get isLoading => _isLoading;
+  bool get isListLoading => _isListLoading;
   String? get errorMessage => _errorMessage;
+
+  List<UserModel> get followersList => _followers;
+  List<UserModel> get followingList => _following;
+
+  // Computed getters from _user
+  String get userName => _user?.name ?? '';
+  String get userRole => _user?.role.name ?? 'parent';
+  int get followers => _user?.followersCount ?? 0;
+  int get following => _user?.followingCount ?? 0;
 
   /// Load user profile
   Future<void> loadProfile(int userId) async {
@@ -35,15 +41,43 @@ class ProfileViewModel extends ChangeNotifier {
       final userData = await repository.getUserProfile(userId);
       if (userData != null) {
         _user = userData;
-        _userName = userData.name;
-        _userRole = userData.role.name;
-        _followers = userData.followersCount ?? 0;
-        _following = userData.followingCount ?? 0;
       }
     } catch (e) {
       _errorMessage = 'فشل تحميل الملف الشخصي: $e';
     } finally {
       _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Load followers
+  Future<void> loadFollowers(int userId) async {
+    _isListLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _followers = await repository.getFollowers(userId);
+    } catch (e) {
+      _errorMessage = 'فشل تحميل المتابعين: $e';
+    } finally {
+      _isListLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Load following
+  Future<void> loadFollowing(int userId) async {
+    _isListLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _following = await repository.getFollowing(userId);
+    } catch (e) {
+      _errorMessage = 'فشل تحميل قائمة المتابعة: $e';
+    } finally {
+      _isListLoading = false;
       notifyListeners();
     }
   }
@@ -77,7 +111,6 @@ class ProfileViewModel extends ChangeNotifier {
         childPhotoUrl: childPhotoUrl,
       );
       _user = updatedUser;
-      _userName = updatedUser.name;
     } catch (e) {
       _errorMessage = 'فشل تحديث الملف الشخصي: $e';
     } finally {
@@ -86,24 +119,15 @@ class ProfileViewModel extends ChangeNotifier {
     }
   }
 
-  /// Logout
-  Future<void> logout() async {
-    _isLoading = true;
+  /// Reset state for logout
+  void resetState() {
+    _isLoading = false;
+    _isListLoading = false;
+    _user = null;
+    _errorMessage = null;
+    _followers = [];
+    _following = [];
     notifyListeners();
-
-    try {
-      // Clear local state
-      _user = null;
-      _userName = '';
-      _userRole = 'parent';
-      _followers = 0;
-      _following = 0;
-    } catch (e) {
-      _errorMessage = 'فشل تسجيل الخروج: $e';
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
   }
 
   /// Clear error

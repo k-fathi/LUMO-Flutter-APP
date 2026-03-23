@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../core/theme/app_colors.dart';
 
 class AvatarWidget extends StatelessWidget {
@@ -27,6 +28,8 @@ class AvatarWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return GestureDetector(
       onTap: onTap,
       child: Stack(
@@ -36,41 +39,17 @@ class AvatarWidget extends StatelessWidget {
             height: size,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Theme.of(context).cardColor,
+              color: theme.cardColor,
               border: Border.all(
-                  color: Theme.of(context).dividerColor.withValues(alpha: 0.5)),
-              image: imageFile != null
-                  ? DecorationImage(
-                      image: FileImage(imageFile!),
-                      fit: BoxFit.cover,
-                    )
-                  : (imageUrl != null && imageUrl!.isNotEmpty
-                      ? DecorationImage(
-                          image: imageUrl!.startsWith('http')
-                              ? NetworkImage(imageUrl!) as ImageProvider
-                              : FileImage(File(imageUrl!)),
-                          fit: BoxFit.cover,
-                        )
-                      : null),
+                  color: theme.dividerColor.withValues(alpha: 0.5)),
             ),
-            child:
-                (imageFile == null && (imageUrl == null || imageUrl!.isEmpty))
-                    ? Center(
-                        child: Icon(
-                          fallbackIcon ?? Icons.person_rounded,
-                          color: Theme.of(context)
-                              .iconTheme
-                              .color
-                              ?.withValues(alpha: 0.5),
-                          size: size * 0.5,
-                        ),
-                      )
-                    : null,
+            clipBehavior: Clip.antiAlias,
+            child: _buildAvatarBody(context),
           ),
           if (showOnlineIndicator)
             Positioned(
-              right: 0,
-              bottom: 0,
+              right: 2,
+              bottom: 2,
               child: Container(
                 width: size * 0.25,
                 height: size * 0.25,
@@ -78,13 +57,52 @@ class AvatarWidget extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: isOnline ? AppColors.online : AppColors.offline,
                   border: Border.all(
-                    color: AppColors.background,
+                    color: theme.scaffoldBackgroundColor,
                     width: 2,
                   ),
                 ),
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAvatarBody(BuildContext context) {
+    if (imageFile != null) {
+      return Image.file(imageFile!, fit: BoxFit.cover);
+    }
+
+    if (imageUrl != null && imageUrl!.isNotEmpty) {
+      if (!imageUrl!.startsWith('http')) {
+        return Image.file(File(imageUrl!), fit: BoxFit.cover);
+      }
+
+      return CachedNetworkImage(
+        imageUrl: imageUrl!,
+        fit: BoxFit.cover,
+        placeholder: (context, url) => Shimmer.fromColors(
+          baseColor: Colors.grey[300]!,
+          highlightColor: Colors.grey[100]!,
+          child: Container(
+            color: Colors.white,
+            width: size,
+            height: size,
+          ),
+        ),
+        errorWidget: (context, url, error) => _buildPlaceholder(context),
+      );
+    }
+
+    return _buildPlaceholder(context);
+  }
+
+  Widget _buildPlaceholder(BuildContext context) {
+    return Center(
+      child: Icon(
+        fallbackIcon ?? Icons.person_rounded,
+        color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.5),
+        size: size * 0.5,
       ),
     );
   }

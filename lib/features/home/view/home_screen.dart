@@ -28,6 +28,13 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _viewModel = context.read<HomeViewModel>();
     _viewModel.loadData();
+    // Fetch notifications and pending requests for the badges
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<NotificationProvider>().fetchNotifications();
+        context.read<PatientProvider>().fetchRequests();
+      }
+    });
   }
 
   @override

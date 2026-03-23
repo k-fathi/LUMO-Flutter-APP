@@ -104,6 +104,14 @@ class PatientRemoteDataSourceImpl implements PatientRemoteDataSource {
         );
         combinedRaw.addAll(_extractListFromResponse(response.data));
       } catch (e) {
+        // If it's a 401 error, we must rethrow it so the UI knows the token is dead
+        final isUnauthenticated = 
+            e.toString().toLowerCase().contains('unauthenticated') || 
+            e.toString().contains('401');
+            
+        if (isUnauthenticated) {
+          rethrow;
+        }
         // Swallow role-based errors but keep going
         if (kDebugMode) print('Search variation $params failed: $e');
       }
@@ -129,8 +137,8 @@ class PatientRemoteDataSourceImpl implements PatientRemoteDataSource {
       if (item is Map<String, dynamic>) {
         try {
           final user = _parseUser(item);
-          // Only add valid users we haven't seen yet
-          if (user.id != 0 && !seenIds.contains(user.id)) {
+          // Only add valid users we haven't seen yet, and strictly EXCLUDE doctors
+          if (user.id != 0 && !seenIds.contains(user.id) && user.role != UserRole.doctor) {
             results.add(user);
             seenIds.add(user.id);
           }

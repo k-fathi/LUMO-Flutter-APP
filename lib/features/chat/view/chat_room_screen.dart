@@ -13,12 +13,6 @@ import 'message_bubble.dart';
 import 'chat_input_widget.dart';
 import '../../../core/router/route_names.dart';
 
-/// ChatRoomScreen - Pixel-perfect match to React ChatScreen
-///
-/// React layout:
-/// - Header: gradient with back + avatar+name inline + phone + more menu
-/// - Messages area: bg-[#E3F2FD]
-/// - Input: white bg with paperclip + rounded-full E3F2FD input + gradient send
 class ChatRoomScreen extends StatefulWidget {
   final String chatRoomId;
   final String otherUserName;
@@ -59,29 +53,32 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     super.dispose();
   }
 
+  // ✅ إصلاح: mounted check قبل الـ animate
   void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      Future.delayed(const Duration(milliseconds: 100), () {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      });
-    }
+    if (!mounted) return;
+    if (!_scrollController.hasClients) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
-  Future<void> _handleSend() async {
+  void _handleSend() {
     final content = _messageController.text.trim();
     if (content.isEmpty) return;
 
-    final authProvider = context.read<AuthProvider>();
-    final currentUser = authProvider.currentUser;
+    final currentUser = context.read<AuthProvider>().currentUser;
     if (currentUser == null) return;
 
     _messageController.clear();
 
-    await _viewModel.sendMessage(
+    _viewModel.sendMessage(
       chatRoomId: widget.chatRoomId,
       senderId: currentUser.id,
       senderName: currentUser.name,
@@ -104,13 +101,19 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final authProvider = context.watch<AuthProvider>();
     final currentUserId = authProvider.currentUser?.id.toString() ?? '';
+
+    // ✅ إصلاح: لون الـ messages area من الـ theme بدل hardcoded
+    final messagesBackground = theme.brightness == Brightness.light
+        ? const Color(0xFFE3F2FD)
+        : theme.colorScheme.surfaceContainerLow;
 
     return Scaffold(
       body: Column(
         children: [
-          // Gradient Header - React: bg-gradient-to-r from-[#2196F3] to-[#1565C0] px-6 py-4
+          // Header
           Container(
             padding: EdgeInsets.only(
               top: MediaQuery.of(context).padding.top + 16,
@@ -123,14 +126,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             ),
             child: Row(
               children: [
-                // Back button - React: text-white
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
                   child: const Icon(Icons.arrow_back,
                       size: 24, color: Colors.white),
                 ),
                 const SizedBox(width: 16),
-                // Avatar - React: w-10 h-10 border-2 border-white
                 GestureDetector(
                   onTap: _navigateToProfile,
                   child: Container(
@@ -146,14 +147,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Name + Status
                 Expanded(
                   child: GestureDetector(
                     onTap: _navigateToProfile,
+                    behavior: HitTestBehavior.opaque,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // React: text-white
                         Text(
                           widget.otherUserName,
                           style: AppTextStyles.body.copyWith(
@@ -161,7 +161,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        // Session Timer or Active Status
                         Consumer2<SessionViewModel, ChatViewModel>(
                           builder: (context, sessionVM, chatVM, child) {
                             if (sessionVM.isActive) {
@@ -174,7 +173,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                               );
                             }
 
-                            // Real logic: Check typing status
                             final room = chatVM.currentChatRoom;
                             final isTyping =
                                 room?.isOtherParticipantTyping(currentUserId) ??
@@ -197,7 +195,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     ),
                   ),
                 ),
-                // Session Controls
                 Consumer<SessionViewModel>(
                   builder: (context, sessionVM, child) {
                     if (sessionVM.isActive) {
@@ -207,39 +204,39 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                         onPressed: () => sessionVM.endSession(),
                         tooltip: 'إنهاء الجلسة',
                       );
-                    } else {
-                      return IconButton(
-                        icon: const Icon(Icons.play_circle_fill_rounded,
-                            color: Colors.white, size: 32),
-                        onPressed: () {
-                          SessionConfigBottomSheet.show(
-                            context,
-                            receiverId: int.tryParse(widget.otherUserId ?? '') ?? 0,
-                          );
-                        },
-                        tooltip: 'بدء جلسة',
-                      );
                     }
+                    return IconButton(
+                      icon: const Icon(Icons.play_circle_fill_rounded,
+                          color: Colors.white, size: 32),
+                      onPressed: () {
+                        SessionConfigBottomSheet.show(
+                          context,
+                          receiverId:
+                              int.tryParse(widget.otherUserId ?? '') ?? 0,
+                        );
+                      },
+                      tooltip: 'بدء جلسة',
+                    );
                   },
                 ),
               ],
             ),
           ),
 
-          // Messages Area - React: flex-1 overflow-y-auto px-6 py-6 space-y-4 bg-[#E3F2FD]
+          // Messages Area
           Expanded(
             child: Consumer<ChatViewModel>(
               builder: (context, viewModel, child) {
                 if (viewModel.isLoading && viewModel.messages.isEmpty) {
-                  return Container(
-                    color: const Color(0xFFE3F2FD),
+                  return ColoredBox(
+                    color: messagesBackground, // ✅ theme-aware
                     child: const Center(child: CircularProgressIndicator()),
                   );
                 }
 
                 if (viewModel.messages.isEmpty) {
-                  return Container(
-                    color: const Color(0xFFE3F2FD),
+                  return ColoredBox(
+                    color: messagesBackground,
                     child: const EmptyState(
                       icon: Icons.chat_outlined,
                       title: 'لا توجد رسائل بعد',
@@ -248,20 +245,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   );
                 }
 
-                return Container(
-                  color: const Color(0xFFE3F2FD),
+                return ColoredBox(
+                  color: messagesBackground,
                   child: ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.symmetric(vertical: 24),
                     itemCount: viewModel.messages.length,
                     itemBuilder: (context, index) {
                       final message = viewModel.messages[index];
-                      final isMe = message.senderId == currentUserId;
-
-                      return MessageBubble(
-                        message: message,
-                        isMe: isMe,
-                      );
+                      final isMe = message.senderId.toString() == currentUserId;
+                      return MessageBubble(message: message, isMe: isMe);
                     },
                   ),
                 );
@@ -275,9 +268,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               return ChatInputWidget(
                 controller: _messageController,
                 onSend: _handleSend,
-                onAttach: () {
-                  // TODO: Attach file
-                },
+                onAttach: null,
                 isLoading: viewModel.isSending,
               );
             },

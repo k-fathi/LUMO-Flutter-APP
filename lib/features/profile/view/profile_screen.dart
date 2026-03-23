@@ -14,7 +14,6 @@ import '../../../data/models/user_model.dart';
 import '../../../shared/providers/notification_provider.dart';
 import '../view_model/profile_view_model.dart';
 
-/// ProfileScreen (Screen 12) - Figma Spec
 ///
 /// Refactored to use CommunityViewModel for user posts.
 class ProfileScreen extends StatefulWidget {
@@ -28,28 +27,26 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  int _followersCount = 0;
-  int _followingCount = 0;
+  int _followersDelta = 0;
 
   @override
   void initState() {
     super.initState();
     // Use addPostFrameCallback to ensure context is ready for providers
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final commViewModel = context.read<CommunityViewModel>();
-      commViewModel.loadMyPosts();
-      
+      if (!mounted) return;
+      final currentUserId = context.read<AuthProvider>().currentUser?.id;
       final targetUserId = widget.userId ?? widget.user?.id;
+      final isMyProfile = targetUserId == null || targetUserId == currentUserId;
+
+      if (isMyProfile) {
+        context.read<CommunityViewModel>().loadMyPosts();
+      }
+
       if (targetUserId != null) {
         context.read<ProfileViewModel>().loadProfile(targetUserId).then((_) {
           if (mounted) {
-            final profileVM = context.read<ProfileViewModel>();
-            if (profileVM.user != null) {
-              setState(() {
-                _followersCount = profileVM.user?.followersCount ?? 0;
-                _followingCount = profileVM.user?.followingCount ?? 0;
-              });
-            }
+            setState(() => _followersDelta = 0);
           }
         });
       }
@@ -62,21 +59,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final communityViewModel = context.watch<CommunityViewModel>();
     final profileViewModel = context.watch<ProfileViewModel>();
     final currentUser = authProvider.currentUser;
-    
+
     final targetUserId = widget.userId ?? widget.user?.id;
     final isMyProfile = (widget.user == null && widget.userId == null) ||
         widget.userId == currentUser?.id ||
         widget.user?.id == currentUser?.id;
-    
-    final user = isMyProfile ? currentUser : (profileViewModel.user ?? widget.user);
+
+    final user =
+        isMyProfile ? currentUser : (profileViewModel.user ?? widget.user);
     final isDoctor = user?.role.name == 'doctor';
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final myPosts = communityViewModel.myPosts;
 
-    // Use ViewModel counters as reality, Fallback to local state during optimistic updates
-    final followersShow = (profileViewModel.isLoading) ? _followersCount : (profileViewModel.user?.followersCount ?? _followersCount);
-    final followingShow = (profileViewModel.isLoading) ? _followingCount : (profileViewModel.user?.followingCount ?? _followingCount);
+    // Show target user's posts for their profile, current user's posts for own profile
+    final displayPosts = isMyProfile
+        ? communityViewModel.myPosts
+        : communityViewModel.posts
+            .where((p) => p.userId == targetUserId)
+            .toList();
+
+    final baseFollowers = profileViewModel.user?.followersCount ?? 0;
+    final followersShow = baseFollowers + _followersDelta;
+    final followingShow = profileViewModel.user?.followingCount ?? 0;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -95,10 +99,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.person_off_rounded, color: Colors.red, size: 48),
+                    const Icon(Icons.person_off_rounded,
+                        color: Colors.red, size: 48),
                     const SizedBox(height: 16),
                     Text(
-                      profileViewModel.errorMessage ?? 'لم يتم العثور على المستخدم',
+                      profileViewModel.errorMessage ??
+                          'لم يتم العثور على المستخدم',
                       textAlign: TextAlign.center,
                       style: const TextStyle(color: Colors.red),
                     ),
@@ -106,7 +112,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ElevatedButton(
                       onPressed: () {
                         if (targetUserId != null) {
-                          context.read<ProfileViewModel>().loadProfile(targetUserId);
+                          context
+                              .read<ProfileViewModel>()
+                              .loadProfile(targetUserId);
                         }
                       },
                       child: const Text('إعادة المحاولة'),
@@ -124,246 +132,268 @@ class _ProfileScreenState extends State<ProfileScreen> {
           return RefreshIndicator(
             onRefresh: () async {
               if (targetUserId != null) {
-                await context.read<ProfileViewModel>().loadProfile(targetUserId);
+                await context
+                    .read<ProfileViewModel>()
+                    .loadProfile(targetUserId);
               }
               await context.read<CommunityViewModel>().loadMyPosts();
             },
             child: CustomScrollView(
-          slivers: [
-            // ── 1. Header Section ─────────────────────────────
-            SliverToBoxAdapter(
-              child: _ProfileHeader(
-                name: user?.name ?? 'User',
-                role: isDoctor ? l10n.roleDoctor : l10n.roleParent,
-                isDoctor: isDoctor,
-                photoUrl: user?.avatarUrl,
-                followers: followersShow,
-                following: followingShow,
-                isMyProfile: isMyProfile,
-                isFollowing: targetUserId != null && communityViewModel.isFollowing(targetUserId),
-                onToggleFollow: () async {
-                  final currentUserId = context.read<AuthProvider>().currentUser?.id;
-                  if (targetUserId != null && currentUserId != null) {
-                    final wasFollowing = communityViewModel.isFollowing(targetUserId);
-                    
-                    // Optimistic UI update for count
-                    setState(() {
-                      if (!wasFollowing) {
-                        _followersCount++;
-                      } else {
-                        _followersCount = (_followersCount > 0) ? _followersCount - 1 : 0;
-                      }
-                    });
+              slivers: [
+                // ── 1. Header Section ─────────────────────────────
+                SliverToBoxAdapter(
+                  child: _ProfileHeader(
+                    userId: targetUserId,
+                    name: user?.name ?? 'User',
+                    role: isDoctor ? l10n.roleDoctor : l10n.roleParent,
+                    isDoctor: isDoctor,
+                    photoUrl: user?.avatarUrl,
+                    followers: followersShow,
+                    following: followingShow,
+                    isMyProfile: isMyProfile,
+                    isFollowing: targetUserId != null &&
+                        communityViewModel.isFollowing(targetUserId),
+                    onToggleFollow: () async {
+                      debugPrint(
+                          'Toggling follow for target user: $targetUserId');
+                      final currentUserId =
+                          context.read<AuthProvider>().currentUser?.id;
+                      if (targetUserId != null && currentUserId != null) {
+                        final wasFollowing =
+                            communityViewModel.isFollowing(targetUserId);
 
-                    try {
-                      await context.read<CommunityViewModel>().toggleFollow(
-                        targetUserId, 
-                        currentUserId: currentUserId
-                      );
-                      
-                      // Notify and Sync Count
-                      if (!wasFollowing) {
-                        context.read<NotificationProvider>().sendFollowNotification(
-                          targetUserId: targetUserId,
-                          followerName: context.read<AuthProvider>().currentUser?.name ?? '',
-                        );
-                      }
-                      
-                      // Final sync with backend for actual counts
-                      if (mounted) {
-                        context.read<ProfileViewModel>().loadProfile(targetUserId);
-                      }
-                    } catch (e) {
-                      // Revert on failure
-                      setState(() {
-                        if (!wasFollowing) {
-                          _followersCount--;
-                        } else {
-                          _followersCount++;
-                        }
-                      });
-                    }
-                  }
-                },
-                onEditProfile: () {
-                  Navigator.pushNamed(context, RouteNames.editProfile);
-                },
-                onSettings: () {
-                  Navigator.pushNamed(context, RouteNames.settings);
-                },
-                onSignOut: () {
-                  authProvider.logout();
-                  Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    RouteNames.login,
-                    (route) => false,
-                  );
-                },
-              ),
-            ),
+                        // Optimistic UI update for count
+                        setState(() {
+                          _followersDelta += wasFollowing ? -1 : 1;
+                        });
 
-            // ── 1b. Role-Specific Quick Actions (Only if my profile) ──────────────
-            if (isMyProfile)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                  child: Column(
-                    children: isDoctor
-                        ? [
-                            // ── DOCTOR Actions ──────────────────
-                            _buildQuickAction(
-                              icon: Icons.people_alt_rounded,
-                              iconColor: AppColors.primary,
-                              title: l10n.viewPatients,
-                              subtitle: l10n.viewPatientsSubtitle,
-                              onTap: () {
-                                Navigator.pushNamed(
-                                    context, RouteNames.doctorPatients);
-                              },
-                            ),
-                            const SizedBox(height: 8),
-                            _buildQuickAction(
-                              icon: Icons.local_hospital_rounded,
-                              iconColor: const Color(0xFF22C55E),
-                              title: l10n.clinicInfo,
-                              subtitle: l10n.editClinicInfo,
-                              onTap: () {
-                                final controller = TextEditingController(
-                                    text: 'Al-Amal Clinic');
-                                showDialog(
-                                  context: context,
-                                  builder: (ctx) => AlertDialog(
-                                    title: Text(l10n.editClinicInfo),
-                                    content: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        TextField(
-                                          controller: controller,
-                                          decoration: InputDecoration(
-                                            labelText: l10n.clinicNameLabel,
-                                            border: const OutlineInputBorder(),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(ctx),
-                                        child: Text(l10n.cancel),
-                                      ),
-                                      ElevatedButton(
-                                        onPressed: () {
-                                          Navigator.pop(ctx);
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
-                                            SnackBar(
-                                                content:
-                                                    Text(l10n.dataUpdated)),
-                                          );
-                                        },
-                                        child: Text(l10n.save),
-                                      ),
-                                    ],
-                                  ),
+                        try {
+                          await context.read<CommunityViewModel>().toggleFollow(
+                              targetUserId,
+                              currentUserId: currentUserId);
+
+                          // Notify and Sync Count
+                          if (!wasFollowing) {
+                            context
+                                .read<NotificationProvider>()
+                                .sendFollowNotification(
+                                  targetUserId: targetUserId,
+                                  followerName: context
+                                          .read<AuthProvider>()
+                                          .currentUser
+                                          ?.name ??
+                                      '',
                                 );
-                              },
-                            ),
-                          ]
-                        : [
-                            // ── PARENT Actions ──────────────────
-                            _buildQuickAction(
-                              icon: Icons.analytics_outlined,
-                              iconColor: const Color(0xFFF59E0B),
-                              title: l10n.analysisHistory,
-                              subtitle: l10n.viewChildAnalysisSubtitle,
-                              onTap: () {
-                                Navigator.pushNamed(
-                                    context, RouteNames.parentAnalysis);
-                              },
-                            ),
-                            const SizedBox(height: 8),
-                            _buildQuickAction(
-                              icon: Icons.child_care_rounded,
-                              iconColor: const Color(0xFF06B6D4),
-                              title: l10n.childInfo,
-                              subtitle: l10n.editChildInfo,
-                              onTap: () {
-                                Navigator.pushNamed(
-                                    context, RouteNames.childProfile);
-                              },
-                            ),
-                          ],
-                  ),
-                ),
-              ),
+                          }
 
-            // ── 2. My Posts List ────────────────────────────
-            if (communityViewModel.isLoading && myPosts.isEmpty)
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.all(32.0),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-              )
-            else if (myPosts.isEmpty)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(32.0),
-                  child: Column(
-                    children: [
-                      Icon(Icons.post_add,
-                          size: 64, color: theme.disabledColor),
-                      const SizedBox(height: 16),
-                      Text(
-                        isMyProfile
-                            ? 'لم تقم بنشر أي شيء بعد'
-                            : 'لا توجد منشورات لهذا المستخدم',
-                        style: TextStyle(color: theme.disabledColor),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-            else
-              SliverPadding(
-                padding: const EdgeInsets.only(top: 16),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      if (index == 0) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          child: Text(
-                            isMyProfile ? l10n.myPosts : l10n.posts,
-                            style: AppTextStyles.h3.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: theme.textTheme.headlineMedium?.color,
-                            ),
-                          ),
+                          // Web/UX feedback snackbar
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(!wasFollowing
+                                    ? 'تم متابعة ${user?.name}'
+                                    : 'تم إلغاء متابعة ${user?.name}'),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          }
+
+                          // Final sync with backend for actual counts
+                          if (mounted) {
+                            context
+                                .read<ProfileViewModel>()
+                                .loadProfile(targetUserId);
+                          }
+                        } catch (e) {
+                          // Revert on failure
+                          setState(() {
+                            _followersDelta -= wasFollowing ? -1 : 1;
+                          });
+                        }
+                      }
+                    },
+                    onEditProfile: () {
+                      Navigator.pushNamed(context, RouteNames.editProfile);
+                    },
+                    onSettings: () {
+                      Navigator.pushNamed(context, RouteNames.settings);
+                    },
+                    onSignOut: () async {
+                      await authProvider.logout();
+                      if (context.mounted) {
+                        Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          RouteNames.login,
+                          (route) => false,
                         );
                       }
-                      final post = myPosts[index - 1];
-                      return PostCard(
-                        post: post,
-                        isOwnProfile: isMyProfile,
-                        hideFollowButton: true,
-                      );
                     },
-                    childCount: myPosts.length + 1,
                   ),
                 ),
-              ),
 
-            // Bottom padding
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 24),
+                // ── 1b. Role-Specific Quick Actions (Only if my profile) ──────────────
+                if (isMyProfile)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                      child: Column(
+                        children: isDoctor
+                            ? [
+                                // ── DOCTOR Actions ──────────────────
+                                _buildQuickAction(
+                                  icon: Icons.people_alt_rounded,
+                                  iconColor: AppColors.primary,
+                                  title: l10n.viewPatients,
+                                  subtitle: l10n.viewPatientsSubtitle,
+                                  onTap: () {
+                                    Navigator.pushNamed(
+                                        context, RouteNames.doctorPatients);
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                _buildQuickAction(
+                                  icon: Icons.local_hospital_rounded,
+                                  iconColor: const Color(0xFF22C55E),
+                                  title: l10n.clinicInfo,
+                                  subtitle: l10n.editClinicInfo,
+                                  onTap: () {
+                                    final controller = TextEditingController(
+                                        text: 'Al-Amal Clinic');
+                                    showDialog(
+                                      context: context,
+                                      builder: (ctx) => AlertDialog(
+                                        title: Text(l10n.editClinicInfo),
+                                        content: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            TextField(
+                                              controller: controller,
+                                              decoration: InputDecoration(
+                                                labelText: l10n.clinicNameLabel,
+                                                border:
+                                                    const OutlineInputBorder(),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(ctx),
+                                            child: Text(l10n.cancel),
+                                          ),
+                                          ElevatedButton(
+                                            onPressed: () {
+                                              Navigator.pop(ctx);
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                    content:
+                                                        Text(l10n.dataUpdated)),
+                                              );
+                                            },
+                                            child: Text(l10n.save),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ]
+                            : [
+                                // ── PARENT Actions ──────────────────
+                                _buildQuickAction(
+                                  icon: Icons.analytics_outlined,
+                                  iconColor: const Color(0xFFF59E0B),
+                                  title: l10n.analysisHistory,
+                                  subtitle: l10n.viewChildAnalysisSubtitle,
+                                  onTap: () {
+                                    Navigator.pushNamed(
+                                        context, RouteNames.parentAnalysis);
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                _buildQuickAction(
+                                  icon: Icons.child_care_rounded,
+                                  iconColor: const Color(0xFF06B6D4),
+                                  title: l10n.childInfo,
+                                  subtitle: l10n.editChildInfo,
+                                  onTap: () {
+                                    Navigator.pushNamed(
+                                        context, RouteNames.childProfile);
+                                  },
+                                ),
+                              ],
+                      ),
+                    ),
+                  ),
+
+                // ── 2. My Posts List ────────────────────────────
+                if (communityViewModel.isLoading && displayPosts.isEmpty)
+                  const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.all(32.0),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  )
+                else if (displayPosts.isEmpty)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Column(
+                        children: [
+                          Icon(Icons.post_add,
+                              size: 64, color: theme.disabledColor),
+                          const SizedBox(height: 16),
+                          Text(
+                            isMyProfile
+                                ? 'لم تقم بنشر أي شيء بعد'
+                                : 'لا توجد منشورات لهذا المستخدم',
+                            style: TextStyle(color: theme.disabledColor),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.only(top: 16),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          if (index == 0) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                              child: Text(
+                                isMyProfile ? l10n.myPosts : l10n.posts,
+                                style: AppTextStyles.h3.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.textTheme.headlineMedium?.color,
+                                ),
+                              ),
+                            );
+                          }
+                          final post = displayPosts[index - 1];
+                          return PostCard(
+                            post: post,
+                            isOwnProfile: isMyProfile,
+                            hideFollowButton: true,
+                          );
+                        },
+                        childCount: displayPosts.length + 1,
+                      ),
+                    ),
+                  ),
+
+                // Bottom padding
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: 24),
+                ),
+              ],
             ),
-          ],
-        ),
-      );
-    },
-    ),
+          );
+        },
+      ),
     );
   }
 
@@ -448,6 +478,7 @@ class _ProfileHeader extends StatelessWidget {
   final String name;
   final String role;
   final bool isDoctor;
+  final int? userId;
   final String? photoUrl;
   final int followers;
   final int following;
@@ -457,9 +488,10 @@ class _ProfileHeader extends StatelessWidget {
   final VoidCallback onToggleFollow;
   final VoidCallback onEditProfile;
   final VoidCallback onSettings;
-  final VoidCallback onSignOut;
+  final Future<void> Function() onSignOut;
 
   const _ProfileHeader({
+    required this.userId,
     required this.name,
     required this.role,
     required this.isDoctor,
@@ -570,9 +602,31 @@ class _ProfileHeader extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _buildStat(l10n.followers, followers.toString()),
+                    InkWell(
+                      onTap: () {
+                        if (userId != null) {
+                          Navigator.pushNamed(
+                            context,
+                            RouteNames.followers,
+                            arguments: userId,
+                          );
+                        }
+                      },
+                      child: _buildStat(l10n.followers, followers.toString()),
+                    ),
                     Container(width: 1, height: 24, color: theme.dividerColor),
-                    _buildStat(l10n.following, following.toString()),
+                    InkWell(
+                      onTap: () {
+                        if (userId != null) {
+                          Navigator.pushNamed(
+                            context,
+                            RouteNames.following,
+                            arguments: userId,
+                          );
+                        }
+                      },
+                      child: _buildStat(l10n.following, following.toString()),
+                    ),
                   ],
                 ),
 

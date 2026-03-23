@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -13,6 +15,8 @@ import '../../../core/router/route_names.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/models/post_model.dart';
 import '../../../data/models/comment_model.dart';
+import '../../../shared/widgets/delete_confirmation_dialog.dart';
+import '../../../shared/providers/notification_provider.dart';
 import 'comment_input_widget.dart';
 
 /// PostDetailScreen (CommentsScreen) - Pixel-perfect match to React CommentsScreen
@@ -56,10 +60,24 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     if (content.isEmpty) return;
 
     final viewModel = context.read<CommunityViewModel>();
+    final auth = context.read<AuthProvider>();
+    final replyTo = viewModel.replyingToComment;
+    
     final success = await viewModel.addComment(widget.postId, content);
 
     if (success && mounted) {
+      // 1. Send Notification
+      final postOwnerId = viewModel.findPostById(widget.postId)?.userId ?? 0;
+      context.read<NotificationProvider>().sendCommentNotification(
+        postId: widget.postId,
+        postOwnerId: replyTo?.userId ?? postOwnerId,
+        commenterName: auth.currentUser?.name ?? 'مستخدم',
+      );
+
+      // 2. Clear state
       _commentController.clear();
+      viewModel.setReplyingTo(null);
+      
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('تم إضافة التعليق بنجاح'),
@@ -121,6 +139,26 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             );
           }
 
+          // --- Smart display name logic (same as PostCard) ---
+          final bool isPostOwner = currentUserId != 0 && post.userId == currentUserId;
+          String displayName = post.userName;
+          if (displayName.toLowerCase().contains('null') ||
+              displayName.trim().isEmpty ||
+              displayName == 'مستخدم') {
+            if (isPostOwner && currentUser != null && currentUser.name.isNotEmpty) {
+              displayName = currentUser.name;
+            } else {
+              displayName = 'مستخدم';
+            }
+          } else if (isPostOwner && currentUser != null && currentUser.name.isNotEmpty) {
+            displayName = currentUser.name;
+          }
+          final String? displayAvatar =
+              (isPostOwner && (post.userAvatarUrl == null || post.userAvatarUrl!.isEmpty))
+                  ? currentUser?.avatarUrl
+                  : post.userAvatarUrl;
+          // --- End smart display name ---
+
           return Column(
             children: [
               Expanded(
@@ -144,8 +182,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               Row(
                                 children: [
                                   AvatarWidget(
-                                    imageUrl: post.userAvatarUrl,
-                                    name: post.userName,
+                                    imageUrl: displayAvatar,
+                                    name: displayName,
                                     size: 40,
                                     onTap: () {
                                       Navigator.pushNamed(
@@ -155,8 +193,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                         'userId': post.userId,
                                         'user': UserModel(
                                           id: post.userId,
-                                          name: post.userName,
-                                          avatarUrl: post.userAvatarUrl,
+                                          name: displayName,
+                                          avatarUrl: displayAvatar,
                                           email: '',
                                           role: UserRole.parent,
                                         ),
@@ -175,8 +213,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                             'userId': post.userId,
                                             'user': UserModel(
                                               id: post.userId,
-                                              name: post.userName,
-                                              avatarUrl: post.userAvatarUrl,
+                                              name: displayName,
+                                              avatarUrl: displayAvatar,
                                               email: '',
                                               role: UserRole.parent,
                                             ),
@@ -188,7 +226,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            post.userName,
+                                            displayName,
                                             style: AppTextStyles.body.copyWith(
                                               color: const Color(0xFF1A1A2E),
                                               fontWeight: FontWeight.w600,
@@ -206,6 +244,44 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                       ),
                                     ),
                                   ),
+                                  // PopupMenu: edit/delete for owner, report for others
+                                  PopupMenuButton<String>(
+                                    icon: const Icon(Icons.more_horiz_rounded, color: Color(0xFF64748B)),
+                                    onSelected: (value) async {
+                                      if (value == 'edit') {
+                                        Navigator.pushNamed(
+                                          context,
+                                          RouteNames.editPost,
+                                          arguments: post,
+                                        );
+                                      } else if (value == 'delete') {
+                                        final confirmed = await DeleteConfirmationDialog.show(
+                                          context,
+                                          title: 'حذف المنشور',
+                                          message: 'هل أنت متأكد من حذف هذا المنشور؟',
+                                        );
+                                        if (confirmed == true && mounted) {
+                                          await viewModel.deletePost(post.id);
+                                          if (mounted) Navigator.pop(context);
+                                        }
+                                      } else if (value == 'report') {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('تم إرسال البلاغ للمراجعة')),
+                                        );
+                                      }
+                                    },
+                                    itemBuilder: (context) => [
+                                      if (isPostOwner) ...[
+                                        const PopupMenuItem(value: 'edit', child: Text('تعديل')),
+                                        const PopupMenuItem(
+                                          value: 'delete',
+                                          child: Text('حذف', style: TextStyle(color: Colors.red)),
+                                        ),
+                                      ] else ...[
+                                        const PopupMenuItem(value: 'report', child: Text('إبلاغ عن محتوى')),
+                                      ],
+                                    ],
+                                  ),
                                 ],
                               ),
                               const SizedBox(height: 12),
@@ -219,10 +295,25 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 const SizedBox(height: 16),
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(12),
-                                  child: Image.network(
-                                    post.imageUrl!,
+                                  child: CachedNetworkImage(
+                                    imageUrl: post.imageUrl!,
                                     width: double.infinity,
                                     fit: BoxFit.cover,
+                                    placeholder: (context, url) => Shimmer.fromColors(
+                                      baseColor: Colors.grey[300]!,
+                                      highlightColor: Colors.grey[100]!,
+                                      child: Container(
+                                        width: double.infinity,
+                                        height: 200,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    errorWidget: (context, url, error) => Container(
+                                      width: double.infinity,
+                                      height: 200,
+                                      color: Colors.grey[200],
+                                      child: const Icon(Icons.broken_image),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -253,7 +344,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               icon: Icons.chat_bubble_outline_rounded,
                               label: post.commentsCount.toString(),
                               color: const Color(0xFF64748B),
-                              onTap: () {},
+                              onTap: () {
+                                // Already on detail screen, just scroll down to comments
+                                Scrollable.ensureVisible(
+                                  context,
+                                  duration: const Duration(milliseconds: 300),
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -292,17 +389,25 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                   return Padding(
                                     padding: EdgeInsetsDirectional.only(
                                       bottom: 12,
-                                      start: isReply ? 45.0 : 0.0,
+                                      start: isReply ? 56.0 : 0.0,
                                     ),
                                     child: Row(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         if (isReply) ...[
-                                          const Padding(
-                                            padding: EdgeInsets.only(top: 8.0),
-                                            child: Icon(Icons.subdirectory_arrow_left_rounded, size: 16, color: Colors.grey),
+                                          Container(
+                                            margin: const EdgeInsets.only(top: 10, right: 4),
+                                            width: 12,
+                                            height: 12,
+                                            decoration: const BoxDecoration(
+                                              border: Border(
+                                                bottom: BorderSide(color: Colors.grey, width: 1.5),
+                                                right: BorderSide(color: Colors.grey, width: 1.5),
+                                              ),
+                                              borderRadius: BorderRadius.only(bottomRight: Radius.circular(4)),
+                                            ),
                                           ),
-                                          const SizedBox(width: 4),
+                                          const SizedBox(width: 8),
                                         ],
                                         AvatarWidget(
                                           imageUrl: comment.userAvatarUrl,

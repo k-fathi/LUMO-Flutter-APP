@@ -254,6 +254,35 @@ class MockDataSource {
     });
   }
 
+  // ==================== MOCK SESSION ANALYSIS (AI Placeholder) ====================
+
+  Future<List<Map<String, dynamic>>> getMockSessionAnalyses(int count) async {
+    await MockDelay.short();
+    return List.generate(count, (i) {
+      return {
+        'id': 'session_$i',
+        'title': 'جلسة #${i + 1} - تقييم الروبوت التلقائي',
+        'summary': 'خلال هذه الجلسة، أظهر الطفل تقدماً ملحوظاً في حل الألغاز التعاونية مع الروبوت. وتواصل بصري بنسبة ${70 + (i * 3) % 20}٪.',
+        'duration': '${20 + (i * 5) % 25} دقيقة',
+        'engagement_level': i % 3 == 0 ? 'ممتاز' : (i % 3 == 1 ? 'جيد' : 'متوسط'),
+        'recommendations': [
+          'التركيز على مهارات تبادل الأدوار',
+          'استخدام الروبوت كمحفز للنطق الوجداني',
+        ],
+        'emotion_distribution': [
+          {'id': 'happy', 'emoji': '😊', 'label': 'سعيد', 'percentage': 0.35, 'color': '#22C55E'},
+          {'id': 'calm', 'emoji': '😌', 'label': 'هادئ', 'percentage': 0.15, 'color': '#2196F3'},
+          {'id': 'sad', 'emoji': '😢', 'label': 'حزين', 'percentage': 0.15, 'color': '#EF4444'},
+          {'id': 'angry', 'emoji': '😠', 'label': 'غاضب', 'percentage': 0.05, 'color': '#F97316'},
+          {'id': 'fear', 'emoji': '😨', 'label': 'خائف', 'percentage': 0.10, 'color': '#6366F1'},
+          {'id': 'surprise', 'emoji': '😲', 'label': 'متفاجئ', 'percentage': 0.20, 'color': '#A855F7'},
+        ],
+        'focused_percentage': 0.75 + (i * 0.05) % 0.2,
+        'not_focused_percentage': 0.25 - (i * 0.05) % 0.2,
+      };
+    });
+  }
+
   // ==================== SEARCH ====================
 
   Future<List<Map<String, dynamic>>> searchMockUsers(String query) async {

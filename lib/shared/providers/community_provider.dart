@@ -74,7 +74,7 @@ class CommunityProvider with ChangeNotifier {
     addComment(postId);
   }
 
-  void clearState() {
+  void resetState() {
     _posts.clear();
     notifyListeners();
   }

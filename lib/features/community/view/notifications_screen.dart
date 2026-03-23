@@ -33,6 +33,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     try {
       await context.read<PatientProvider>().acceptPatientRequest(request);
       if (mounted) {
+        // Send a simulated urgent notification to the doctor
+        context.read<NotificationProvider>().sendConnectionAcceptedNotification(
+          doctorId: int.tryParse(request.doctorId.toString()) ?? 0,
+          patientName: request.childName,
+        );
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLocalizations.of(context)!.requestAccepted(request.doctorName)),
@@ -282,17 +288,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     ThemeData theme,
     dynamic notification,
   ) {
-    // Backend returns notifications like: { title, content, type, created_at, ... }
+    // Backend returns notifications like: { title, content, type, created_at, is_read, ... }
     final title = notification['title'] ?? 'إشعار جديد';
     final content = notification['content'] ?? notification['message'] ?? '';
     final createdAt = DateTime.tryParse(notification['created_at'] ?? '') ?? DateTime.now();
+    
+    final isReadVal = notification['is_read'];
+    final isUnread = isReadVal == false || isReadVal == 0 || isReadVal == null || notification['read_at'] == null;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.cardColor,
+        color: isUnread ? AppColors.primary.withValues(alpha: 0.05) : theme.cardColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: theme.dividerColor),
+        border: Border.all(
+          color: isUnread ? AppColors.primary.withValues(alpha: 0.3) : theme.dividerColor,
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

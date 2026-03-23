@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -17,30 +15,21 @@ import 'shared/providers/locale_provider.dart';
 import 'shared/providers/patient_provider.dart';
 import 'shared/providers/community_provider.dart';
 import 'features/community/view_model/community_view_model.dart';
-import 'features/chat/view_model/chat_view_model.dart';
-import 'features/ai_helper/view_model/ai_view_model.dart';
-import 'features/analysis/view_model/analysis_view_model.dart';
-import 'features/profile/view_model/profile_view_model.dart';
 import 'features/session/view_model/session_view_model.dart';
-import 'features/home/view_model/home_view_model.dart';
+import 'features/profile/view_model/profile_view_model.dart';
+import 'features/ai_helper/view_model/ai_view_model.dart';
+import 'features/chat/view_model/chat_view_model.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase conditionally
-  if (kIsWeb ||
-      Platform.isAndroid ||
-      Platform.isIOS ||
-      Platform.isMacOS ||
-      Platform.isLinux) {
-    try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-    } catch (e) {
-      debugPrint('Firebase initialization failed (might be unsupported on this platform): $e');
-    }
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint('Firebase initialization failed: $e');
   }
 
   // Setup dependency injection
@@ -72,6 +61,7 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
+        // ── Core Providers (Global — مطلوبين في كل الـ app) ──
         ChangeNotifierProvider(create: (_) => getIt<AuthProvider>()),
         ChangeNotifierProvider(create: (_) => getIt<UserProvider>()),
         ChangeNotifierProvider(create: (_) => getIt<NotificationProvider>()),
@@ -80,18 +70,14 @@ void main() async {
         ChangeNotifierProvider(create: (_) => getIt<PatientProvider>()),
         ChangeNotifierProvider(create: (_) => getIt<CommunityProvider>()),
         ChangeNotifierProvider(create: (_) => getIt<CommunityViewModel>()),
-        ChangeNotifierProvider(create: (_) => getIt<ChatViewModel>()),
-        ChangeNotifierProvider(create: (_) => getIt<AIViewModel>()),
-        ChangeNotifierProvider(create: (_) => getIt<AnalysisViewModel>()),
-        ChangeNotifierProvider(create: (_) => getIt<ProfileViewModel>()),
         ChangeNotifierProvider(create: (_) => getIt<SessionViewModel>()),
-        ChangeNotifierProvider(create: (_) => getIt<HomeViewModel>()),
+        ChangeNotifierProvider(create: (_) => getIt<ProfileViewModel>()),
+        ChangeNotifierProvider(create: (_) => getIt<AIViewModel>()),
+        ChangeNotifierProvider(create: (_) => getIt<ChatViewModel>()),
+
       ],
-      child: Consumer<UserProvider>(
-        builder: (context, userProvider, child) {
-          return const LumoAIApp();
-        },
-      ),
+      // ✅ شلنا Consumer<UserProvider> الزيادة — مكانش بيستخدم userProvider
+      child: const LumoAIApp(),
     ),
   );
 }

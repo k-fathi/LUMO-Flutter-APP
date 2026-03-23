@@ -66,6 +66,22 @@ class AuthRepository {
   }
 
   // ─────────────────────────────────────────────
+  //  Change Password
+  // ─────────────────────────────────────────────
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    await _remoteDataSource.changePassword(
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+      confirmPassword: confirmPassword,
+    );
+  }
+
+  // ─────────────────────────────────────────────
   //  Logout
   // ─────────────────────────────────────────────
 

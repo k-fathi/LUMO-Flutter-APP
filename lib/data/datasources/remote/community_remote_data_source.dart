@@ -11,6 +11,7 @@ import '../../models/comment_model.dart';
 
 abstract class CommunityRemoteDataSource {
   Future<List<PostModel>> getHomeFeed({int page = 1});
+  Future<List<PostModel>> getExploreFeed({int page = 1});
   Future<List<PostModel>> getMyPosts({int page = 1});
   Future<PostModel> createPost(String content, {String? imagePath});
   Future<PostModel> updatePost(String postId, String content,
@@ -41,6 +42,15 @@ class CommunityRemoteDataSourceImpl implements CommunityRemoteDataSource {
   }
 
   @override
+  Future<List<PostModel>> getExploreFeed({int page = 1}) async {
+    final response = await _dioClient.get(
+      ApiConstants.exploreFeed,
+      queryParameters: {'page': page},
+    );
+    return _parsePostList(response.data);
+  }
+
+  @override
   Future<List<PostModel>> getMyPosts({int page = 1}) async {
     final response = await _dioClient.get(
       ApiConstants.myPosts,
@@ -53,11 +63,14 @@ class CommunityRemoteDataSourceImpl implements CommunityRemoteDataSource {
     List<dynamic> data = [];
 
     if (responseData is Map<String, dynamic>) {
-      final rawData = responseData['posts'] ?? responseData['data'] ?? responseData['results'];
+      final rawData = responseData['posts'] ??
+          responseData['data'] ??
+          responseData['results'];
       if (rawData is List) {
         data = rawData;
       } else if (rawData is Map<String, dynamic>) {
-        final innerData = rawData['posts'] ?? rawData['data'] ?? rawData['results'] ?? [];
+        final innerData =
+            rawData['posts'] ?? rawData['data'] ?? rawData['results'] ?? [];
         if (innerData is List) {
           data = innerData;
         }
@@ -69,13 +82,16 @@ class CommunityRemoteDataSourceImpl implements CommunityRemoteDataSource {
       data = responseData;
     }
 
-    return data.map((json) {
-      try {
-        return PostModel.fromJson(json as Map<String, dynamic>);
-      } catch (e) {
-        return null;
-      }
-    }).whereType<PostModel>().toList();
+    return data
+        .map((json) {
+          try {
+            return PostModel.fromJson(json as Map<String, dynamic>);
+          } catch (e) {
+            return null;
+          }
+        })
+        .whereType<PostModel>()
+        .toList();
   }
 
   @override
@@ -115,7 +131,7 @@ class CommunityRemoteDataSourceImpl implements CommunityRemoteDataSource {
     });
 
     final response = await _dioClient.post(
-      ApiConstants.updatePost.replaceAll('{id}', postId) + '?_method=PUT',
+      '${ApiConstants.updatePost.replaceAll('{id}', postId)}?_method=PUT',
       data: formData,
     );
 
@@ -138,7 +154,7 @@ class CommunityRemoteDataSourceImpl implements CommunityRemoteDataSource {
   @override
   Future<void> deletePost(String postId) async {
     await _dioClient.post(
-      ApiConstants.deletePost.replaceAll('{id}', postId) + '?_method=DELETE',
+      '${ApiConstants.deletePost.replaceAll('{id}', postId)}?_method=DELETE',
     );
   }
 
@@ -150,7 +166,8 @@ class CommunityRemoteDataSourceImpl implements CommunityRemoteDataSource {
   }
 
   @override
-  Future<void> addComment(String postId, String comment, {int? parentId}) async {
+  Future<void> addComment(String postId, String comment,
+      {int? parentId}) async {
     await _dioClient.post(
       ApiConstants.postComments.replaceAll('{id}', postId),
       data: {
@@ -165,7 +182,7 @@ class CommunityRemoteDataSourceImpl implements CommunityRemoteDataSource {
   @override
   Future<void> toggleCommentLike(String commentId) async {
     await _dioClient.post(
-      '/posts/comments/$commentId/like',
+      ApiConstants.toggleCommentLike.replaceAll('{id}', commentId),
     );
   }
 
@@ -186,13 +203,16 @@ class CommunityRemoteDataSourceImpl implements CommunityRemoteDataSource {
       data = responseData;
     }
 
-    return data.map((json) {
-      try {
-        return CommentModel.fromJson(json as Map<String, dynamic>);
-      } catch (e) {
-        return null;
-      }
-    }).whereType<CommentModel>().toList();
+    return data
+        .map((json) {
+          try {
+            return CommentModel.fromJson(json as Map<String, dynamic>);
+          } catch (e) {
+            return null;
+          }
+        })
+        .whereType<CommentModel>()
+        .toList();
   }
 
   @override
@@ -205,7 +225,8 @@ class CommunityRemoteDataSourceImpl implements CommunityRemoteDataSource {
   @override
   Future<List<UserModel>> getFollowingUsers() async {
     final response = await _dioClient.get(ApiConstants.getFollowing);
-    final List<dynamic> data = response.data['followings'] ?? response.data['data'] ?? [];
+    final List<dynamic> data =
+        response.data['followings'] ?? response.data['data'] ?? [];
     return data.map((json) => _parseUser(json)).toList();
   }
 

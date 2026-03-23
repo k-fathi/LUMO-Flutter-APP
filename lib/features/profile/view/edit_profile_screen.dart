@@ -5,12 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/gradient_app_bar.dart';
 import '../../../shared/widgets/avatar_widget.dart';
-import '../../../core/di/dependency_injection.dart';
 import '../../../data/models/parent_model.dart';
-import '../../../shared/providers/patient_provider.dart';
-import '../../../shared/providers/community_provider.dart';
-import '../../../shared/providers/user_provider.dart';
-import '../../chat/view_model/chat_view_model.dart';
 import '../../../shared/providers/auth_provider.dart';
 import '../../community/view_model/community_view_model.dart';
 import '../../../core/router/route_names.dart';
@@ -363,10 +358,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               height: 48,
               child: ElevatedButton.icon(
                 onPressed: () async {
-                  context.read<PatientProvider>().clearState();
-                  context.read<CommunityProvider>().clearState();
-                  context.read<UserProvider>().clearUser();
-                  getIt<ChatViewModel>().clearState();
                   await context.read<AuthProvider>().logout();
                   if (!context.mounted) return;
                   Navigator.pushNamedAndRemoveUntil(
@@ -505,61 +496,66 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           textAlign: TextAlign.right,
         ),
         actionsAlignment: MainAxisAlignment.center,
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
         actions: [
-          Expanded(
-            child: SizedBox(
-              height: 44,
-              child: TextButton(
-                onPressed: () => Navigator.pop(context),
-                style: TextButton.styleFrom(
-                  backgroundColor: isDark
-                      ? theme.colorScheme.primary.withValues(alpha: 0.1)
-                      : const Color(0xFFE3F2FD),
-                  foregroundColor: theme.colorScheme.primary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const FittedBox(
-                    fit: BoxFit.scaleDown, child: Text('إلغاء')),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: SizedBox(
-              height: 44,
-              child: TextButton(
-                onPressed: () async {
-                  try {
-                    await context.read<AuthProvider>().logout();
-                    if (!context.mounted) return;
-                    Navigator.pushNamedAndRemoveUntil(
-                      context,
-                      RouteNames.login,
-                      (route) => false,
-                    );
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('خطأ أثناء حذف الحساب: $e'),
-                        backgroundColor: AppColors.destructive,
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 44,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      backgroundColor: isDark
+                          ? theme.colorScheme.primary.withValues(alpha: 0.1)
+                          : const Color(0xFFE3F2FD),
+                      foregroundColor: theme.colorScheme.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    );
-                  }
-                },
-                style: TextButton.styleFrom(
-                  backgroundColor: AppColors.destructive,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const FittedBox(
+                        fit: BoxFit.scaleDown, child: Text('إلغاء')),
                   ),
                 ),
-                child: const FittedBox(
-                    fit: BoxFit.scaleDown, child: Text('نعم، احذف الحساب')),
               ),
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: 44,
+                  child: TextButton(
+                    onPressed: () async {
+                      try {
+                        await context.read<AuthProvider>().logout();
+                        if (!context.mounted) return;
+                        Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          RouteNames.login,
+                          (route) => false,
+                        );
+                      } catch (e) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('خطأ أثناء حذف الحساب: $e'),
+                            backgroundColor: AppColors.destructive,
+                          ),
+                        );
+                      }
+                    },
+                    style: TextButton.styleFrom(
+                      backgroundColor: AppColors.destructive,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const FittedBox(
+                        fit: BoxFit.scaleDown, child: Text('نعم، احذف الحساب')),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

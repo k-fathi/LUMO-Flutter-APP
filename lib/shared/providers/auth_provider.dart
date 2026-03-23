@@ -8,6 +8,9 @@ import '../../data/models/user_model.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/profile_repository.dart';
 import '../../data/datasources/local_data_source.dart';
+import '../../core/network/api_exception.dart';
+
+// ✅ شلنا imports الـ ViewModels — مش المفروض AuthProvider يعتمد عليهم
 
 class AuthProvider extends ChangeNotifier {
   final AuthRepository _authRepository;
@@ -21,10 +24,19 @@ class AuthProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
+  // ✅ Callback لـ logout — بيتسجل من بره بدل الـ circular coupling
+  VoidCallback? _onLogoutCallback;
+
   UserModel? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _authRepository.isLoggedIn;
+
+  /// يتسجل من main.dart أو app.dart عشان يعمل reset للـ ViewModels عند الـ logout
+  /// بدل ما AuthProvider يعتمد على الـ ViewModels مباشرة
+  void setLogoutCallback(VoidCallback callback) {
+    _onLogoutCallback = callback;
+  }
 
   // ─────────────────────────────────────────────
   //  Initialize — restore session from stored token
@@ -36,21 +48,17 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     if (!_authRepository.isLoggedIn) {
-      // No token — user is definitively logged out.
       _setLoading(false);
       return;
     }
 
-    // ── Priority 1: Restore from local cache (always available offline) ──
+    // ── Priority 1: Restore from local cache ──
     final cachedUserJson = _localDataSource.getCurrentUser();
     if (cachedUserJson != null) {
       try {
         _currentUser = UserModel.fromJson(cachedUserJson);
-        debugPrint(
-            '✅ Session restored from local cache: ${_currentUser?.name}');
       } catch (e) {
-        // Cache is corrupted (stale model schema). Wipe and force re-login.
-        debugPrint('❌ Cached user JSON is corrupt: $e — clearing session.');
+        debugPrint('Cached user corrupt: $e');
         await logout();
         await _localDataSource.clearAll();
         _setLoading(false);
@@ -59,38 +67,78 @@ class AuthProvider extends ChangeNotifier {
       }
     }
 
-    // ── Priority 2: Silently refresh profile from REST API in background ──
-    // If this fails (no internet, server down) we keep the cached user.
-    // We do NOT force-logout on network failures.
+    // ── Priority 2: Refresh from API ──
     final userIdStr = _localDataSource.getCurrentUserId();
-    if (userIdStr != null) {
-      final userId = int.tryParse(userIdStr);
-      if (userId != null) {
-        try {
-          final refreshed = await _profileRepository
-              .getUserProfile(userId)
-              .timeout(const Duration(seconds: 8));
-          if (refreshed != null) {
-            _currentUser = refreshed;
-            await _localDataSource.saveCurrentUser(refreshed.toJson());
-            debugPrint(
-                '✅ Profile refreshed from server: ${_currentUser?.name}');
-          }
-        } catch (e) {
-          // Network / Firebase not available — keep cached user, do NOT logout.
-          debugPrint('⚠️ Profile refresh failed (keeping cache): $e');
+    // ✅ حتى لو مفيش userId بس فيه token (زي بعد الـ OTP)، نحاول نجيب الـ profile
+    if (userIdStr != null || _authRepository.isLoggedIn) {
+      final userId = int.tryParse(userIdStr ?? '0') ?? 0;
+      try {
+        final refreshed = await _profileRepository
+            .getUserProfile(userId)
+            .timeout(const Duration(seconds: 10));
+        if (refreshed != null) {
+          _currentUser = refreshed;
+          await _localDataSource.saveCurrentUser(refreshed.toJson());
         }
+      } catch (e) {
+        // ✅ بدل string matching — بنتحقق من نوع الـ exception
+        final isUnauthenticated = _isUnauthenticatedError(e);
+        if (isUnauthenticated) {
+          debugPrint('Token expired. Forcing logout.');
+          await logout();
+          await _localDataSource.clearAll();
+          _setLoading(false);
+          notifyListeners();
+          return;
+        }
+        debugPrint('Profile refresh failed (keeping cache): $e');
       }
     }
 
-    // ── Priority 3: Last resort — if still no user, token is useless → logout ──
+    // ── Priority 3: Last resort ──
     if (_currentUser == null) {
-      debugPrint('❌ Token exists but no cached user found. Forcing logout.');
       await logout();
     }
 
     _setLoading(false);
     notifyListeners();
+  }
+
+  /// ✅ تحقق من الـ 401 بطريقة صح بدل string matching
+  bool _isUnauthenticatedError(Object e) {
+    if (e is ApiException) {
+      return e.statusCode == 401;
+    }
+    // Fallback للـ DioException أو غيره
+    final msg = e.toString().toLowerCase();
+    return msg.contains('401') || msg.contains('unauthenticated');
+  }
+
+  /// ✅ تحويل الخطأ لرسالة عربية مفهومة للمستخدم
+  String _mapErrorToMessage(Object e) {
+    if (e is ApiException) {
+      if (e.statusCode == 401) {
+        return 'رقم الهاتف أو كلمة المرور غير صحيحة';
+      }
+      if (e.statusCode == 422) {
+        // إذا كان هناك رسالة من الباك اند نستخدمها، وإلا رسالة افتراضية
+        return e.message.isNotEmpty ? e.message : 'البيانات المدخلة غير صحيحة أو مستخدمة مسبقاً';
+      }
+      return e.message.isNotEmpty ? e.message : 'حدث خطأ في الاتصال بالسيرفر';
+    }
+    
+    final msg = e.toString().toLowerCase();
+    if (msg.contains('401') || msg.contains('unauthenticated')) {
+      return 'رقم الهاتف أو كلمة المرور غير صحيحة';
+    }
+    if (msg.contains('422')) {
+      return 'البيانات المدخلة غير صحيحة أو مستخدمة مسبقاً';
+    }
+    if (msg.contains('network') || msg.contains('socket') || msg.contains('timeout')) {
+      return 'فشل الاتصال بالإنترنت، يرجى المحاولة لاحقاً';
+    }
+    
+    return 'حدث خطأ غير متوقع، يرجى المحاولة لاحقاً';
   }
 
   // ─────────────────────────────────────────────
@@ -106,7 +154,6 @@ class AuthProvider extends ChangeNotifier {
     _errorMessage = null;
 
     try {
-      // Fetch FCM token
       final fcmToken = await _getFcmToken();
 
       final request = LoginRequest(
@@ -117,16 +164,21 @@ class AuthProvider extends ChangeNotifier {
 
       final AuthResponse response = await _authRepository.login(request);
 
+      if (!response.status) {
+        _errorMessage = response.message;
+        return false;
+      }
+
       if (response.user != null) {
         _currentUser = response.user;
-        // Persist user to local cache so session survives cold starts
         await _localDataSource.saveCurrentUser(_currentUser!.toJson());
         notifyListeners();
         if (onSuccess != null) onSuccess();
       }
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = _mapErrorToMessage(e);
+      debugPrint('Login error: $e');
       return false;
     } finally {
       _setLoading(false);
@@ -148,6 +200,8 @@ class AuthProvider extends ChangeNotifier {
     int? childAge,
     String? doctorNumber,
     String? clinicLocation,
+    String? userImageUrl,
+    String? childImageUrl,
     VoidCallback? onSuccess,
   }) async {
     _setLoading(true);
@@ -165,20 +219,27 @@ class AuthProvider extends ChangeNotifier {
         childAge: childAge,
         doctorNumber: doctorNumber,
         clinicLocation: clinicLocation,
+        avatarFilePath: userImageUrl,
+        childPhotoPath: childImageUrl,
       );
 
       final AuthResponse response = await _authRepository.register(request);
 
+      if (!response.status) {
+        _errorMessage = response.message;
+        return false;
+      }
+
       if (response.user != null) {
         _currentUser = response.user;
-        // Persist user to local cache so session survives cold starts
         await _localDataSource.saveCurrentUser(_currentUser!.toJson());
         notifyListeners();
         if (onSuccess != null) onSuccess();
       }
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = _mapErrorToMessage(e);
+      debugPrint('Register error: $e');
       return false;
     } finally {
       _setLoading(false);
@@ -186,7 +247,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // ─────────────────────────────────────────────
-  //  OTP — Registration flow
+  //  OTP
   // ─────────────────────────────────────────────
 
   Future<MessageResponse?> verifyOtp({
@@ -195,14 +256,19 @@ class AuthProvider extends ChangeNotifier {
   }) async {
     _setLoading(true);
     _errorMessage = null;
-
     try {
       final response = await _authRepository.verifyOtp(
         VerifyOtpRequest(phone: phone, otp: otp),
       );
+      
+      // ✅ لو نجح الـ OTP، نحاول نجيب بيانات المستخدم فوراً
+      if (response.status) {
+        await init();
+      }
+      
       return response;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = _mapErrorToMessage(e);
       return null;
     } finally {
       _setLoading(false);
@@ -212,14 +278,13 @@ class AuthProvider extends ChangeNotifier {
   Future<MessageResponse?> resendOtp({required String phone}) async {
     _setLoading(true);
     _errorMessage = null;
-
     try {
       final response = await _authRepository.resendOtp(
         ResendOtpRequest(phone: phone),
       );
       return response;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = _mapErrorToMessage(e);
       return null;
     } finally {
       _setLoading(false);
@@ -227,20 +292,19 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // ─────────────────────────────────────────────
-  //  Forgot / Reset Password flow
+  //  Forgot / Reset Password
   // ─────────────────────────────────────────────
 
   Future<MessageResponse?> forgotPassword({required String phone}) async {
     _setLoading(true);
     _errorMessage = null;
-
     try {
       final response = await _authRepository.forgotPassword(
         ForgotPasswordRequest(phone: phone),
       );
       return response;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = _mapErrorToMessage(e);
       return null;
     } finally {
       _setLoading(false);
@@ -253,14 +317,13 @@ class AuthProvider extends ChangeNotifier {
   }) async {
     _setLoading(true);
     _errorMessage = null;
-
     try {
       final response = await _authRepository.verifyResetOtp(
         VerifyOtpRequest(phone: phone, otp: otp),
       );
       return response;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = _mapErrorToMessage(e);
       return null;
     } finally {
       _setLoading(false);
@@ -275,7 +338,6 @@ class AuthProvider extends ChangeNotifier {
   }) async {
     _setLoading(true);
     _errorMessage = null;
-
     try {
       final response = await _authRepository.resetPassword(
         ResetPasswordRequest(
@@ -287,7 +349,7 @@ class AuthProvider extends ChangeNotifier {
       );
       return response;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = _mapErrorToMessage(e);
       return null;
     } finally {
       _setLoading(false);
@@ -325,12 +387,11 @@ class AuthProvider extends ChangeNotifier {
         childPhotoUrl: childPhotoUrl,
       );
       _currentUser = updatedUser;
-      // Persist the fresh user data so the cache stays consistent
       await _localDataSource.saveCurrentUser(updatedUser.toJson());
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = _mapErrorToMessage(e);
       return false;
     } finally {
       _setLoading(false);
@@ -347,6 +408,15 @@ class AuthProvider extends ChangeNotifier {
     } catch (_) {
       // Ensure local state is cleared even if the API call fails
     }
+
+    // ✅ بدل ما نعتمد على getIt<ViewModel> مباشرة (circular coupling)
+    // بننادي الـ callback اللي اتسجل من بره
+    try {
+      _onLogoutCallback?.call();
+    } catch (e) {
+      debugPrint('Logout callback error: $e');
+    }
+
     _currentUser = null;
     notifyListeners();
   }
@@ -360,33 +430,57 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Change password
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    _setLoading(true);
+    clearError();
+
+    try {
+      await _authRepository.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+        confirmPassword: confirmPassword,
+      );
+    } catch (e) {
+      _errorMessage = _mapErrorToMessage(e);
+      debugPrint('Change password error: $e');
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
   }
 
-  /// Retrieves the FCM token from Firebase Messaging.
-  /// Returns a dummy token on unsupported platforms (Linux/Windows).
   Future<String?> _getFcmToken() async {
-    // Check for web first
     if (kIsWeb) {
       try {
-        return await FirebaseMessaging.instance.getToken();
+        return await FirebaseMessaging.instance
+            .getToken()
+            .timeout(const Duration(seconds: 3));
       } catch (e) {
         debugPrint('Failed to get FCM token (Web): $e');
         return null;
       }
     }
 
-    // Check for desktop platforms that don't support Firebase Messaging
+    // ✅ Desktop platforms — بنرجع null بدل dummy token
     if (Platform.isLinux || Platform.isWindows) {
-      debugPrint('FCM is not supported on this platform. Using dummy token.');
-      return 'dummy_token_for_desktop';
+      debugPrint('FCM not supported on desktop. Skipping token.');
+      return null;
     }
 
-    // Supported mobile/macOS platforms
     try {
-      return await FirebaseMessaging.instance.getToken();
+      return await FirebaseMessaging.instance
+          .getToken()
+          .timeout(const Duration(seconds: 5));
     } catch (e) {
       debugPrint('Failed to get FCM token: $e');
       return null;

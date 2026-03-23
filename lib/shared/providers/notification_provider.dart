@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app_badger/flutter_app_badger.dart';
 import '../../core/services/notification_service.dart';
 import '../../data/repositories/notification_repository.dart';
 
@@ -44,6 +45,7 @@ class NotificationProvider extends ChangeNotifier {
         final isRead = n['is_read'];
         return isRead == false || isRead == 0 || isRead == null || n['read_at'] == null;
       }).length;
+      _updateAppBadge();
     } catch (e) {
       _errorMessage = e.toString();
     } finally {
@@ -59,7 +61,11 @@ class NotificationProvider extends ChangeNotifier {
     try {
       await _repository!.markNotificationsAsRead();
       _unreadCount = 0;
-      await fetchNotifications(); // Refresh list
+      _updateAppBadge();
+      notifyListeners();
+      // We intentionally do NOT call fetchNotifications() here!
+      // This allows the NotificationsScreen to keep the visual "unread highlight" 
+      // on previously unread items until the user leaves and refreshes later.
     } catch (e) {
       debugPrint('Failed to mark notifications as read: $e');
     }
@@ -92,13 +98,28 @@ class NotificationProvider extends ChangeNotifier {
   // Increment unread count
   void incrementUnreadCount() {
     _unreadCount++;
+    _updateAppBadge();
     notifyListeners();
   }
 
   // Clear unread count
   void clearUnreadCount() {
     _unreadCount = 0;
+    _updateAppBadge();
     notifyListeners();
+  }
+
+  /// Updates the app icon badge based on the current unread count.
+  void _updateAppBadge() {
+    try {
+      if (_unreadCount > 0) {
+        FlutterAppBadger.updateBadgeCount(_unreadCount);
+      } else {
+        FlutterAppBadger.removeBadge();
+      }
+    } catch (e) {
+      debugPrint('App badger update failed (platform may not support it): $e');
+    }
   }
 
   // Show local notification
@@ -128,17 +149,61 @@ class NotificationProvider extends ChangeNotifier {
     // Actual backend handles this when toggleLike is called
   }
 
-  // Send follow notification
+  // Send connection accepted notification
+  Future<void> sendConnectionAcceptedNotification({
+    required int doctorId,
+    required String patientName,
+  }) async {
+    debugPrint('SIMULATION: Urgent notification sent to Doctor \$doctorId -> Patient \$patientName accepted the request!');
+    
+    // In a real production environment, the Backend (Laravel) should automatically send an FCM Push Notification
+    // to the doctor when the /accept API is called.
+    // As a local simulation/fallback, we can show a local notification if testing on a single device:
+    await showNotification(
+      title: 'طلب إضافة مقبول!',
+      body: 'لقد وافق \$patientName على طلب الإضافة الخاص بك. يمكنك الآن متابعة حالته.',
+      payload: 'doctor_patients_list',
+    );
+  }
+
+  // Send follow notification — backend handles actual push to target user
   Future<void> sendFollowNotification({
     required int targetUserId,
     required String followerName,
   }) async {
-    debugPrint('User $followerName followed $targetUserId');
-    // Actual backend handles this when toggleFollow is called
-    // We can show a local experimental notification if the user wants to see it work
+    debugPrint('SIMULATION: Urgent notification sent to User $targetUserId -> $followerName followed you!');
+    
+    // In a real production environment, the Backend (Laravel) should automatically send an FCM Push Notification
+    // to the target user when the /follow API is called.
+    // As a local simulation/fallback, we can show a local notification if testing on a single device:
     await showNotification(
-      title: 'متابعة جديدة!',
-      body: 'لقد قام $followerName بمتابعتك مؤخراً.',
+      title: 'متابع جديد!',
+      body: 'قام $followerName بمتابعتك الآن.',
+      payload: 'profile',
+    );
+  }
+
+  // Send comment notification
+  Future<void> sendCommentNotification({
+    required int postId,
+    required int postOwnerId,
+    required String commenterName,
+  }) async {
+    debugPrint('User $commenterName commented on post $postId');
+    // Backend handles this
+  }
+
+  // Send chat message notification
+  Future<void> sendMessageNotification({
+    required int targetUserId,
+    required String senderName,
+    required String messagePreview,
+  }) async {
+    debugPrint('Message notification from $senderName to $targetUserId');
+    await showNotification(
+      title: 'رسالة جديدة من $senderName',
+      body: messagePreview,
+      payload: 'chat_$targetUserId',
     );
   }
 }

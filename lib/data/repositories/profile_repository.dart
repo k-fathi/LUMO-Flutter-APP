@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import '../datasources/firebase_data_source.dart';
 import '../datasources/local_data_source.dart';
@@ -27,35 +28,53 @@ class ProfileRepository {
   Future<UserModel?> getUserProfile(int userId) async {
     // Check if this is the current user
     final currentUserData = _localDataSource.getCurrentUser();
-    final currentUserId = currentUserData != null 
-        ? int.tryParse(currentUserData['id']?.toString() ?? '') 
+    final currentUserId = currentUserData != null
+        ? int.tryParse(currentUserData['id']?.toString() ?? '')
         : null;
-    
-    final isMyProfile = userId == currentUserId;
+
+    final isMyProfile = userId == currentUserId || userId <= 0;
 
     // 1. Try REST API only for current user
     if (_remoteDataSource != null && isMyProfile) {
       try {
         final profile = await _remoteDataSource!.getProfile();
         // Persist to local cache
-        if (isMyProfile) {
-          await _localDataSource.saveCurrentUser(profile.toJson());
-        }
+        await _localDataSource.saveCurrentUser(profile.toJson());
         return profile;
       } catch (e) {
+        final isUnauthenticated =
+            e.toString().toLowerCase().contains('unauthenticated') ||
+                e.toString().contains('401');
+
+        if (isUnauthenticated) {
+          rethrow; // Let AuthProvider handle the 401 and log out
+        }
         debugPrint('REST Profile fetch failed: $e. Falling back to Firebase.');
       }
     }
 
     // 2. Fallback to Firebase for others (or if REST failed)
-    final userData = await _firebaseDataSource.getUserById(userId.toString());
-    if (userData == null) return null;
+    if (userId <= 0) return null; // Can't fetch "me" from Firebase without ID
 
-    final role = UserRole.fromString(userData['role'] as String? ?? 'parent');
-    if (role == UserRole.doctor) {
-      return DoctorModel.fromJson(userData);
-    } else {
-      return ParentModel.fromJson(userData);
+    // 🔥 Avoid hanging on Desktop/Linux where Firebase might not be initialized
+    if (!kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
+      debugPrint('Skipping Firebase fallback on desktop platform.');
+      return null;
+    }
+
+    try {
+      final userData = await _firebaseDataSource.getUserById(userId.toString());
+      if (userData == null) return null;
+
+      final role = UserRole.fromString(userData['role'] as String? ?? 'parent');
+      if (role == UserRole.doctor) {
+        return DoctorModel.fromJson(userData);
+      } else {
+        return ParentModel.fromJson(userData);
+      }
+    } catch (e) {
+      debugPrint('Firebase fetch failed: $e');
+      return null;
     }
   }
 
@@ -162,6 +181,28 @@ class ProfileRepository {
   Future<void> unfollowUser(int followerId, int followingId) async {
     await _firebaseDataSource.unfollowUser(
         followerId.toString(), followingId.toString());
+  }
+
+  Future<List<UserModel>> getFollowers(int userId) async {
+    if (_remoteDataSource != null) {
+      try {
+        return await _remoteDataSource!.getFollowers(userId);
+      } catch (e) {
+        debugPrint('REST getFollowers failed: $e');
+      }
+    }
+    return []; // Fallback to empty list if no remote source or it fails
+  }
+
+  Future<List<UserModel>> getFollowing(int userId) async {
+    if (_remoteDataSource != null) {
+      try {
+        return await _remoteDataSource!.getFollowing(userId);
+      } catch (e) {
+        debugPrint('REST getFollowing failed: $e');
+      }
+    }
+    return []; // Fallback to empty list if no remote source or it fails
   }
 
   // ==================== DOCTOR CODE SYSTEM ====================

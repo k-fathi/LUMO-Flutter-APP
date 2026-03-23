@@ -26,9 +26,9 @@ mixin FormValidationMixin {
   }
 
   // Phone validation
-  String? validatePhone(String? value) {
+  String? validatePhone(String? value, {bool required = true}) {
     if (value == null || value.isEmpty) {
-      return null; // Optional field
+      return required ? 'رقم الهاتف مطلوب' : null;
     }
     return Validators.phone(value);
   }
@@ -65,28 +65,14 @@ mixin FormValidationMixin {
 
   // Doctor code validation
   String? validateDoctorCode(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'كود الطبيب مطلوب';
-    }
-    if (value.length < 6) {
-      return 'كود الطبيب غير صحيح';
-    }
-    return null;
+    return Validators.doctorCode(value);
   }
 
   // Content validation (for posts/messages)
   String? validateContent(String? value, {int minLength = 1}) {
-    if (value == null || value.trim().isEmpty) {
-      return 'المحتوى مطلوب';
-    }
-    if (value.trim().length < minLength) {
-      return 'المحتوى قصير جداً';
-    }
+    if (value == null || value.trim().isEmpty) return 'المحتوى مطلوب';
+    if (value.trim().length < minLength) return 'المحتوى قصير جداً';
     return null;
   }
 
-  // Dispose form key
-  void disposeForm() {
-    // formKey is automatically disposed by the widget
-  }
 }

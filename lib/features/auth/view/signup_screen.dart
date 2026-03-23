@@ -42,9 +42,8 @@ class _SignupScreenState extends State<SignupScreen> with FormValidationMixin {
   final _childAgeController = TextEditingController();
 
   // Doctor fields
-  final _specializationController = TextEditingController();
+  final _clinicLocationController = TextEditingController();
   final _licenseNumberController = TextEditingController();
-  final _experienceController = TextEditingController();
 
   File? _userImage;
   File? _childImage;
@@ -68,9 +67,8 @@ class _SignupScreenState extends State<SignupScreen> with FormValidationMixin {
     _phoneController.dispose();
     _childNameController.dispose();
     _childAgeController.dispose();
-    _specializationController.dispose();
+    _clinicLocationController.dispose();
     _licenseNumberController.dispose();
-    _experienceController.dispose();
     super.dispose();
   }
 
@@ -132,19 +130,34 @@ class _SignupScreenState extends State<SignupScreen> with FormValidationMixin {
             ? _licenseNumberController.text.trim()
             : null,
         clinicLocation: _selectedRole.isDoctor
-            ? _specializationController.text.trim()
+            ? _clinicLocationController.text.trim()
             : null,
+        userImageUrl: _userImage?.path,
+        childImageUrl: _childImage?.path,
       );
 
       if (!mounted) return;
 
       if (success) {
         if (!mounted) return;
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          RouteNames.mainLayout,
-          (route) => false,
-        );
+        
+        // If registration was successful but user is null, it means OTP is required
+        if (authProvider.currentUser == null) {
+          Navigator.pushNamed(
+            context,
+            RouteNames.otpVerification,
+            arguments: {
+              'phone': _phoneController.text.trim(),
+              'isPasswordReset': false,
+            },
+          );
+        } else {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            RouteNames.mainLayout,
+            (route) => false,
+          );
+        }
       } else {
         if (!mounted) return;
         _showErrorSnackBar(authProvider.errorMessage ?? 'فشل إنشاء الحساب');
@@ -282,7 +295,7 @@ class _SignupScreenState extends State<SignupScreen> with FormValidationMixin {
                       child: Padding(
                         padding: const EdgeInsets.all(18.0),
                         child: Image.asset(
-                          'assets/images_from_web/web_splash.png',
+                          'assets/images/lumo-logo.png',
                           fit: BoxFit.contain,
                         ),
                       ),
@@ -291,17 +304,14 @@ class _SignupScreenState extends State<SignupScreen> with FormValidationMixin {
                 ),
                 const SizedBox(height: 24),
 
-                // React: text-3xl text-[#1a1a2e] mb-2
                 Text(
                   'إنشاء حساب',
                   style: AppTextStyles.h1.copyWith(
                     color: Theme.of(context).textTheme.displayLarge?.color,
-                    fontSize: 30, // text-3xl
                   ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
-                // React: "مستخدم" not "ولي أمر"
                 Text(
                   'التسجيل ك${_selectedRole.isDoctor ? "طبيب" : "مستخدم"}',
                   style: AppTextStyles.body.copyWith(
@@ -309,8 +319,6 @@ class _SignupScreenState extends State<SignupScreen> with FormValidationMixin {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 32),
-
                 const SizedBox(height: 32),
 
                 // Common fields
@@ -414,11 +422,11 @@ class _SignupScreenState extends State<SignupScreen> with FormValidationMixin {
                   ),
                   const SizedBox(height: 20),
                   AppTextField(
-                    controller: _specializationController,
-                    label: 'موقع العيادة', // Matches React's clinicLocation
+                    controller: _clinicLocationController,
+                    label: 'موقع العيادة',
                     hint: 'أدخل موقع العيادة',
                     prefixIcon: Icons.location_on_outlined,
-                    validator: validateSpecialization,
+                    validator: (value) => value == null || value.isEmpty ? 'يرجى إدخال موقع العيادة' : null,
                   ),
                 ],
 

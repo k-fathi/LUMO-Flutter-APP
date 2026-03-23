@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 
-/// MessageBubble - Figma Screen 10 Spec
 ///
 /// My Message: Aligned Right, Gradient BG (#2196F3 → #1565C0), White Text,
 ///             Rounded-2xl with sharp Bottom-Right corner.

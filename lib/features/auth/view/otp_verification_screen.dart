@@ -147,9 +147,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                     child: const Align(
                       alignment: Alignment.centerRight,
                       child: Icon(
-                        Icons.arrow_forward,
+                        Icons.arrow_back_ios_rounded,
                         size: 24,
-                        color: Color(0xFF2196F3),
+                        color: AppColors.primary,
                       ),
                     ),
                   ),
@@ -157,7 +157,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                   Text(
                     'رمز التحقق',
                     style: AppTextStyles.h1.copyWith(
-                      color: const Color(0xFF1A1F36),
+                      color: Theme.of(context).textTheme.displayLarge?.color,
                       fontSize: 30,
                       fontWeight: FontWeight.w500,
                     ),
@@ -167,7 +167,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                   Text(
                     'لقد أرسلنا رمز التحقق المكون من 4 أرقام إلى رقم الهاتف ${widget.phone}',
                     style: AppTextStyles.body.copyWith(
-                      color: const Color(0xFF64748B),
+                      color: Theme.of(context).hintColor,
                     ),
                     textAlign: TextAlign.right,
                   ),
@@ -235,7 +235,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                       Text(
                         'لم يصلك الرمز؟',
                         style: AppTextStyles.body
-                            .copyWith(color: const Color(0xFF64748B)),
+                            .copyWith(color: Theme.of(context).hintColor),
                       ),
                     ],
                   ),

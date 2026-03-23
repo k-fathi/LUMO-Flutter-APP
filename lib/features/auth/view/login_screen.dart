@@ -54,11 +54,23 @@ class _LoginScreenState extends State<LoginScreen> with FormValidationMixin {
     setState(() => _isLoading = false);
 
     if (success) {
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        RouteNames.mainLayout,
-        (route) => false,
-      );
+      // If login was successful but user is null, it means OTP is required (unverified account)
+      if (authProvider.currentUser == null) {
+        Navigator.pushNamed(
+          context,
+          RouteNames.otpVerification,
+          arguments: {
+            'phone': _phoneController.text.trim(),
+            'isPasswordReset': false,
+          },
+        );
+      } else {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          RouteNames.mainLayout,
+          (route) => false,
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -111,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen> with FormValidationMixin {
                       child: Padding(
                         padding: const EdgeInsets.all(18.0),
                         child: Image.asset(
-                          'assets/images_from_web/web_splash.png',
+                          'assets/images/lumo-logo.png',
                           fit: BoxFit.contain,
                         ),
                       ),
@@ -120,12 +132,10 @@ class _LoginScreenState extends State<LoginScreen> with FormValidationMixin {
                 ),
                 const SizedBox(height: 24),
 
-                // Title - React: text-3xl text-[#1a1a2e] mb-2
                 Text(
                   'مرحباً بعودتك',
                   style: AppTextStyles.h1.copyWith(
                     color: Theme.of(context).textTheme.displayLarge?.color,
-                    fontSize: 30, // text-3xl
                   ),
                   textAlign: TextAlign.center,
                 ),

@@ -1,6 +1,8 @@
 import '../datasources/remote/community_remote_data_source.dart';
 import '../models/comment_model.dart';
 import '../models/post_model.dart';
+import 'package:flutter/foundation.dart';
+
 import '../models/user_model.dart';
 import './profile_repository.dart';
 
@@ -14,6 +16,10 @@ class CommunityRepository {
 
   Future<List<PostModel>> getHomeFeed({int page = 1}) async {
     return await _remoteDataSource.getHomeFeed(page: page);
+  }
+
+  Future<List<PostModel>> getExploreFeed({int page = 1}) async {
+    return await _remoteDataSource.getExploreFeed(page: page);
   }
 
   Future<PostModel> getPostById(int postId) async {
@@ -81,7 +87,7 @@ class CommunityRepository {
         }
       } catch (e) {
         // Log error but don't fail the whole operation as REST call succeeded
-        print('Firebase follow sync error: $e');
+        debugPrint('Firebase follow sync error: $e');
       }
     }
   }

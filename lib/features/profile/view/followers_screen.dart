@@ -1,79 +1,83 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../view_model/profile_view_model.dart';
+import '../../../shared/providers/auth_provider.dart';
+import '../../../data/models/user_model.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/gradient_app_bar.dart';
 import '../../../shared/widgets/avatar_widget.dart';
 
 /// Followers Screen - Matches React FollowersScreen
-///
-/// React layout:
-/// - Gradient header with back + title
-/// - px-6 py-6 space-y-3
-/// - Card: p-4 rounded-2xl shadow-sm border-[#E3F2FD]
-///   with w-14 h-14 avatar, name, role, gradient follow or E3F2FD "متابَع" button
 class FollowersScreen extends StatefulWidget {
-  const FollowersScreen({super.key});
+  final int? userId;
+  const FollowersScreen({super.key, this.userId});
 
   @override
   State<FollowersScreen> createState() => _FollowersScreenState();
 }
 
 class _FollowersScreenState extends State<FollowersScreen> {
-  // Placeholder data matching React
-  final List<Map<String, dynamic>> followers = [
-    {'name': 'د. محمد أحمد', 'role': 'طبيب قلب', 'isFollowingBack': true},
-    {'name': 'سارة علي', 'role': 'مستخدم', 'isFollowingBack': false},
-    {'name': 'د. فاطمة حسن', 'role': 'طبيبة أطفال', 'isFollowingBack': true},
-    {'name': 'أحمد محمود', 'role': 'مستخدم', 'isFollowingBack': true},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final effectiveUserId =
+          widget.userId ?? context.read<AuthProvider>().currentUser?.id;
+      if (effectiveUserId != null) {
+        context.read<ProfileViewModel>().loadFollowers(effectiveUserId);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final profileViewModel = context.watch<ProfileViewModel>();
+    final followers = profileViewModel.followersList;
     final theme = Theme.of(context);
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      // React: gradient header with back + title
       appBar: const GradientAppBar(title: 'المتابعون'),
-      body: followers.isEmpty
-          ? Center(
-              child: Text(
-                'لا توجد متابعون بعد',
-                style: AppTextStyles.body.copyWith(
-                  color: AppColors.mutedForeground,
+      body: profileViewModel.isListLoading
+          ? const Center(child: CircularProgressIndicator())
+          : followers.isEmpty
+              ? Center(
+                  child: Text(
+                    'لا يوجد متابعون بعد',
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.mutedForeground,
+                    ),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(24),
+                  itemCount: followers.length,
+                  itemBuilder: (context, index) {
+                    final follower = followers[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _buildFollowerCard(follower),
+                    );
+                  },
                 ),
-              ),
-            )
-          : ListView.builder(
-              // React: px-6 py-6 space-y-3
-              padding: const EdgeInsets.all(24),
-              itemCount: followers.length,
-              itemBuilder: (context, index) {
-                final follower = followers[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildFollowerCard(follower),
-                );
-              },
-            ),
     );
   }
 
-  /// Card matching React: p-4 rounded-2xl shadow-sm border-[#E3F2FD]
-  Widget _buildFollowerCard(Map<String, dynamic> follower) {
+  Widget _buildFollowerCard(UserModel follower) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final isFollowingBack = follower['isFollowingBack'] as bool;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.cardColor,
-        borderRadius: BorderRadius.circular(16), // rounded-2xl
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
             color: isDark ? theme.dividerColor : const Color(0xFFE3F2FD)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 4,
             offset: const Offset(0, 1),
           ),
@@ -81,30 +85,26 @@ class _FollowersScreenState extends State<FollowersScreen> {
       ),
       child: Row(
         children: [
-          // React: w-14 h-14 avatar
           AvatarWidget(
-            imageUrl: null,
-            name: follower['name'] as String,
+            imageUrl: follower.avatarUrl,
+            name: follower.name,
             size: 56,
           ),
           const SizedBox(width: 16),
-          // React: flex-1 text-right
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // React: text-[#1a1a2e] mb-1
                 Text(
-                  follower['name'] as String,
+                  follower.name,
                   style: AppTextStyles.body.copyWith(
                     color: theme.textTheme.bodyLarge?.color,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 4),
-                // React: text-sm text-[#64748b]
                 Text(
-                  follower['role'] as String,
+                  follower.role.name,
                   style: AppTextStyles.caption.copyWith(
                     color: AppColors.mutedForeground,
                   ),
@@ -112,61 +112,34 @@ class _FollowersScreenState extends State<FollowersScreen> {
               ],
             ),
           ),
-          // Follow button - gradient or outline depending on isFollowingBack
           InkWell(
             onTap: () {
-              setState(() {
-                follower['isFollowingBack'] = !isFollowingBack;
-              });
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    !isFollowingBack
-                        ? 'تمت المتابعة بنجاح'
-                        : 'تم إلغاء المتابعة',
-                  ),
-                  duration: const Duration(seconds: 1),
+                const SnackBar(
+                  content: Text('سيتم تفعيل المتابعة قريباً'),
+                  duration: Duration(seconds: 1),
                 ),
               );
             },
             borderRadius: BorderRadius.circular(12),
-            child: isFollowingBack
-                ? Container(
-                    height: 36,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                          color: isDark
-                              ? theme.dividerColor
-                              : const Color(0xFFE3F2FD),
-                          width: 2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      'متابَع',
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.mutedForeground,
-                      ),
-                    ),
-                  )
-                : Container(
-                    height: 36,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      gradient: AppColors.primaryGradient,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      'متابعة',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
+            child: Container(
+              height: 36,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                border: Border.all(
+                    color:
+                        isDark ? theme.dividerColor : const Color(0xFFE3F2FD),
+                    width: 2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                'متابَع',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+            ),
           ),
         ],
       ),

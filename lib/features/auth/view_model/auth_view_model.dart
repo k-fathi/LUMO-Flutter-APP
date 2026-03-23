@@ -131,7 +131,9 @@ class AuthViewModel extends ChangeNotifier {
 
   Future<String?> _getFcmToken() async {
     try {
-      return await FirebaseMessaging.instance.getToken();
+      return await FirebaseMessaging.instance
+          .getToken()
+          .timeout(const Duration(seconds: 3));
     } catch (e) {
       debugPrint('Failed to get FCM token: $e');
       return null;

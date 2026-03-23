@@ -137,7 +137,7 @@ class PatientProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void clearState() {
+  void resetState() {
     _patients = [];
     _joinRequests = [];
     _isLoading = false;

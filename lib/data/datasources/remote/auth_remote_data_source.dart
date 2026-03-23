@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import '../../../core/network/api_constants.dart';
 import '../../../core/network/dio_client.dart';
 import '../../models/auth/auth_models.dart';
@@ -14,6 +15,12 @@ abstract class AuthRemoteDataSource {
   Future<MessageResponse> forgotPassword(ForgotPasswordRequest request);
   Future<MessageResponse> verifyResetOtp(VerifyOtpRequest request);
   Future<MessageResponse> resetPassword(ResetPasswordRequest request);
+  Future<void> requestOtp(String email);
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  });
   Future<MessageResponse> logout();
 }
 
@@ -36,12 +43,33 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     return AuthResponse.fromJson(response.data as Map<String, dynamic>);
   }
 
-  // ── Register ───────────────────────────────
   @override
   Future<AuthResponse> register(RegisterRequest request) async {
+    final formData = FormData.fromMap(request.toJson());
+
+    if (request.avatarFilePath != null && request.avatarFilePath!.isNotEmpty) {
+      formData.files.add(MapEntry(
+        'profile_image',
+        await MultipartFile.fromFile(
+          request.avatarFilePath!,
+          filename: request.avatarFilePath!.split('/').last,
+        ),
+      ));
+    }
+
+    if (request.childPhotoPath != null && request.childPhotoPath!.isNotEmpty) {
+      formData.files.add(MapEntry(
+        'child_photo',
+        await MultipartFile.fromFile(
+          request.childPhotoPath!,
+          filename: request.childPhotoPath!.split('/').last,
+        ),
+      ));
+    }
+
     final response = await _dioClient.post(
       ApiConstants.register,
-      data: request.toJson(),
+      data: formData,
     );
     return AuthResponse.fromJson(response.data as Map<String, dynamic>);
   }
@@ -101,5 +129,26 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   Future<MessageResponse> logout() async {
     final response = await _dioClient.post(ApiConstants.logout);
     return MessageResponse.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  @override
+  Future<void> requestOtp(String email) async {
+    await _dioClient.post(ApiConstants.forgotPassword, data: {'email': email});
+  }
+
+  @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    await _dioClient.post(
+      ApiConstants.changePassword,
+      data: {
+        'current_password': currentPassword,
+        'new_password': newPassword,
+        'new_password_confirmation': confirmPassword,
+      },
+    );
   }
 }

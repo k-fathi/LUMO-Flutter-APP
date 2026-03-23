@@ -10,6 +10,7 @@ class ApiConstants {
   static const String resendOtp = '/auth/resend-otp';
   static const String verifyResetOtp = '/auth/verify-reset-otp';
   static const String resetPassword = '/auth/reset-password';
+  static const String changePassword = '/auth/change-password';
   static const String logout = '/auth/logout';
 
   // Profile Endpoints
@@ -18,6 +19,7 @@ class ApiConstants {
 
   // Community & Posts
   static const String homeFeed = '/home';
+  static const String exploreFeed = '/home/all';
   static const String myPosts = '/posts';
   static const String createPost = '/posts/create';
   static const String showPost = '/posts/{id}/show';
@@ -29,6 +31,7 @@ class ApiConstants {
   static const String postLikes = '/posts/{id}/likes';
   static const String postComments = '/posts/{id}/comments';
   static const String deleteComment = '/posts/comments/{id}'; // Note: uses POST with _method=DELETE
+  static const String toggleCommentLike = '/posts/comments/{id}/like';
 
   // Social & Search
   static const String toggleFollow = '/user/{id}/follow';

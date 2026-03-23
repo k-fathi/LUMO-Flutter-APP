@@ -19,6 +19,8 @@ abstract class ProfileRemoteDataSource {
     String? childMedicalCondition,
     String? childPhotoUrl,
   });
+  Future<List<UserModel>> getFollowers(int userId);
+  Future<List<UserModel>> getFollowing(int userId);
 }
 
 class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
@@ -33,6 +35,30 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
     final data = response.data as Map<String, dynamic>;
     final userData = data['user'] ?? data['data'] ?? data;
     return _parseUser(userData as Map<String, dynamic>);
+  }
+
+  @override
+  Future<List<UserModel>> getFollowers(int userId) async {
+    final response = await _dioClient.get(
+      ApiConstants.getFollowers.replaceFirst('{id}', userId.toString()),
+    );
+    final data = response.data as Map<String, dynamic>;
+    final list = (data['followers'] ?? data['data'] ?? []) as List;
+    return list
+        .map((item) => _parseUser(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<List<UserModel>> getFollowing(int userId) async {
+    final response = await _dioClient.get(
+      ApiConstants.getFollowing.replaceFirst('{id}', userId.toString()),
+    );
+    final data = response.data as Map<String, dynamic>;
+    final list = (data['followings'] ?? data['data'] ?? []) as List;
+    return list
+        .map((item) => _parseUser(item as Map<String, dynamic>))
+        .toList();
   }
 
   @override

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../data/models/doctor_model.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/chat_input_bar.dart';
 
@@ -38,7 +37,6 @@ class ChatConversation {
   });
 }
 
-/// ChatScreen (Screen 10) - Figma Spec
 ///
 /// Header: AppBar with User Avatar, Name, "Active now" status. Actions: Call/Video.
 /// Body: ListView (reversed: true) starting from the bottom.
@@ -94,30 +92,20 @@ class _ChatScreenState extends State<ChatScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         titleSpacing: 0,
-        title: Row(
-          children: [
-            // Avatar with online dot
-            GestureDetector(
-              onTap: () {
-                if (!conv.isAI) {
-                  final mockUser = DoctorModel(
-                    id: conv.id,
-                    email: 'doctor@demo.com',
-                    name: conv.userName,
-                    createdAt: DateTime.now(),
-                    updatedAt: DateTime.now(),
-                    specialization: 'طب نفسي أطفال',
-                    licenseNumber: '12345',
-                    yearsOfExperience: 5,
-                  );
-                  Navigator.pushNamed(
-                    context,
-                    '/profile',
-                    arguments: {'user': mockUser},
-                  );
-                }
-              },
-              child: Stack(
+        title: InkWell(
+          onTap: () {
+            if (!conv.isAI) {
+              Navigator.pushNamed(
+                context,
+                '/profile',
+                arguments: {'userId': conv.id},
+              );
+            }
+          },
+          child: Row(
+            children: [
+              // Avatar with online dot
+              Stack(
                 children: [
                   CircleAvatar(
                     radius: 18,
@@ -150,31 +138,31 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                 ],
               ),
-            ),
-            const SizedBox(width: 10),
-            // Name + status
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  conv.userName,
-                  style: AppTextStyles.label.copyWith(
-                    fontWeight: FontWeight.w600,
+              const SizedBox(width: 10),
+              // Name + status
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    conv.userName,
+                    style: AppTextStyles.label.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                Text(
-                  conv.isOnline ? 'متصل الآن' : 'غير متصل',
-                  style: AppTextStyles.caption.copyWith(
-                    fontSize: 11,
-                    color: conv.isOnline
-                        ? AppColors.online
-                        : AppColors.mutedForeground,
+                  Text(
+                    conv.isOnline ? 'متصل الآن' : 'غير متصل',
+                    style: AppTextStyles.caption.copyWith(
+                      fontSize: 11,
+                      color: conv.isOnline
+                          ? AppColors.online
+                          : AppColors.mutedForeground,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
         actions: [
           const SizedBox(width: 16),

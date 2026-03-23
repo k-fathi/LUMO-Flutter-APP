@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../view_model/profile_view_model.dart';
+import '../../../shared/providers/auth_provider.dart';
+import '../../../data/models/user_model.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/gradient_app_bar.dart';
@@ -8,31 +12,43 @@ import '../../../shared/widgets/avatar_widget.dart';
 ///
 /// React: Gradient header, rounded-2xl cards, gradient unfollow buttons
 class FollowingScreen extends StatefulWidget {
-  const FollowingScreen({super.key});
+  final int? userId;
+  const FollowingScreen({super.key, this.userId});
 
   @override
   State<FollowingScreen> createState() => _FollowingScreenState();
 }
 
 class _FollowingScreenState extends State<FollowingScreen> {
-  final List<Map<String, dynamic>> following = [
-    {'id': '1', 'name': 'يتابع 1', 'role': 'مستخدم', 'isFollowing': true},
-    {'id': '2', 'name': 'يتابع 2', 'role': 'طبيب', 'isFollowing': true},
-    {'id': '3', 'name': 'يتابع 3', 'role': 'مستخدم', 'isFollowing': true},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final effectiveUserId =
+          widget.userId ?? context.read<AuthProvider>().currentUser?.id;
+      if (effectiveUserId != null) {
+        context.read<ProfileViewModel>().loadFollowing(effectiveUserId);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final profileViewModel = context.watch<ProfileViewModel>();
+    final following = profileViewModel.followingList;
     final theme = Theme.of(context);
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: const GradientAppBar(title: 'المتابَعون'),
-      body: following.isEmpty
+      body: profileViewModel.isListLoading
+          ? const Center(child: CircularProgressIndicator())
+          : following.isEmpty
           ? Center(
               child: Text(
-                'لا تتابع أحد بعد',
+                'لا تتابع أحداً بعد',
                 style: AppTextStyles.body.copyWith(
-                  color: const Color(0xFF64748B),
+                  color: AppColors.mutedForeground,
                 ),
               ),
             )
@@ -50,10 +66,9 @@ class _FollowingScreenState extends State<FollowingScreen> {
     );
   }
 
-  Widget _buildFollowingCard(Map<String, dynamic> user) {
+  Widget _buildFollowingCard(UserModel user) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final isFollowing = user['isFollowing'] as bool;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -64,7 +79,7 @@ class _FollowingScreenState extends State<FollowingScreen> {
             color: isDark ? theme.dividerColor : const Color(0xFFE3F2FD)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 4,
             offset: const Offset(0, 1),
           ),
@@ -73,8 +88,8 @@ class _FollowingScreenState extends State<FollowingScreen> {
       child: Row(
         children: [
           AvatarWidget(
-            imageUrl: null,
-            name: user['name'] as String,
+            imageUrl: user.avatarUrl,
+            name: user.name,
             size: 56,
           ),
           const SizedBox(width: 16),
@@ -83,7 +98,7 @@ class _FollowingScreenState extends State<FollowingScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  user['name'] as String,
+                  user.name,
                   style: AppTextStyles.body.copyWith(
                     color: theme.textTheme.bodyLarge?.color,
                     fontWeight: FontWeight.w600,
@@ -91,7 +106,7 @@ class _FollowingScreenState extends State<FollowingScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  user['role'] as String,
+                  user.role.name,
                   style: AppTextStyles.caption.copyWith(
                     color: AppColors.mutedForeground,
                   ),
@@ -99,20 +114,12 @@ class _FollowingScreenState extends State<FollowingScreen> {
               ],
             ),
           ),
-          // Unfollow button
           InkWell(
             onTap: () {
-              setState(() {
-                user['isFollowing'] = !isFollowing;
-              });
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    !isFollowing
-                        ? 'تم البدء بمتابعة ${user['name']}'
-                        : 'تم إلغاء متابعة ${user['name']}',
-                  ),
-                  duration: const Duration(seconds: 1),
+                const SnackBar(
+                  content: Text('سيتم تفعيل إلغاء المتابعة قريباً'),
+                  duration: Duration(seconds: 1),
                 ),
               );
             },
@@ -122,21 +129,15 @@ class _FollowingScreenState extends State<FollowingScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
                 border: Border.all(
-                    color: isDark
-                        ? theme.dividerColor
-                        : (isFollowing
-                            ? const Color(0xFFE3F2FD)
-                            : AppColors.primary),
+                    color: isDark ? theme.dividerColor : const Color(0xFFE3F2FD),
                     width: 2),
                 borderRadius: BorderRadius.circular(12),
-                color: isFollowing ? Colors.transparent : AppColors.primary,
               ),
               alignment: Alignment.center,
               child: Text(
-                isFollowing ? 'إلغاء المتابعة' : 'متابعة',
+                'متابَع',
                 style: AppTextStyles.caption.copyWith(
-                  color: isFollowing ? AppColors.mutedForeground : Colors.white,
-                  fontWeight: isFollowing ? FontWeight.normal : FontWeight.w600,
+                  color: AppColors.mutedForeground,
                 ),
               ),
             ),

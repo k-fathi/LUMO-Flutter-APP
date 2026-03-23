@@ -9,13 +9,6 @@ import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/providers/auth_provider.dart';
 import '../../../shared/mixins/form_validation_mixin.dart';
 
-/// Forgot Password Screen - Pixel-perfect match to React ForgotPasswordScreen
-///
-/// React layout:
-/// - bg-gradient-to-b from-[#E3F2FD] to-white flex flex-col
-/// - Header: px-6 pt-12 pb-8 with ArrowLeft back button
-/// - Phone input (not email)
-/// - Help text card at bottom
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
 
@@ -81,7 +74,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        // React: bg-gradient-to-b from-[#E3F2FD] to-white
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFFE3F2FD), Colors.white],
@@ -93,51 +85,44 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Header - React: px-6 pt-12 pb-8
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 48, 24, 32),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Back button - React: text-[#2196F3] mb-6
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
                       child: const Icon(
-                        Icons.arrow_back,
+                        Icons.arrow_back_ios_rounded,
                         size: 24,
-                        color: Color(0xFF2196F3),
+                        color: AppColors.primary,
                       ),
                     ),
                     const SizedBox(height: 24),
-                    // React: text-3xl text-[#1a1f36] mb-2 text-right
                     Text(
                       'نسيت كلمة المرور؟',
                       style: AppTextStyles.h1.copyWith(
-                        color: const Color(0xFF1A1F36),
-                        fontSize: 30, // text-3xl
+                        color: Theme.of(context).textTheme.displayLarge?.color,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    // React: text-[#64748b] text-right
                     Text(
                       'أدخل رقم هاتفك وسنرسل لك رمز التحقق',
                       style: AppTextStyles.body.copyWith(
-                        color: const Color(0xFF64748B),
+                        color: Theme.of(context).hintColor,
                       ),
                     ),
                   ],
                 ),
               ),
 
-              // Form - React: flex-1 px-6
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Phone field - React: space-y-6
                       AppTextField(
                         controller: _phoneController,
                         label: 'رقم الهاتف',
@@ -147,7 +132,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                       ),
                       const SizedBox(height: 24),
 
-                      // Submit button - React: w-full h-14 rounded-2xl bg-gradient-to-r from-[#2196F3] to-[#1565C0]
                       AppButton(
                         text:
                             _isLoading ? 'جاري الإرسال...' : 'إرسال رمز التحقق',
@@ -160,13 +144,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
 
                       const SizedBox(height: 32),
 
-                      // Help Text - React: mt-8 p-4 bg-white rounded-2xl border border-[#E3F2FD]
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius:
-                              BorderRadius.circular(16), // rounded-2xl
+                          borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: const Color(0xFFE3F2FD),
                           ),
@@ -174,7 +156,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                         child: Text(
                           'سيتم إرسال رمز التحقق عبر رسالة نصية إلى رقم هاتفك. قد يستغرق الأمر بضع دقائق.',
                           style: AppTextStyles.bodySmall.copyWith(
-                            color: const Color(0xFF64748B),
+                            color: Theme.of(context).hintColor,
                           ),
                           textAlign: TextAlign.right,
                         ),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../shared/providers/auth_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/gradient_app_bar.dart';
@@ -16,7 +18,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  bool _isLoading = false;
+  // Removed local _isLoading as it's now in AuthProvider
 
   void _handleChangePassword() async {
     final l10n = AppLocalizations.of(context)!;
@@ -38,32 +40,41 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    final authProvider = context.read<AuthProvider>();
 
-    // Simulate API call to change password
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      await authProvider.changePassword(
+        currentPassword: _oldPasswordController.text,
+        newPassword: _newPasswordController.text,
+        confirmPassword: _confirmPasswordController.text,
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _isLoading = false;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(l10n.passwordChangedSuccessfully),
-        backgroundColor: AppColors.success,
-      ),
-    );
-    Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.passwordChangedSuccessfully),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authProvider.errorMessage ?? l10n.errorOccurred),
+          backgroundColor: AppColors.statusCritical,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final authProvider = context.watch<AuthProvider>();
+    final isLoading = authProvider.isLoading;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -94,7 +105,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               width: double.infinity,
               height: 56, // h-14 to match the standard app button size
               child: ElevatedButton(
-                onPressed: _isLoading ? null : _handleChangePassword,
+                onPressed: isLoading ? null : _handleChangePassword,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
@@ -102,7 +113,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                child: _isLoading
+                child: isLoading
                     ? const SizedBox(
                         width: 24,
                         height: 24,

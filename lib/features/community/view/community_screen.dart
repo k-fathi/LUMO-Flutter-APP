@@ -11,13 +11,7 @@ import '../../../shared/widgets/shimmer_loading.dart';
 import '../../../shared/providers/auth_provider.dart';
 import '../../../l10n/app_localizations.dart';
 
-/// CommunityScreen (Home) - Figma Screen 6
-///
-/// Assembly:
-/// - Sticky CommunityHeader
-/// - QuickPostWidget
-/// - ListView of PostCards with mock data
-/// - BG: #F8FAFC (light grey-blue)
+
 class CommunityScreen extends StatefulWidget {
   const CommunityScreen({super.key});
 
@@ -63,11 +57,11 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
 
   Future<void> _handleRefresh() async {
     final viewModel = context.read<CommunityViewModel>();
-    await Future.wait([
-      viewModel.loadHomeFeed(),
-      viewModel.loadFollowingFeed(),
-      viewModel.loadMyPosts(),
-    ]);
+    if (_tabController.index == 0) {
+      await viewModel.loadExploreFeed();
+    } else {
+      await viewModel.loadFollowingFeed();
+    }
   }
 
 
@@ -127,7 +121,7 @@ class _CommunityFeedWrapper extends StatelessWidget {
   Widget build(BuildContext context) {
     return RefreshIndicator(
       onRefresh: () async {
-        await context.read<CommunityViewModel>().loadHomeFeed();
+        await context.read<CommunityViewModel>().loadExploreFeed();
       },
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -137,7 +131,7 @@ class _CommunityFeedWrapper extends StatelessWidget {
           ),
           Consumer<CommunityViewModel>(
             builder: (context, viewModel, child) {
-              final posts = viewModel.posts;
+              final posts = viewModel.explorePosts;
               
               // Show shimmer if loading OR if not yet initialized (first load)
               if ((viewModel.isLoading || !viewModel.isInitialized) && posts.isEmpty) {
@@ -170,7 +164,7 @@ class _CommunityFeedWrapper extends StatelessWidget {
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton(
-                            onPressed: () => viewModel.loadHomeFeed(),
+                            onPressed: () => viewModel.loadExploreFeed(),
                             child: const Text('إعادة المحاولة'),
                           ),
                         ],

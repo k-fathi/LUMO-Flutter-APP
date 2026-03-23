@@ -222,7 +222,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       decoration: BoxDecoration(
         color: isActive
             ? AppColors.primary
-            : AppColors.secondary, // Figma: #2196F3 vs #E3F2FD
+            : AppColors.secondary,
         borderRadius: BorderRadius.circular(4),
       ),
     );

@@ -7,18 +7,10 @@ import 'dart:io';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/avatar_widget.dart';
 
 class CreatePostScreen extends StatefulWidget {
-  final int? postId;
-  final String? initialContent;
-  final String? initialImageUrl;
-
-  const CreatePostScreen({
-    super.key,
-    this.postId,
-    this.initialContent,
-    this.initialImageUrl,
-  });
+  const CreatePostScreen({super.key});
 
   @override
   State<CreatePostScreen> createState() => _CreatePostScreenState();
@@ -27,13 +19,11 @@ class CreatePostScreen extends StatefulWidget {
 class _CreatePostScreenState extends State<CreatePostScreen> {
   late final TextEditingController _contentController;
   File? _selectedImage;
-  bool _isEditing = false;
 
   @override
   void initState() {
     super.initState();
-    _isEditing = widget.postId != null;
-    _contentController = TextEditingController(text: widget.initialContent);
+    _contentController = TextEditingController();
   }
 
   @override
@@ -59,23 +49,13 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     final authProvider = context.read<AuthProvider>();
     final user = authProvider.currentUser;
     final viewModel = context.read<CommunityViewModel>();
-    bool success;
-
-    if (_isEditing) {
-      await viewModel.updatePost(
-        widget.postId!,
-        _contentController.text.trim(),
-      );
-      success = viewModel.errorMessage == null;
-    } else {
-      success = await viewModel.createPost(
-        content: content,
-        imagePath: _selectedImage?.path,
-        currentUserName: user?.name,
-        currentUserAvatar: user?.avatarUrl,
-        currentUserId: user?.id,
-      );
-    }
+    final success = await viewModel.createPost(
+      content: content,
+      imagePath: _selectedImage?.path,
+      currentUserName: user?.name,
+      currentUserAvatar: user?.avatarUrl,
+      currentUserId: user?.id,
+    );
 
     if (mounted) {
       if (success) {
@@ -100,7 +80,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'تعديل المنشور' : 'إنشاء منشور'),
+        title: const Text('إنشاء منشور'),
         actions: [
           if (viewModel.isLoading)
             const Center(
@@ -117,7 +97,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             TextButton(
               onPressed: _handleSubmit,
               child: Text(
-                _isEditing ? l10n.save : l10n.post,
+                l10n.post,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -130,12 +110,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  backgroundImage: user?.avatarUrl != null
-                      ? NetworkImage(user!.avatarUrl!)
-                      : null,
-                  child:
-                      user?.avatarUrl == null ? const Icon(Icons.person) : null,
+                AvatarWidget(
+                  imageUrl: user?.avatarUrl,
+                  size: 40,
                 ),
                 const SizedBox(width: 12),
                 Text(
@@ -182,11 +159,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                     ),
                   ),
                 ],
-              )
-            else if (widget.initialImageUrl != null && !_isEditing)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(widget.initialImageUrl!),
               ),
             const SizedBox(height: 16),
             ListTile(

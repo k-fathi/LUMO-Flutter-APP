@@ -84,7 +84,9 @@ class DependencyInjection {
 
     // Network & API
     getIt.registerLazySingleton<Dio>(() => Dio());
-    getIt.registerLazySingleton<DioClient>(() => DioClient(getIt<Dio>()));
+    getIt.registerLazySingleton<DioClient>(
+      () => DioClient(getIt<Dio>(), getIt<SharedPreferences>()),
+    );
 
     getIt.registerLazySingleton<AuthRemoteDataSource>(
       () => AuthRemoteDataSourceImpl(getIt<DioClient>()),

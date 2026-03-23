@@ -5,8 +5,13 @@ import 'api_exception.dart';
 
 class DioClient {
   final Dio _dio;
+  final SharedPreferences _prefs;
 
-  DioClient(this._dio) {
+  DioClient(this._dio, this._prefs) {
+    _setupDio();
+  }
+
+  void _setupDio() {
     _dio.options
       ..baseUrl = ApiConstants.baseUrl
       ..connectTimeout = const Duration(seconds: 30)
@@ -21,10 +26,8 @@ class DioClient {
 
     _dio.interceptors.add(
       InterceptorsWrapper(
-        onRequest: (options, handler) async {
-          // Retrieve token and inject into headers
-          final prefs = await SharedPreferences.getInstance();
-          final token = prefs.getString('auth_token');
+        onRequest: (options, handler) {
+          final token = _prefs.getString('auth_token');
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }

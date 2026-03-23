@@ -49,11 +49,11 @@ class AppTheme {
       // Input decoration theme
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.inputBackground, // Figma: #E3F2FD
+        fillColor: AppColors.inputBackground,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16), // Figma: rounded-2xl
+          borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: AppColors.border),
         ),
         enabledBorder: OutlineInputBorder(
@@ -84,9 +84,9 @@ class AppTheme {
           textStyle: AppTextStyles.button.copyWith(fontWeight: FontWeight.bold),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16)), // Figma: rounded-2xl
+              borderRadius: BorderRadius.circular(16)),
           elevation:
-              0, // Figma often uses flat or minimal shadow, adjusting to match modern flat look
+              0,
           shadowColor: AppColors.primary.withValues(alpha: 0.3),
           minimumSize: const Size(double.infinity, 56),
         ),
@@ -122,7 +122,7 @@ class AppTheme {
         elevation:
             0, // Reset to 0, use custom shadows where needed or slight elevation
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16), // Figma: rounded-2xl
+          borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: AppColors.border, width: 1),
         ),
         margin: const EdgeInsets.all(0),

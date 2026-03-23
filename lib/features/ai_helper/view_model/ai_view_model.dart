@@ -119,4 +119,11 @@ class AIViewModel extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
   }
+
+  void resetState() {
+    _messages.clear();
+    _isSending = false;
+    _errorMessage = null;
+    notifyListeners();
+  }
 }

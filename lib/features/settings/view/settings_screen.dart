@@ -243,13 +243,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: ListTile(
                 onTap: () async {
                   // 1. Clear memory state of all major providers
-                  context.read<PatientProvider>().clearState();
-                  context.read<CommunityProvider>().clearState();
+                  context.read<PatientProvider>().resetState();
+                  context.read<CommunityProvider>().resetState();
                   context.read<UserProvider>().clearUser();
 
                   // 2. Clear ViewModels
-                  getIt<ChatViewModel>().clearState();
-                  getIt<ProfileViewModel>().logout(); // Clears profile state
+                  getIt<ChatViewModel>().resetState();
+                  getIt<ProfileViewModel>().resetState(); // Clears profile state
 
                   // 3. Clear auth and local caches
                   await context.read<AuthProvider>().logout();

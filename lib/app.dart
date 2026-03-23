@@ -9,10 +9,30 @@ import 'l10n/app_localizations.dart';
 import 'shared/providers/theme_provider.dart';
 import 'shared/providers/locale_provider.dart';
 
+import 'core/di/dependency_injection.dart';
+import 'shared/providers/auth_provider.dart';
+import 'features/community/view_model/community_view_model.dart';
 import 'features/session/view/floating_timer_overlay.dart';
 
-class LumoAIApp extends StatelessWidget {
+class LumoAIApp extends StatefulWidget {
   const LumoAIApp({super.key});
+
+  @override
+  State<LumoAIApp> createState() => _LumoAIAppState();
+}
+
+class _LumoAIAppState extends State<LumoAIApp> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = context.read<AuthProvider>();
+      authProvider.setLogoutCallback(() {
+        // CommunityViewModel is the only Singleton — reset it manually
+        getIt<CommunityViewModel>().resetState();
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
