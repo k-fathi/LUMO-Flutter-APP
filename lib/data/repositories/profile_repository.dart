@@ -173,6 +173,12 @@ class ProfileRepository {
 
   // ==================== FOLLOW SYSTEM ====================
 
+  Future<void> toggleFollow(int userId) async {
+    if (_remoteDataSource != null) {
+      await _remoteDataSource!.toggleFollow(userId);
+    }
+  }
+
   Future<void> followUser(int followerId, int followingId) async {
     await _firebaseDataSource.followUser(
         followerId.toString(), followingId.toString());

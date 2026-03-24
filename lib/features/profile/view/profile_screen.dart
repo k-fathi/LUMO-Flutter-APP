@@ -27,8 +27,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  int _followersDelta = 0;
-
   @override
   void initState() {
     super.initState();
@@ -43,11 +41,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
 
       if (targetUserId != null) {
-        context.read<ProfileViewModel>().loadProfile(targetUserId).then((_) {
-          if (mounted) {
-            setState(() => _followersDelta = 0);
-          }
-        });
+        context.read<ProfileViewModel>().loadProfile(targetUserId);
       }
     });
   }
@@ -76,8 +70,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             .where((p) => p.userId == targetUserId)
             .toList();
 
-    final baseFollowers = profileViewModel.user?.followersCount ?? 0;
-    final followersShow = baseFollowers + _followersDelta;
+    final followersShow = profileViewModel.user?.followersCount ?? 0;
     final followingShow = profileViewModel.user?.followingCount ?? 0;
 
     return Scaffold(
@@ -150,57 +143,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     isFollowing: targetUserId != null &&
                         communityViewModel.isFollowing(targetUserId),
                     onToggleFollow: () async {
-                      if (targetUserId == null) return;
-                      final wasFollowing = communityViewModel.isFollowing(targetUserId);
+                      final currentUserId =
+                          context.read<AuthProvider>().currentUser?.id;
+                      if (targetUserId != null && currentUserId != null) {
+                        final wasFollowing =
+                            communityViewModel.isFollowing(targetUserId);
 
-                      // Optimistic counter
-                      setState(() => _followersDelta += wasFollowing ? -1 : 1);
+                        // 1. Optimistic UI update for count in ProfileViewModel
+                        profileViewModel.updateFollowerCount(!wasFollowing);
 
-                      try {
-                        await context.read<CommunityViewModel>().toggleFollow(
-                          targetUserId,
-                          currentUserId: currentUser?.id,
-                          onFollowingCountChanged: (nowFollowing) {
-                            // حدّث following count في بروفايل الـ current user
-                            final myId = context.read<AuthProvider>().currentUser?.id;
-                            if (myId != null && mounted) {
-                              context.read<ProfileViewModel>().loadProfile(myId);
-                            }
-                          },
-                        );
+                        try {
+                          // 2. Centralized toggle in CommunityViewModel
+                          await context.read<CommunityViewModel>().toggleFollow(
+                              targetUserId,
+                              currentUserId: currentUserId);
 
-                        // Refresh notifications list (backend يبعت الـ FCM)
-                        if (!wasFollowing && context.mounted) {
-                          context.read<NotificationProvider>().fetchNotifications();
-                        }
+                          // 3. Notify
+                          if (!wasFollowing) {
+                            context
+                                .read<NotificationProvider>()
+                                .sendFollowNotification(
+                                  targetUserId: targetUserId,
+                                  followerName: context
+                                          .read<AuthProvider>()
+                                          .currentUser
+                                          ?.name ??
+                                      '',
+                                );
+                          }
 
-                        // Sync actual count
-                        if (context.mounted) {
-                          await context.read<ProfileViewModel>().loadProfile(targetUserId);
-                          if (!context.mounted) return;
-                          
-                          setState(() => _followersDelta = 0);
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(!wasFollowing
-                                  ? 'تم متابعة ${user?.name}'
-                                  : 'تم إلغاء متابعة ${user?.name}'),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        // Revert
-                        if (context.mounted) {
-                          setState(() => _followersDelta += wasFollowing ? 1 : -1);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('فشل تحديث المتابعة، حاول مجدداً'),
-                              backgroundColor: Colors.red,
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
+                          // 4. Feedback
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(!wasFollowing
+                                    ? 'تم متابعة ${user?.name}'
+                                    : 'تم إلغاء متابعة ${user?.name}'),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          // 5. Revert on failure
+                          profileViewModel.updateFollowerCount(wasFollowing);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('فشل تحديث حالة المتابعة: $e')),
+                            );
+                          }
                         }
                       }
                     },
@@ -501,11 +491,19 @@ class _ProfileHeader extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   elevation: 0,
                 ),
-                child: Text(l10n.editProfile),
+                child: Text(
+                  l10n.editProfile,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             )
           else
@@ -516,60 +514,56 @@ class _ProfileHeader extends StatelessWidget {
                     onPressed: onToggleFollow,
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
-                          isFollowing ? theme.dividerColor : AppColors.primary,
+                          isFollowing ? Colors.grey[200] : AppColors.primary,
                       foregroundColor:
-                          isFollowing ? theme.textTheme.bodyLarge?.color : Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          isFollowing ? Colors.black87 : Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       elevation: 0,
                     ),
-                    child: Text(isFollowing ? 'متابع' : l10n.follow),
+                    child: Text(
+                      isFollowing ? l10n.unfollow : l10n.follow,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () async {
+                    onPressed: () {
                       if (userId != null) {
-                        try {
-                          final chatViewModel = context.read<ChatViewModel>();
-                          final chatRoomId = await chatViewModel.startChat(userId!);
-
-                          if (context.mounted) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ChangeNotifierProvider.value(
-                                  value: chatViewModel,
-                                  child: ChatRoomScreen(
-                                    chatRoomId: chatRoomId,
-                                    otherUserName: name,
-                                    otherUserAvatar: photoUrl,
-                                    otherUserId: userId!.toString(),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('فشل بدء المحادثة: $e'),
-                                backgroundColor: Colors.red,
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                          }
-                        }
+                        context.read<ChatViewModel>().createChat(userId!);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ChatRoomScreen(
+                              receiverId: userId!,
+                              receiverName: name,
+                            ),
+                          ),
+                        );
                       }
                     },
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       side: const BorderSide(color: AppColors.primary),
                     ),
-                    child: Text(l10n.message),
+                    child: Text(
+                      l10n.message,
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -586,9 +580,10 @@ class _ProfileHeader extends StatelessWidget {
           count.toString(),
           style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
         ),
+        const SizedBox(height: 4),
         Text(
           label,
-          style: AppTextStyles.caption,
+          style: AppTextStyles.caption.copyWith(color: Colors.grey),
         ),
       ],
     );

@@ -21,6 +21,7 @@ abstract class ProfileRemoteDataSource {
   });
   Future<List<UserModel>> getFollowers(int userId);
   Future<List<UserModel>> getFollowing(int userId);
+  Future<void> toggleFollow(int userId);
 }
 
 class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
@@ -57,6 +58,13 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
     return list
         .map((item) => _parseUser(item as Map<String, dynamic>))
         .toList();
+  }
+
+  @override
+  Future<void> toggleFollow(int userId) async {
+    await _dioClient.post(
+      ApiConstants.toggleFollow.replaceFirst('{id}', userId.toString()),
+    );
   }
 
   @override

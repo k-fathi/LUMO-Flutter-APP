@@ -31,6 +31,17 @@ class ProfileViewModel extends ChangeNotifier {
   int get followers => _user?.followersCount ?? 0;
   int get following => _user?.followingCount ?? 0;
 
+  /// Update the local user's follower count optimistically
+  void updateFollowerCount(bool isFollowing) {
+    if (_user != null) {
+      final currentCount = _user!.followersCount ?? 0;
+      _user = _user!.copyWith(
+        followersCount: isFollowing ? currentCount + 1 : (currentCount > 0 ? currentCount - 1 : 0),
+      );
+      notifyListeners();
+    }
+  }
+
   /// Load user profile - BUG FIX #4: Prevent infinite rebuilds with proper state management
   Future<void> loadProfile(int userId) async {
     // Skip if already loading this exact user to prevent StackOverflow

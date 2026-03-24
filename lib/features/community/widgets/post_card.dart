@@ -43,7 +43,6 @@ class _PostCardState extends State<PostCard> {
     final currentUser = authProvider.currentUser;
     final currentUserId = currentUser?.id ?? 0;
     final isOwner = currentUserId != 0 && post.userId == currentUserId;
-    final isTargetUserCurrentUser = post.userId == currentUserId && post.userId != 0;
 
     // --- الفلتر الذكي الصارم ---
     String displayName = post.userName;
@@ -82,7 +81,6 @@ class _PostCardState extends State<PostCard> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          // التحويل للديتيلز عند الضغط على البوست نفسه
           onTap: () {
             Navigator.pushNamed(context, RouteNames.postDetail, arguments: post);
           },
@@ -94,7 +92,6 @@ class _PostCardState extends State<PostCard> {
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
                 child: Row(
                   children: [
-                    // 1. الصورة (فيها خاصية التحويل للبروفايل)
                     AvatarWidget(
                       size: 40,
                       imageUrl: displayAvatar,
@@ -102,7 +99,6 @@ class _PostCardState extends State<PostCard> {
                     ),
                     const SizedBox(width: 12),
                     
-                    // 2. الاسم والتاريخ (فيهم خاصية التحويل للبروفايل)
                     Expanded(
                       child: GestureDetector(
                         onTap: () => _navigateToProfile(context, post),
@@ -121,7 +117,6 @@ class _PostCardState extends State<PostCard> {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                // 3. الـ Badge بتاع (دكتور / ولي أمر)
                                 if (post.userRole != null)
                                   Container(
                                     margin: const EdgeInsetsDirectional.only(start: 6),
@@ -158,7 +153,6 @@ class _PostCardState extends State<PostCard> {
                       ),
                     ),
 
-                    // التعديل والحذف أو زرار المتابعة
                     if (isOwner)
                       PopupMenuButton<String>(
                         icon: const Icon(Icons.more_horiz_rounded, color: Colors.grey),
@@ -197,33 +191,39 @@ class _PostCardState extends State<PostCard> {
                           ),
                         ],
                       )
-                    else if (!widget.hideFollowButton && post.userId != 0 && !isTargetUserCurrentUser)
+                    else if (!widget.hideFollowButton && post.userId != 0 && post.userId != currentUserId)
                       Consumer<CommunityViewModel>(
                         builder: (context, viewModel, child) {
                           final isFollowing = viewModel.isFollowing(post.userId);
+
                           return Container(
                             margin: const EdgeInsetsDirectional.only(start: 8),
                             child: TextButton(
                               onPressed: () async {
                                 try {
+                                  final wasFollowing = isFollowing;
                                   await viewModel.toggleFollow(
                                     post.userId,
                                     currentUserId: currentUserId,
                                   );
-                                  if (context.mounted && !isFollowing) {
-                                    context.read<NotificationProvider>().sendFollowNotification(
-                                      targetUserId: post.userId,
-                                      followerName: authProvider.currentUser?.name ?? '',
-                                    );
+                                  if (!wasFollowing && post.userId != 0) {
+                                    Future.microtask(() {
+                                      if (context.mounted) {
+                                        context
+                                            .read<NotificationProvider>()
+                                            .sendFollowNotification(
+                                              targetUserId: post.userId,
+                                              followerName:
+                                                  authProvider.currentUser?.name ??
+                                                      '',
+                                            );
+                                      }
+                                    });
                                   }
                                 } catch (e) {
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('فشل تحديث المتابعة'),
-                                        backgroundColor: Colors.red,
-                                        behavior: SnackBarBehavior.floating,
-                                      ),
+                                      SnackBar(content: Text(e.toString())),
                                     );
                                   }
                                 }
@@ -234,10 +234,10 @@ class _PostCardState extends State<PostCard> {
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
                               child: Text(
-                                isFollowing ? 'متابَع ✓' : l10n.follow,
+                                isFollowing ? l10n.unfollow : l10n.follow,
                                 style: TextStyle(
                                   color: isFollowing ? Colors.grey : AppColors.primary,
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: isFollowing ? FontWeight.normal : FontWeight.bold,
                                   fontSize: 13,
                                 ),
                               ),
@@ -249,7 +249,6 @@ class _PostCardState extends State<PostCard> {
                 ),
               ),
 
-              // Post Content
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: Column(
@@ -282,7 +281,6 @@ class _PostCardState extends State<PostCard> {
                 ),
               ),
 
-              // Footer 
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 child: Row(
@@ -301,7 +299,6 @@ class _PostCardState extends State<PostCard> {
                         Navigator.pushNamed(context, RouteNames.postDetail, arguments: post);
                       },
                     ),
-                    // 4. تم مسح زرار المشاركة (Share) نهائياً
                   ],
                 ),
               ),

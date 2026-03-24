@@ -248,7 +248,7 @@ class CommunityViewModel extends ChangeNotifier {
 
   Future<bool> createPost({
     required String content,
-    String? imagePath,
+    required String? imagePath,
     String? currentUserName,
     String? currentUserAvatar,
     int? currentUserId,
@@ -355,60 +355,17 @@ class CommunityViewModel extends ChangeNotifier {
       await _repository.toggleLike(postId);
     } catch (e) {
       _updatePostEverywhere(post);
-      _errorMessage = 'فشل التفاعل مع المنشور';
+      _errorMessage = 'فشل التفاعل مع المنشور: ${e.toString()}';
       _safeNotify();
     }
   }
 
-  Future<PostModel?> fetchPostById(int postId) async {
-    try {
-      final post = await _repository.getPostById(postId);
-      _updatePostEverywhere(post);
-      return post;
-    } catch (e) {
-      debugPrint('Error fetching post by ID: $e');
-      return null;
-    }
-  }
-
-  Future<void> fetchComments(int postId) async {
-    _isLoading = true;
-    _safeNotify();
-    try {
-      _comments = await _repository.getComments(postId);
-      _isLoading = false;
-      _safeNotify();
-    } catch (e) {
-      _errorMessage = 'فشل تحميل التعليقات';
-      _isLoading = false;
-      _safeNotify();
-    }
-  }
-
-  Future<void> addComment(int postId, String content, {int? parentId}) async {
-    try {
-      await _repository.addComment(postId, content, parentId: parentId);
-      // Since repository returns void, we refresh comments to show the new one
-      await fetchComments(postId);
-      
-      final post = findPostById(postId);
-      if (post != null) {
-        _updatePostEverywhere(post.copyWith(commentsCount: post.commentsCount + 1));
-      }
-      
-      _safeNotify();
-    } catch (e) {
-      _errorMessage = 'فشل إضافة التعليق';
-      _safeNotify();
-    }
-  }
-
-  Future<void> toggleCommentLike(int commentId, {int? currentUserId}) async {
+  Future<void> toggleCommentLike(int commentId) async {
     final index = _comments.indexWhere((c) => c.id == commentId);
     if (index == -1) return;
 
     final comment = _comments[index];
-    final isLiked = comment.isLikedBy(currentUserId);
+    final isLiked = comment.isLiked;
     
     try {
       final updatedComment = comment.copyWith(
@@ -454,70 +411,48 @@ class CommunityViewModel extends ChangeNotifier {
     _safeNotify();
   }
 
-  // Social - BUG FIX #2, #3, #4, #5, #6: Complete refactor with optimistic UI, global state sync, rollback
-  Future<void> toggleFollow(int userId, {int? currentUserId, Function(bool isFollowing)? onFollowingCountChanged}) async {
-    final isFollowing = _followedUserIds.contains(userId);
-    
-    // STEP 1: Optimistic UI update (immediate visual feedback)
-    if (isFollowing) {
-      _followedUserIds.remove(userId);
-    } else {
+  // Social
+  Future<void> toggleFollow(int userId, {int? currentUserId}) async {
+    final wasFollowing = _followedUserIds.contains(userId);
+    final newFollowingState = !wasFollowing;
+
+    // 1. Optimistic UI Update
+    if (newFollowingState) {
       _followedUserIds.add(userId);
+    } else {
+      _followedUserIds.remove(userId);
     }
+
+    // Optimistically update the following feed
+    if (!newFollowingState) {
+      _followingPosts.removeWhere((p) => p.userId == userId);
+    }
+
     _safeNotify();
 
-    // Notify caller about the optimistic change
-    onFollowingCountChanged?.call(!isFollowing);
-
     try {
-      // STEP 2: Call REST API
-      await _repository.toggleFollow(userId, currentUserId: currentUserId, isFollowing: isFollowing);
+      // 2. Call API with the intended state for Firebase sync
+      await _repository.toggleFollow(userId,
+          currentUserId: currentUserId, isFollowing: newFollowingState);
 
-      // STEP 3: Delayed background refresh to sync backend state
-      // Give backend time to propagate, then reload following users
-      final optimisticIds = List<int>.from(_followedUserIds);
-      Future.delayed(const Duration(seconds: 2), () async {
-        if (_isDisposed) return;
-        try {
-          final followingUsers = await _repository.getFollowingUsers();
-          if (_isDisposed) return;
-          final serverIds = followingUsers.map((u) => u.id).toList();
-          
-          // Merge: use server data but preserve any optimistic adds not yet reflected
-          _followedUserIds = serverIds;
-          // If we optimistically added userId and server doesn't have it yet, keep it
-          for (final id in optimisticIds) {
-            if (!_followedUserIds.contains(id)) {
-              _followedUserIds.add(id);
-            }
-          }
-
-          // Update following feed if needed
-          final feed = await _repository.getHomeFeed(page: 1);
-          if (_isDisposed) return;
-          _followingPosts = feed
-              .where((post) =>
-                  _followedUserIds.contains(post.userId) ||
-                  (_currentUserId != null && post.userId == _currentUserId))
-              .toList();
-          _safeNotify();
-        } catch (_) {
-          // Silently fail — the optimistic state is still valid
-        }
-      });
+      // 3. Silent background refresh of following feed
+      _loadFollowingFeedInternal(page: 1);
+      
+      // Also refresh following list to ensure _followedUserIds is accurate
+      final followingUsers = await _repository.getFollowingUsers();
+      _followedUserIds = followingUsers.map((u) => u.id).toList();
+      _safeNotify();
     } catch (e) {
-      // STEP 4: Rollback on failure - revert optimistic update
-      if (isFollowing) {
+      // 4. Graceful Revert on Failure
+      if (wasFollowing) {
         _followedUserIds.add(userId);
       } else {
         _followedUserIds.remove(userId);
       }
       
-      // Notify caller about roll-back
-      onFollowingCountChanged?.call(isFollowing);
-      
-      _errorMessage = 'فشل متابعة المستخدم: ${e.toString()}';
+      _errorMessage = 'فشل تحديث حالة المتابعة: ${e.toString()}';
       _safeNotify();
+      rethrow; // Rethrow so UI can show snackbar
     }
   }
 

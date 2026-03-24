@@ -78,6 +78,9 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
             // ── Sticky Header ─────────────────────────────────
             const CommunityHeader(),
 
+            // ── Quick Post Widget (Now visible for both tabs) ──
+            const QuickPostWidget(),
+
             // ── Tab Bar ───────────────────────────────────────
             TabBar(
               controller: _tabController,
@@ -95,15 +98,8 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  const _CommunityFeedWrapper(),
-                  RefreshIndicator(
-                    onRefresh: _handleRefresh,
-                    child: Consumer<CommunityViewModel>(
-                      builder: (context, viewModel, child) => PostsFeedWidget(
-                        customPosts: viewModel.followingPosts,
-                      ),
-                    ),
-                  ),
+                  const _CommunityFeedWrapper(isExplore: true),
+                  const _CommunityFeedWrapper(isExplore: false),
                 ],
               ),
             ),
@@ -115,23 +111,25 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
 }
 
 class _CommunityFeedWrapper extends StatelessWidget {
-  const _CommunityFeedWrapper();
+  final bool isExplore;
+  const _CommunityFeedWrapper({required this.isExplore});
 
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
       onRefresh: () async {
-        await context.read<CommunityViewModel>().loadExploreFeed();
+        if (isExplore) {
+          await context.read<CommunityViewModel>().loadExploreFeed();
+        } else {
+          await context.read<CommunityViewModel>().loadFollowingFeed();
+        }
       },
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          const SliverToBoxAdapter(
-            child: QuickPostWidget(),
-          ),
           Consumer<CommunityViewModel>(
             builder: (context, viewModel, child) {
-              final posts = viewModel.explorePosts;
+              final posts = isExplore ? viewModel.explorePosts : viewModel.followingPosts;
               
               // Show shimmer if loading OR if not yet initialized (first load)
               if ((viewModel.isLoading || !viewModel.isInitialized) && posts.isEmpty) {
@@ -164,7 +162,7 @@ class _CommunityFeedWrapper extends StatelessWidget {
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton(
-                            onPressed: () => viewModel.loadExploreFeed(),
+                            onPressed: () => isExplore ? viewModel.loadExploreFeed() : viewModel.loadFollowingFeed(),
                             child: const Text('إعادة المحاولة'),
                           ),
                         ],
@@ -175,12 +173,12 @@ class _CommunityFeedWrapper extends StatelessWidget {
               }
 
               if (posts.isEmpty) {
-                return const SliverFillRemaining(
+                return SliverFillRemaining(
                   hasScrollBody: false,
                   child: EmptyState(
-                    icon: Icons.article_outlined,
-                    title: 'لا توجد منشورات بعد',
-                    message: 'كن أول من ينشر في المجتمع',
+                    icon: isExplore ? Icons.article_outlined : Icons.people_outline_rounded,
+                    title: isExplore ? 'لا توجد منشورات بعد' : 'لا تتابع أحداً بعد',
+                    message: isExplore ? 'كن أول من ينشر في المجتمع' : 'تابع بعض المستخدمين لرؤية منشوراتهم هنا',
                   ),
                 );
               }
