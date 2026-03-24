@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -11,6 +12,8 @@ import '../../../core/router/route_names.dart';
 import '../../../shared/widgets/avatar_widget.dart';
 import '../../../data/models/user_model.dart';
 import '../../../shared/providers/notification_provider.dart';
+import '../../chat/view_model/chat_view_model.dart';
+import '../../chat/view/chat_room_screen.dart';
 import '../view_model/profile_view_model.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -147,52 +150,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     isFollowing: targetUserId != null &&
                         communityViewModel.isFollowing(targetUserId),
                     onToggleFollow: () async {
-                      final currentUserId =
-                          context.read<AuthProvider>().currentUser?.id;
-                      if (targetUserId != null && currentUserId != null && targetUserId != currentUserId) {
-                        final wasFollowing =
-                            communityViewModel.isFollowing(targetUserId);
+                      if (targetUserId == null) return;
+                      final wasFollowing = communityViewModel.isFollowing(targetUserId);
 
-                        try {
-                          await context.read<CommunityViewModel>().toggleFollow(
-                            targetUserId,
-                            currentUserId: currentUserId,
-                            onFollowingCountChanged: (nowFollowing) {
-                              if (mounted) {
-                                setState(() {
-                                  _followersDelta = nowFollowing ? (wasFollowing ? 0 : 1) : (wasFollowing ? -1 : 0);
-                                });
-                              }
-                            },
-                          );
+                      // Optimistic counter
+                      setState(() => _followersDelta += wasFollowing ? -1 : 1);
 
+                      try {
+                        await context.read<CommunityViewModel>().toggleFollow(
+                          targetUserId,
+                          currentUserId: currentUser?.id,
+                          onFollowingCountChanged: (nowFollowing) {
+                            // حدّث following count في بروفايل الـ current user
+                            final myId = context.read<AuthProvider>().currentUser?.id;
+                            if (myId != null && mounted) {
+                              context.read<ProfileViewModel>().loadProfile(myId);
+                            }
+                          },
+                        );
+
+                        // Refresh notifications list (backend يبعت الـ FCM)
+                        if (!wasFollowing && context.mounted) {
+                          context.read<NotificationProvider>().fetchNotifications();
+                        }
+
+                        // Sync actual count
+                        if (context.mounted) {
+                          await context.read<ProfileViewModel>().loadProfile(targetUserId);
                           if (!context.mounted) return;
-
-                          if (!wasFollowing) {
-                            context.read<NotificationProvider>().fetchNotifications();
-                          }
+                          
+                          setState(() => _followersDelta = 0);
 
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(!wasFollowing
                                   ? 'تم متابعة ${user?.name}'
                                   : 'تم إلغاء متابعة ${user?.name}'),
-                              duration: const Duration(seconds: 2),
-                              backgroundColor: Colors.green,
+                              behavior: SnackBarBehavior.floating,
                             ),
                           );
-
-                          // Still reload profile to get absolute truth from server
-                          await context.read<ProfileViewModel>().loadProfile(targetUserId);
-                          if (mounted) setState(() => _followersDelta = 0);
-                        } catch (e) {
-                          if (!context.mounted) return;
-                          
+                        }
+                      } catch (e) {
+                        // Revert
+                        if (context.mounted) {
+                          setState(() => _followersDelta += wasFollowing ? 1 : -1);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text('فشل تغيير حالة المتابعة، حاول مرة أخرى'),
-                              duration: const Duration(seconds: 3),
+                            const SnackBar(
+                              content: Text('فشل تحديث المتابعة، حاول مجدداً'),
                               backgroundColor: Colors.red,
+                              behavior: SnackBarBehavior.floating,
                             ),
                           );
                         }
@@ -379,7 +385,7 @@ class _ProfileHeader extends StatelessWidget {
   final int following;
   final bool isMyProfile;
   final bool isFollowing;
-  final VoidCallback onToggleFollow;
+  final AsyncCallback onToggleFollow;
   final VoidCallback onEditProfile;
   final VoidCallback onSettings;
   final VoidCallback onSignOut;
@@ -523,18 +529,39 @@ class _ProfileHeader extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       if (userId != null) {
-                        Navigator.pushNamed(
-                          context,
-                          RouteNames.chatRoom,
-                          arguments: {
-                            'chatRoomId': 'new_${userId}_${DateTime.now().millisecondsSinceEpoch}',
-                            'otherUserName': name,
-                            'otherUserAvatar': photoUrl,
-                            'otherUserId': userId.toString(),
-                          },
-                        );
+                        try {
+                          final chatViewModel = context.read<ChatViewModel>();
+                          final chatRoomId = await chatViewModel.startChat(userId!);
+
+                          if (context.mounted) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ChangeNotifierProvider.value(
+                                  value: chatViewModel,
+                                  child: ChatRoomScreen(
+                                    chatRoomId: chatRoomId,
+                                    otherUserName: name,
+                                    otherUserAvatar: photoUrl,
+                                    otherUserId: userId!.toString(),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('فشل بدء المحادثة: $e'),
+                                backgroundColor: Colors.red,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        }
                       }
                     },
                     style: OutlinedButton.styleFrom(

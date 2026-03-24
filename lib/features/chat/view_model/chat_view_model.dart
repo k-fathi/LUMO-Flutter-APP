@@ -54,6 +54,8 @@ class ChatViewModel extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isSending => _isSending;
   String? get errorMessage => _errorMessage;
+  bool get isFirebaseAuthenticated =>
+      _firebaseAuthService.currentUser != null;
 
   Future<bool> authenticateFirebase() async {
     _isLoading = true;
@@ -71,6 +73,16 @@ class ChatViewModel extends ChangeNotifier {
       _isLoading = false;
       _safeNotifyListeners();
       return false;
+    }
+  }
+
+  Future<String> startChat(int receiverId) async {
+    try {
+      return await _chatRepository.startChat(receiverId);
+    } catch (e) {
+      _errorMessage = 'فشل بدء المحادثة: $e';
+      _safeNotifyListeners();
+      rethrow;
     }
   }
 
@@ -176,6 +188,7 @@ class ChatViewModel extends ChangeNotifier {
     required int senderId,
     required String senderName,
     required String content,
+    required int receiverId,
     String? senderAvatarUrl,
   }) async {
     _isSending = true;
@@ -189,6 +202,7 @@ class ChatViewModel extends ChangeNotifier {
         senderName: senderName,
         senderAvatarUrl: senderAvatarUrl,
         content: content,
+        receiverId: receiverId,
       );
 
       if (!_messages.any((m) => m.id == message.id)) {

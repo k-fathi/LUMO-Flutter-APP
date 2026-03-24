@@ -44,12 +44,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   }
 
   Future<void> _initChat() async {
-    // Await Firebase authentication before loading messages to prevent empty screen/errors
-    final authenticated = await _viewModel.authenticateFirebase();
-    if (authenticated && mounted) {
-      await _viewModel.loadMessages(widget.chatRoomId);
-      _scheduleAutoScroll();
+    // ✅ تجنب إعادة auth لو Firebase بالفعل authenticated
+    if (!_viewModel.isFirebaseAuthenticated) {
+      final authenticated = await _viewModel.authenticateFirebase();
+      if (!authenticated || !mounted) return;
     }
+    await _viewModel.loadMessages(widget.chatRoomId);
+    _scrollToBottom();
   }
 
   @override
@@ -59,32 +60,23 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     super.dispose();
   }
 
-  /// BUG FIX #9: Auto-scroll to newest message with safety checks
-  void _scheduleAutoScroll() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _scrollToBottom();
-    });
-  }
+
 
   /// BUG FIX #9: Safe scroll with mounted check and hasClients validation
   void _scrollToBottom() {
-    if (!mounted) return;
-    if (!_scrollController.hasClients) {
-      // Schedule retry if scroll controller not ready
-      Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
-      return;
-    }
-
-    try {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    } catch (e) {
-      debugPrint('Scroll error: $e');
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!_scrollController.hasClients) return;
+      try {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      } catch (e) {
+        debugPrint('Scroll error: $e');
+      }
+    });
   }
 
   void _handleSend() {
@@ -94,6 +86,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     final currentUser = context.read<AuthProvider>().currentUser;
     if (currentUser == null) return;
 
+    final receiverId = int.tryParse(widget.otherUserId ?? '') ?? 0;
+    if (receiverId == 0) {
+      debugPrint('Invalid receiverId — cannot send message');
+      return;
+    }
+
     _messageController.clear();
 
     _viewModel.sendMessage(
@@ -102,10 +100,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       senderName: currentUser.name,
       senderAvatarUrl: currentUser.avatarUrl,
       content: content,
+      receiverId: receiverId, // ✅
     );
 
-    // BUG FIX #9: Auto-scroll after sending message
-    _scheduleAutoScroll();
+    _scrollToBottom();
   }
 
   void _navigateToProfile() {
@@ -262,12 +260,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   );
                 }
 
-                // Schedule auto-scroll when messages update
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted && viewModel.messages.isNotEmpty) {
-                    _scrollToBottom();
-                  }
-                });
+                // ✅ Auto-scroll عند كل تحديث للرسايل
+                if (viewModel.messages.isNotEmpty) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+                }
 
                 return ColoredBox(
                   color: messagesBackground,

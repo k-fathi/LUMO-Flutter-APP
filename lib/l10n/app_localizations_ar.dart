@@ -547,6 +547,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get readMore => 'اقرأ المزيد';
 
   @override
+  String get showMore => 'عرض المزيد';
+
+  @override
+  String get showLess => 'عرض أقل';
+
+  @override
   String get roleDoctor => 'طبيب';
 
   @override
@@ -599,6 +605,27 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get editChildInfo => 'تعديل بيانات طفلك';
+
+  @override
+  String get childProfile => 'ملف الطفل';
+
+  @override
+  String get childProfileSubtitle => 'عرض وتعديل بيانات طفلك الصحية';
+
+  @override
+  String get viewAnalyses => 'عرض التحليلات';
+
+  @override
+  String get viewAnalysesSubtitle => 'متابعة التقدم والتحليلات الذكية';
+
+  @override
+  String get userPosts => 'منشورات المستخدم';
+
+  @override
+  String get profileTitle => 'الملف الشخصي';
+
+  @override
+  String get message => 'رسالة';
 
   @override
   String get myPosts => 'منشوراتي';

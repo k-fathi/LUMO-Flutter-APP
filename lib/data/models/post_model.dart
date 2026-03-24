@@ -1,4 +1,5 @@
 import '../../core/enums/post_status.dart';
+import '../../core/enums/user_role.dart';
 import '../../core/utils/date_formatter.dart';
 
 class PostModel {
@@ -18,6 +19,7 @@ class PostModel {
   final List<String> tags;
   final bool isPinned;
   final bool isLiked;
+  final UserRole? userRole;
 
   const PostModel({
     required this.id,
@@ -36,6 +38,7 @@ class PostModel {
     this.tags = const [],
     this.isPinned = false,
     this.isLiked = false,
+    this.userRole,
   });
 
   // Factory constructor from JSON
@@ -43,6 +46,14 @@ class PostModel {
     final Map<String, dynamic>? userMap = json['user'] is Map<String, dynamic>
         ? json['user']
         : (json['author'] is Map<String, dynamic> ? json['author'] : null);
+
+    final String rawRole = json['user_role']?.toString() ??
+        userMap?['role']?.toString() ??
+        json['role']?.toString() ??
+        '';
+    final UserRole? userRole = rawRole.trim().isEmpty
+        ? null
+        : UserRole.fromString(rawRole);
 
     final int parsedId = int.tryParse(json['id']?.toString() ?? '0') ?? 0;
     final int parsedUserId = int.tryParse(
@@ -90,6 +101,7 @@ class PostModel {
       tags: json['tags'] is List
           ? (json['tags'] as List).map((e) => e.toString()).toList()
           : [],
+      userRole: userRole,
       isPinned: json['is_pinned']?.toString() == 'true' ||
           json['is_pinned'] == 1 ||
           json['is_pinned'] == true,
@@ -121,6 +133,7 @@ class PostModel {
       'tags': tags,
       'is_pinned': isPinned,
       'is_liked': isLiked,
+      'user_role': userRole?.name,
     };
   }
 
@@ -142,6 +155,7 @@ class PostModel {
     List<String>? tags,
     bool? isPinned,
     bool? isLiked,
+    UserRole? userRole,
   }) {
     return PostModel(
       id: id ?? this.id,
@@ -160,6 +174,7 @@ class PostModel {
       tags: tags ?? this.tags,
       isPinned: isPinned ?? this.isPinned,
       isLiked: isLiked ?? this.isLiked,
+      userRole: userRole ?? this.userRole,
     );
   }
 

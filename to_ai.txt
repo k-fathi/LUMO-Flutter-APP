@@ -1,3 +1,220 @@
+==== lib/data/models/post_model.dart ====
+import '../../core/enums/post_status.dart';
+import '../../core/enums/user_role.dart';
+import '../../core/utils/date_formatter.dart';
+
+class PostModel {
+  final int id;
+  final int userId;
+  final String userName;
+  final String? userAvatarUrl;
+  final String content;
+  final String? imageUrl;
+  final PostStatus status;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final int likesCount;
+  final int commentsCount;
+  final int sharesCount;
+  final List<int> likedByUserIds;
+  final List<String> tags;
+  final bool isPinned;
+  final bool isLiked;
+  final UserRole? userRole;
+
+  const PostModel({
+    required this.id,
+    required this.userId,
+    required this.userName,
+    this.userAvatarUrl,
+    required this.content,
+    this.imageUrl,
+    this.status = PostStatus.published,
+    required this.createdAt,
+    required this.updatedAt,
+    this.likesCount = 0,
+    this.commentsCount = 0,
+    this.sharesCount = 0,
+    this.likedByUserIds = const [],
+    this.tags = const [],
+    this.isPinned = false,
+    this.isLiked = false,
+    this.userRole,
+  });
+
+  // Factory constructor from JSON
+  factory PostModel.fromJson(Map<String, dynamic> json) {
+    final Map<String, dynamic>? userMap = json['user'] is Map<String, dynamic>
+        ? json['user']
+        : (json['author'] is Map<String, dynamic> ? json['author'] : null);
+
+    final String rawRole = json['user_role']?.toString() ??
+        userMap?['role']?.toString() ??
+        json['role']?.toString() ??
+        '';
+    final UserRole? userRole = rawRole.trim().isEmpty
+        ? null
+        : UserRole.fromString(rawRole);
+
+    final int parsedId = int.tryParse(json['id']?.toString() ?? '0') ?? 0;
+    final int parsedUserId = int.tryParse(
+            json['user_id']?.toString() ?? userMap?['id']?.toString() ?? '0') ??
+        0;
+
+    // --- الفلتر السحري لتنظيف الاسم من الـ null ---
+    String rawName = json['user_name']?.toString() ??
+        userMap?['name']?.toString() ??
+        userMap?['full_name']?.toString() ??
+        json['name']?.toString() ??
+        '';
+
+    // بنمسح كلمة null لو الباك إند باعت كنص أو أي قيم تانية غير مرغوب فيها
+    rawName = rawName.replaceAll('null', '').replaceAll('NULL', '').trim();
+    if (rawName.isEmpty || rawName == 'مستخدم') {
+      rawName = 'مستخدم'; // القيمة الاحتياطية النضيفة
+    }
+    // ------------------------------------------------
+
+    return PostModel(
+      id: parsedId,
+      userId: parsedUserId,
+      userName: rawName,
+      userAvatarUrl: json['user_avatar_url']?.toString() ??
+          userMap?['avatar_url']?.toString() ??
+          userMap?['profile_image']?.toString(),
+      content:
+          (json['content'] ?? json['body'] ?? json['text'])?.toString() ?? '',
+      imageUrl: json['image_url']?.toString() ?? json['image']?.toString(),
+      status: PostStatus.fromString(json['status']?.toString() ?? 'published'),
+      createdAt:
+          DateFormatter.parseServerDateTime(json['created_at']?.toString()),
+      updatedAt:
+          DateFormatter.parseServerDateTime(json['updated_at']?.toString()),
+      likesCount: int.tryParse(json['likes_count']?.toString() ?? '0') ?? 0,
+      commentsCount:
+          int.tryParse(json['comments_count']?.toString() ?? '0') ?? 0,
+      sharesCount: int.tryParse(json['shares_count']?.toString() ?? '0') ?? 0,
+      likedByUserIds: json['liked_by_user_ids'] is List
+          ? (json['liked_by_user_ids'] as List)
+              .map((e) => int.tryParse(e.toString()) ?? 0)
+              .toList()
+          : [],
+      tags: json['tags'] is List
+          ? (json['tags'] as List).map((e) => e.toString()).toList()
+          : [],
+      userRole: userRole,
+      isPinned: json['is_pinned']?.toString() == 'true' ||
+          json['is_pinned'] == 1 ||
+          json['is_pinned'] == true,
+      isLiked: json['is_liked']?.toString() == 'true' ||
+          json['is_liked'] == 1 ||
+          json['is_liked'] == true ||
+          json['liked_by_me']?.toString() == 'true' ||
+          json['liked_by_me'] == 1 ||
+          json['liked_by_me'] == true,
+    );
+  }
+
+  // Convert to JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'user_id': userId,
+      'user_name': userName,
+      'user_avatar_url': userAvatarUrl,
+      'content': content,
+      'image_url': imageUrl,
+      'status': status.name,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+      'likes_count': likesCount,
+      'comments_count': commentsCount,
+      'shares_count': sharesCount,
+      'liked_by_user_ids': likedByUserIds,
+      'tags': tags,
+      'is_pinned': isPinned,
+      'is_liked': isLiked,
+      'user_role': userRole?.name,
+    };
+  }
+
+  // CopyWith method
+  PostModel copyWith({
+    int? id,
+    int? userId,
+    String? userName,
+    String? userAvatarUrl,
+    String? content,
+    String? imageUrl,
+    PostStatus? status,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    int? likesCount,
+    int? commentsCount,
+    int? sharesCount,
+    List<int>? likedByUserIds,
+    List<String>? tags,
+    bool? isPinned,
+    bool? isLiked,
+    UserRole? userRole,
+  }) {
+    return PostModel(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      userName: userName ?? this.userName,
+      userAvatarUrl: userAvatarUrl ?? this.userAvatarUrl,
+      content: content ?? this.content,
+      imageUrl: imageUrl ?? this.imageUrl,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      likesCount: likesCount ?? this.likesCount,
+      commentsCount: commentsCount ?? this.commentsCount,
+      sharesCount: sharesCount ?? this.sharesCount,
+      likedByUserIds: likedByUserIds ?? this.likedByUserIds,
+      tags: tags ?? this.tags,
+      isPinned: isPinned ?? this.isPinned,
+      isLiked: isLiked ?? this.isLiked,
+      userRole: userRole ?? this.userRole,
+    );
+  }
+
+  // Helper methods
+  bool isLikedBy(int userId) {
+    if (likedByUserIds.isNotEmpty) {
+      return likedByUserIds.contains(userId);
+    }
+    return isLiked;
+  }
+
+  bool get hasImage => imageUrl != null && imageUrl!.isNotEmpty;
+  bool get hasTags => tags.isNotEmpty;
+  bool get isPublished => status.isPublished;
+  bool get isDraft => status.isDraft;
+
+  // Engagement rate (for analytics)
+  double get engagementRate {
+    if (likesCount + commentsCount + sharesCount == 0) return 0.0;
+    return (likesCount + commentsCount * 2 + sharesCount * 3) / 100.0;
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is PostModel && other.id == id;
+  }
+
+  @override
+  int get hashCode => id.hashCode;
+
+  @override
+  String toString() {
+    return 'PostModel(id: $id, userId: $userId, content: ${content.length} chars, likes: $likesCount)';
+  }
+}
+
+
+==== lib/features/community/widgets/post_card.dart ====
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -42,11 +259,14 @@ class _PostCardState extends State<PostCard> {
 
     final currentUser = authProvider.currentUser;
     final currentUserId = currentUser?.id ?? 0;
+
     final isOwner = currentUserId != 0 && post.userId == currentUserId;
+    
+    // BUG FIX #1: Check if target user is the current user (hide follow button)
     final isTargetUserCurrentUser = post.userId == currentUserId && post.userId != 0;
 
-    // --- الفلتر الذكي الصارم ---
     String displayName = post.userName;
+
     if (displayName.toLowerCase().contains('null') ||
         displayName.trim().isEmpty ||
         displayName == 'مستخدم') {
@@ -82,27 +302,23 @@ class _PostCardState extends State<PostCard> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          // التحويل للديتيلز عند الضغط على البوست نفسه
           onTap: () {
-            Navigator.pushNamed(context, RouteNames.postDetail, arguments: post);
+            Navigator.pushNamed(context, RouteNames.postDetail,
+                arguments: post);
           },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
                 child: Row(
                   children: [
-                    // 1. الصورة (فيها خاصية التحويل للبروفايل)
                     AvatarWidget(
                       size: 40,
                       imageUrl: displayAvatar,
                       onTap: () => _navigateToProfile(context, post),
                     ),
                     const SizedBox(width: 12),
-                    
-                    // 2. الاسم والتاريخ (فيهم خاصية التحويل للبروفايل)
                     Expanded(
                       child: GestureDetector(
                         onTap: () => _navigateToProfile(context, post),
@@ -112,34 +328,40 @@ class _PostCardState extends State<PostCard> {
                           children: [
                             Row(
                               children: [
-                                Flexible(
-                                  child: Text(
-                                    displayName,
-                                    style: AppTextStyles.label.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
+                                Text(
+                                  displayName,
+                                  style: AppTextStyles.label.copyWith(
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                // 3. الـ Badge بتاع (دكتور / ولي أمر)
+                                // Role badge (Doctor/Parent)
                                 if (post.userRole != null)
                                   Container(
                                     margin: const EdgeInsetsDirectional.only(start: 6),
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: post.userRole?.isDoctor == true
                                           ? Colors.blue.withValues(alpha: 0.1)
                                           : Colors.green.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
-                                        color: post.userRole?.isDoctor == true ? Colors.blue : Colors.green,
+                                        color: post.userRole?.isDoctor == true
+                                            ? Colors.blue
+                                            : Colors.green,
                                         width: 0.5,
                                       ),
                                     ),
                                     child: Text(
-                                      post.userRole?.isDoctor == true ? l10n.roleDoctor : l10n.roleParent,
+                                      post.userRole?.isDoctor == true
+                                          ? l10n.roleDoctor
+                                          : l10n.roleParent,
                                       style: AppTextStyles.caption.copyWith(
-                                        color: post.userRole?.isDoctor == true ? Colors.blue : Colors.green,
+                                        color: post.userRole?.isDoctor == true
+                                            ? Colors.blue
+                                            : Colors.green,
                                         fontSize: 10,
                                         fontWeight: FontWeight.w500,
                                       ),
@@ -158,22 +380,28 @@ class _PostCardState extends State<PostCard> {
                       ),
                     ),
 
-                    // التعديل والحذف أو زرار المتابعة
                     if (isOwner)
                       PopupMenuButton<String>(
                         icon: const Icon(Icons.more_horiz_rounded, color: Colors.grey),
                         onSelected: (value) async {
                           if (value == 'edit') {
-                            Navigator.pushNamed(context, RouteNames.editPost, arguments: post);
+                            Navigator.pushNamed(
+                              context,
+                              RouteNames.editPost,
+                              arguments: post,
+                            );
                           } else if (value == 'delete') {
-                            final confirmed = await DeleteConfirmationDialog.show(
+                            final confirmed =
+                                await DeleteConfirmationDialog.show(
                               context,
                               title: 'حذف المنشور',
                               message: 'هل أنت متأكد من حذف هذا المنشور؟',
                             );
                             if (!context.mounted) return;
                             if (confirmed == true) {
-                              context.read<CommunityViewModel>().deletePost(post.id);
+                              context
+                                  .read<CommunityViewModel>()
+                                  .deletePost(post.id);
                             }
                           }
                         },
@@ -197,6 +425,7 @@ class _PostCardState extends State<PostCard> {
                           ),
                         ],
                       )
+                    // BUG FIX #1: Hide follow button if viewing own profile
                     else if (!widget.hideFollowButton && post.userId != 0 && !isTargetUserCurrentUser)
                       Consumer<CommunityViewModel>(
                         builder: (context, viewModel, child) {
@@ -249,7 +478,6 @@ class _PostCardState extends State<PostCard> {
                 ),
               ),
 
-              // Post Content
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: Column(
@@ -268,7 +496,10 @@ class _PostCardState extends State<PostCard> {
                           placeholder: (context, url) => Shimmer.fromColors(
                             baseColor: Colors.grey[300]!,
                             highlightColor: Colors.grey[100]!,
-                            child: Container(height: 200, color: Colors.white),
+                            child: Container(
+                              height: 200,
+                              color: Colors.white,
+                            ),
                           ),
                           errorWidget: (context, url, error) => Container(
                             height: 200,
@@ -282,7 +513,6 @@ class _PostCardState extends State<PostCard> {
                 ),
               ),
 
-              // Footer 
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 child: Row(
@@ -298,10 +528,11 @@ class _PostCardState extends State<PostCard> {
                       color: Colors.grey,
                       label: post.commentsCount.toString(),
                       onTap: () {
-                        Navigator.pushNamed(context, RouteNames.postDetail, arguments: post);
+                        Navigator.pushNamed(context, RouteNames.postDetail,
+                            arguments: post);
                       },
                     ),
-                    // 4. تم مسح زرار المشاركة (Share) نهائياً
+                    const Spacer(),
                   ],
                 ),
               ),
@@ -314,11 +545,17 @@ class _PostCardState extends State<PostCard> {
 
   Widget _buildTextContent(String content, AppLocalizations l10n) {
     final isLong = content.length > 150;
-    final displayContent = isLong && !_isExpanded ? '${content.substring(0, 150)}...' : content;
+    final displayContent = isLong && !_isExpanded
+        ? '${content.substring(0, 150)}...'
+        : content;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(displayContent, style: AppTextStyles.body),
+        Text(
+          displayContent,
+          style: AppTextStyles.body,
+        ),
         if (isLong)
           GestureDetector(
             onTap: () => setState(() => _isExpanded = !_isExpanded),
@@ -384,3 +621,5 @@ class _ActionButton extends StatelessWidget {
     );
   }
 }
+
+

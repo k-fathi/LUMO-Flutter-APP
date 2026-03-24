@@ -7,7 +7,7 @@ abstract class ChatRemoteDataSource {
   Future<String> askAiConsultation(String question);
   Future<String> getFirebaseToken();
   Future<List<dynamic>> getMyChats();
-  Future<void> startChat(int receiverId);
+  Future<String> startChat(int receiverId); // ✅ غيّر من void لـ String
   Future<void> updateLastMessage({
     required int senderId,
     required int receiverId,
@@ -49,11 +49,23 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
   }
 
   @override
-  Future<void> startChat(int receiverId) async {
-    await _dioClient.post(
+  Future<String> startChat(int receiverId) async {
+    final response = await _dioClient.post(
       ApiConstants.startChat,
       data: {'receiver_id': receiverId},
     );
+    final data = response.data as Map<String, dynamic>;
+    
+    // ✅ Backend بيرجع الـ chatRoomId الثابت — تأكد من الـ key مع الـ backend
+    final roomId = data['chat_room_id']?.toString() ??
+        data['room']?['id']?.toString() ??
+        data['id']?.toString();
+        
+    if (roomId == null) {
+      throw Exception('Backend لم يرجع chat_room_id');
+    }
+    
+    return roomId;
   }
 
   @override

@@ -547,6 +547,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get readMore => 'Read More';
 
   @override
+  String get showMore => 'Show More';
+
+  @override
+  String get showLess => 'Show Less';
+
+  @override
   String get roleDoctor => 'Doctor';
 
   @override
@@ -599,6 +605,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editChildInfo => 'Edit child info';
+
+  @override
+  String get childProfile => 'Child Profile';
+
+  @override
+  String get childProfileSubtitle => 'View and edit your child\'s health data';
+
+  @override
+  String get viewAnalyses => 'View Analyses';
+
+  @override
+  String get viewAnalysesSubtitle => 'Monitor progress and smart analyses';
+
+  @override
+  String get userPosts => 'User Posts';
+
+  @override
+  String get profileTitle => 'Profile';
+
+  @override
+  String get message => 'Message';
 
   @override
   String get myPosts => 'My Posts';

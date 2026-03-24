@@ -518,9 +518,6 @@ class CommunityViewModel extends ChangeNotifier {
       
       _errorMessage = 'فشل متابعة المستخدم: ${e.toString()}';
       _safeNotify();
-      
-      // Show error snackbar (caller responsibility to show this)
-      rethrow;
     }
   }
 

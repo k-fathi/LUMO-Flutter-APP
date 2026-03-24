@@ -1,3 +1,482 @@
+==== lib/features/chat/view_model/chat_view_model.dart ====
+import 'dart:async';
+import 'package:flutter/material.dart';
+
+import '../../../data/repositories/chat_repository.dart';
+import '../../../data/models/chat_room_model.dart';
+import '../../../data/models/message_model.dart';
+import '../../../core/services/firebase_auth_service.dart';
+
+class ChatViewModel extends ChangeNotifier {
+  final ChatRepository _chatRepository;
+  final FirebaseAuthService _firebaseAuthService;
+
+  ChatViewModel(this._chatRepository, this._firebaseAuthService);
+
+  bool _isDisposed = false;
+
+  StreamSubscription<List<MessageModel>>? _messagesSubscription;
+  StreamSubscription<ChatRoomModel?>? _roomSubscription;
+  StreamSubscription<List<ChatRoomModel>>? _roomsSubscription;
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    _messagesSubscription?.cancel();
+    _roomSubscription?.cancel();
+    _roomsSubscription?.cancel();
+    super.dispose();
+  }
+
+  int? _userId;
+
+  int get totalUnreadCount {
+    final currentUserId = _userId?.toString();
+    if (currentUserId == null) return 0;
+    return _chatRooms.fold(0, (sum, room) => sum + room.getUnreadCount(currentUserId));
+  }
+
+  void _safeNotifyListeners() {
+    if (!_isDisposed) {
+      notifyListeners();
+    }
+  }
+
+  final List<ChatRoomModel> _chatRooms = [];
+  final List<MessageModel> _messages = [];
+  ChatRoomModel? _currentChatRoom;
+  bool _isLoading = false;
+  bool _isSending = false;
+  String? _errorMessage;
+
+  List<ChatRoomModel> get chatRooms => _chatRooms;
+  List<MessageModel> get messages => _messages;
+  ChatRoomModel? get currentChatRoom => _currentChatRoom;
+  bool get isLoading => _isLoading;
+  bool get isSending => _isSending;
+  String? get errorMessage => _errorMessage;
+  bool get isFirebaseAuthenticated =>
+      _firebaseAuthService.currentUser != null;
+
+  Future<bool> authenticateFirebase() async {
+    _isLoading = true;
+    _errorMessage = null;
+    _safeNotifyListeners();
+
+    try {
+      final token = await _chatRepository.getFirebaseToken();
+      await _firebaseAuthService.signInWithCustomToken(token);
+      _isLoading = false;
+      _safeNotifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = "Firebase Auth Failed: ${e.toString()}";
+      _isLoading = false;
+      _safeNotifyListeners();
+      return false;
+    }
+  }
+
+  Future<String> startChat(int receiverId) async {
+    try {
+      return await _chatRepository.startChat(receiverId);
+    } catch (e) {
+      _errorMessage = 'فشل بدء المحادثة: $e';
+      _safeNotifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> loadChatRooms([int? userId]) async {
+    _isLoading = true;
+    if (userId != null) _userId = userId;
+    _safeNotifyListeners();
+
+    try {
+      final rooms = await _chatRepository.getMyChats();
+      _chatRooms.clear();
+      _chatRooms.addAll(rooms);
+      
+      _chatRooms.sort((a, b) {
+        final aTime = a.lastMessageTimestamp ?? a.updatedAt;
+        final bTime = b.lastMessageTimestamp ?? b.updatedAt;
+        return bTime.compareTo(aTime);
+      });
+      
+      _isLoading = false;
+      _safeNotifyListeners();
+
+      if (userId != null) {
+        await _roomsSubscription?.cancel();
+        _roomsSubscription = _chatRepository.streamUserChats(userId).listen(
+          (updatedRooms) {
+            _chatRooms.clear();
+            _chatRooms.addAll(updatedRooms);
+            _chatRooms.sort((a, b) {
+              final aTime = a.lastMessageTimestamp ?? a.updatedAt;
+              final bTime = b.lastMessageTimestamp ?? b.updatedAt;
+              return bTime.compareTo(aTime);
+            });
+            _safeNotifyListeners();
+          },
+          onError: (e) {
+            _errorMessage = 'Stream error: $e';
+            _safeNotifyListeners();
+          },
+        );
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      _safeNotifyListeners();
+    }
+  }
+
+  Future<void> loadMessages(String chatRoomId) async {
+    _isLoading = true;
+    _errorMessage = null;
+
+    if (_messages.isNotEmpty && _messages.first.chatRoomId != chatRoomId) {
+      _messages.clear();
+      _messages.addAll(_chatRepository.getCachedMessages(chatRoomId));
+    } else if (_messages.isEmpty) {
+      _messages.addAll(_chatRepository.getCachedMessages(chatRoomId));
+    }
+    
+    _safeNotifyListeners();
+
+    try {
+      await _roomSubscription?.cancel();
+      _roomSubscription = _chatRepository.streamChatRoom(chatRoomId).listen(
+        (room) {
+          _currentChatRoom = room;
+          final index = _chatRooms.indexWhere((r) => r.id == chatRoomId);
+          if (index != -1 && room != null) {
+            _chatRooms[index] = room;
+          }
+          _safeNotifyListeners();
+        },
+        onError: (e) {
+          _errorMessage = 'Room stream error: $e';
+          _safeNotifyListeners();
+        },
+      );
+
+      await _messagesSubscription?.cancel();
+      _messagesSubscription = _chatRepository.streamMessages(chatRoomId).listen(
+        (messagesList) {
+          _messages.clear();
+          _messages.addAll(messagesList);
+          _messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+          _isLoading = false;
+          _safeNotifyListeners();
+        },
+        onError: (e) {
+          _errorMessage = e.toString();
+          _isLoading = false;
+          _safeNotifyListeners();
+        },
+      );
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      _safeNotifyListeners();
+    }
+  }
+
+  Future<bool> sendMessage({
+    required String chatRoomId,
+    required int senderId,
+    required String senderName,
+    required String content,
+    required int receiverId, // ✅ أضف
+    String? senderAvatarUrl,
+  }) async {
+    _isSending = true;
+    _errorMessage = null;
+    _safeNotifyListeners();
+
+    try {
+      final message = await _chatRepository.sendMessage(
+        chatRoomId: chatRoomId,
+        senderId: senderId,
+        senderName: senderName,
+        senderAvatarUrl: senderAvatarUrl,
+        content: content,
+        receiverId: receiverId, // ✅
+      );
+
+      if (!_messages.any((m) => m.id == message.id)) {
+        _messages.add(message);
+      }
+
+      final roomIndex = _chatRooms.indexWhere((r) => r.id == chatRoomId);
+      if (roomIndex != -1) {
+        _chatRooms[roomIndex] = _chatRooms[roomIndex].copyWith(
+          lastMessage: content,
+          lastMessageSenderId: senderId.toString(),
+          lastMessageTimestamp: DateTime.now(),
+        );
+
+        _chatRooms.sort((a, b) {
+          final aTime = a.lastMessageTimestamp ?? a.updatedAt;
+          final bTime = b.lastMessageTimestamp ?? b.updatedAt;
+          return bTime.compareTo(aTime);
+        });
+      }
+
+      _isSending = false;
+      _safeNotifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isSending = false;
+      _safeNotifyListeners();
+      return false;
+    }
+  }
+
+  void clearError() {
+    _errorMessage = null;
+    _safeNotifyListeners();
+  }
+
+  void resetState() {
+    _chatRooms.clear();
+    _messages.clear();
+    _messagesSubscription?.cancel();
+    _messagesSubscription = null;
+    _roomSubscription?.cancel();
+    _roomSubscription = null;
+    _roomsSubscription?.cancel();
+    _roomsSubscription = null;
+    _errorMessage = null;
+    _isLoading = false;
+    _isSending = false;
+    _safeNotifyListeners();
+  }
+}
+
+
+==== lib/data/datasources/remote/chat_remote_data_source.dart ====
+import '../../../core/network/dio_client.dart';
+import '../../../core/network/api_constants.dart';
+import '../../models/message_model.dart';
+
+abstract class ChatRemoteDataSource {
+  Future<List<MessageModel>> getChatHistory();
+  Future<String> askAiConsultation(String question);
+  Future<String> getFirebaseToken();
+  Future<List<dynamic>> getMyChats();
+  Future<String> startChat(int receiverId); // ✅ غيّر من void لـ String
+  Future<void> updateLastMessage({
+    required int senderId,
+    required int receiverId,
+    required String message,
+  });
+}
+
+class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
+  final DioClient _dioClient;
+
+  ChatRemoteDataSourceImpl(this._dioClient);
+
+  @override
+  Future<List<MessageModel>> getChatHistory() async {
+    final response = await _dioClient.get(ApiConstants.getChatHistory);
+    final List<dynamic> data = response.data['history'];
+    return data.map((json) => MessageModel.fromJson(json)).toList();
+  }
+
+  @override
+  Future<String> askAiConsultation(String question) async {
+    final response = await _dioClient.post(
+      ApiConstants.aiConsult,
+      data: {'question': question},
+    );
+    return response.data['answer'];
+  }
+
+  @override
+  Future<String> getFirebaseToken() async {
+    final response = await _dioClient.get(ApiConstants.firebaseToken);
+    return response.data['token'];
+  }
+
+  @override
+  Future<List<dynamic>> getMyChats() async {
+    final response = await _dioClient.get(ApiConstants.myChats);
+    return response.data['chats'];
+  }
+
+  @override
+  Future<String> startChat(int receiverId) async {
+    final response = await _dioClient.post(
+      ApiConstants.startChat,
+      data: {'receiver_id': receiverId},
+    );
+    final data = response.data as Map<String, dynamic>;
+    
+    // ✅ Backend بيرجع الـ chatRoomId الثابت — تأكد من الـ key مع الـ backend
+    final roomId = data['chat_room_id']?.toString() ??
+        data['room']?['id']?.toString() ??
+        data['id']?.toString();
+        
+    if (roomId == null) {
+      throw Exception('Backend لم يرجع chat_room_id');
+    }
+    
+    return roomId;
+  }
+
+  @override
+  Future<void> updateLastMessage({
+    required int senderId,
+    required int receiverId,
+    required String message,
+  }) async {
+    await _dioClient.post(
+      ApiConstants.updateLastMessage,
+      data: {
+        'sender_id': senderId,
+        'receiver_id': receiverId,
+        'message': message,
+      },
+    );
+  }
+}
+
+
+==== lib/features/home/view/main_layout.dart ====
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:iconly/iconly.dart';
+
+import '../../../core/di/dependency_injection.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../features/analysis/view_model/analysis_view_model.dart';
+import '../../../features/profile/view_model/profile_view_model.dart';
+import '../../../shared/providers/auth_provider.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../community/view/community_screen.dart';
+import '../../chat/view/chats_list_screen.dart';
+import '../../chat/view/chatbot_screen.dart';
+import '../../analysis/view/parent_analysis_screen.dart';
+import '../../analysis/view/doctor_patients_screen.dart';
+import '../../chat/view_model/chat_view_model.dart';
+import '../../profile/view/profile_screen.dart';
+
+class MainLayout extends StatefulWidget {
+  const MainLayout({super.key});
+
+  @override
+  State<MainLayout> createState() => _MainLayoutState();
+}
+
+class _MainLayoutState extends State<MainLayout> {
+  int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = context.read<AuthProvider>();
+      final userId = authProvider.currentUser?.id;
+      if (userId != null) {
+        context.read<ChatViewModel>().loadChatRooms(userId);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+    final currentUser = authProvider.currentUser;
+
+    if (currentUser == null) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    final userRole = currentUser.role;
+
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          const CommunityScreen(), // 0: Home
+          ChangeNotifierProvider(  // 1: Analysis
+            create: (_) => getIt<AnalysisViewModel>(),
+            child: userRole.isDoctor
+                ? const DoctorPatientsScreen()
+                : const ParentAnalysisScreen(),
+          ),
+          const ChatbotScreen(), // 2: AI Assistant (center)
+          const ChatsListScreen(), // 3: Chat
+          ChangeNotifierProvider(           // 4: Profile
+            create: (_) => getIt<ProfileViewModel>(),
+            child: const ProfileScreen(),
+          ),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (index) => setState(() => _currentIndex = index),
+        backgroundColor: theme.bottomAppBarTheme.color ?? theme.cardColor,
+        indicatorColor: AppColors.primary.withValues(alpha: 0.15),
+        elevation: 0,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        destinations: [
+          NavigationDestination(
+            icon: const Icon(IconlyLight.home),
+            selectedIcon: const Icon(IconlyBold.home, color: AppColors.primary),
+            label: l10n.home,
+          ),
+          NavigationDestination(
+            icon: const Icon(IconlyLight.chart),
+            selectedIcon:
+                const Icon(IconlyBold.chart, color: AppColors.primary),
+            label: userRole.isDoctor ? l10n.myPatients : l10n.analysis,
+          ),
+          NavigationDestination(
+            icon: const Icon(IconlyLight.discovery),
+            selectedIcon: const Icon(IconlyBold.discovery, color: AppColors.primary),
+            label: l10n.aiHelper,
+          ),
+          NavigationDestination(
+            icon: Consumer<ChatViewModel>(
+              builder: (context, chatVM, _) {
+                final count = chatVM.totalUnreadCount;
+                return Badge.count(
+                  count: count,
+                  isLabelVisible: count > 0,
+                  child: const Icon(IconlyLight.chat),
+                );
+              },
+            ),
+            selectedIcon: const Icon(IconlyBold.chat, color: AppColors.primary),
+            label: l10n.chats,
+          ),
+          NavigationDestination(
+            icon: const Icon(IconlyLight.profile),
+            selectedIcon:
+                const Icon(IconlyBold.profile, color: AppColors.primary),
+            label: l10n.profile,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+==== lib/features/chat/view/chats_list_screen.dart ====
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -619,3 +1098,151 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     );
   }
 }
+
+
+==== lib/data/models/chat_room_model.dart ====
+class ChatRoomModel {
+  final String id;
+  final List<String> participantIds;
+  final Map<String, String> participantNames;
+  final Map<String, String?> participantAvatars;
+  final String? lastMessage;
+  final String? lastMessageSenderId;
+  final DateTime? lastMessageTimestamp;
+  final Map<String, int> unreadCounts; // userId -> unread count
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final bool isActive;
+  final Map<String, bool> typingStatus; // userId -> isTyping
+
+  const ChatRoomModel({
+    required this.id,
+    required this.participantIds,
+    required this.participantNames,
+    required this.participantAvatars,
+    this.lastMessage,
+    this.lastMessageSenderId,
+    this.lastMessageTimestamp,
+    this.unreadCounts = const {},
+    required this.createdAt,
+    required this.updatedAt,
+    this.isActive = true,
+    this.typingStatus = const {},
+  });
+
+  // Factory constructor from JSON
+  factory ChatRoomModel.fromJson(Map<String, dynamic> json) {
+    return ChatRoomModel(
+      id: json['id'] as String,
+      participantIds: (json['participant_ids'] as List<dynamic>)
+          .map((e) => e as String)
+          .toList(),
+      participantNames: Map<String, String>.from(json['participant_names'] as Map),
+      participantAvatars: Map<String, String?>.from(json['participant_avatars'] as Map),
+      lastMessage: json['last_message'] as String?,
+      lastMessageSenderId: json['last_message_sender_id'] as String?,
+      lastMessageTimestamp: json['last_message_timestamp'] != null
+          ? DateTime.parse(json['last_message_timestamp'] as String)
+          : null,
+      unreadCounts: Map<String, int>.from(json['unread_counts'] as Map? ?? {}),
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+      isActive: json['is_active'] as bool? ?? true,
+      typingStatus: Map<String, bool>.from(json['typing_status'] as Map? ?? {}),
+    );
+  }
+
+  // Convert to JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'participant_ids': participantIds,
+      'participant_names': participantNames,
+      'participant_avatars': participantAvatars,
+      'last_message': lastMessage,
+      'last_message_sender_id': lastMessageSenderId,
+      'last_message_timestamp': lastMessageTimestamp?.toIso8601String(),
+      'unread_counts': unreadCounts,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+      'is_active': isActive,
+      'typing_status': typingStatus,
+    };
+  }
+
+  // CopyWith method
+  ChatRoomModel copyWith({
+    String? id,
+    List<String>? participantIds,
+    Map<String, String>? participantNames,
+    Map<String, String?>? participantAvatars,
+    String? lastMessage,
+    String? lastMessageSenderId,
+    DateTime? lastMessageTimestamp,
+    Map<String, int>? unreadCounts,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    bool? isActive,
+    Map<String, bool>? typingStatus,
+  }) {
+    return ChatRoomModel(
+      id: id ?? this.id,
+      participantIds: participantIds ?? this.participantIds,
+      participantNames: participantNames ?? this.participantNames,
+      participantAvatars: participantAvatars ?? this.participantAvatars,
+      lastMessage: lastMessage ?? this.lastMessage,
+      lastMessageSenderId: lastMessageSenderId ?? this.lastMessageSenderId,
+      lastMessageTimestamp: lastMessageTimestamp ?? this.lastMessageTimestamp,
+      unreadCounts: unreadCounts ?? this.unreadCounts,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      isActive: isActive ?? this.isActive,
+      typingStatus: typingStatus ?? this.typingStatus,
+    );
+  }
+
+  // Helper methods
+  String getOtherParticipantId(String currentUserId) {
+    return participantIds.firstWhere((id) => id != currentUserId);
+  }
+
+  String getOtherParticipantName(String currentUserId) {
+    final otherId = getOtherParticipantId(currentUserId);
+    return participantNames[otherId] ?? 'مستخدم';
+  }
+
+  String? getOtherParticipantAvatar(String currentUserId) {
+    final otherId = getOtherParticipantId(currentUserId);
+    return participantAvatars[otherId];
+  }
+
+  int getUnreadCount(String userId) {
+    return unreadCounts[userId] ?? 0;
+  }
+
+  bool hasUnreadMessages(String userId) {
+    return getUnreadCount(userId) > 0;
+  }
+
+  bool isOtherParticipantTyping(String currentUserId) {
+    final otherId = getOtherParticipantId(currentUserId);
+    return typingStatus[otherId] ?? false;
+  }
+
+  bool get hasLastMessage => lastMessage != null && lastMessage!.isNotEmpty;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is ChatRoomModel && other.id == id;
+  }
+
+  @override
+  int get hashCode => id.hashCode;
+
+  @override
+  String toString() {
+    return 'ChatRoomModel(id: $id, participants: ${participantIds.length})';
+  }
+}
+

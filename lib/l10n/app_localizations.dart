@@ -1151,6 +1151,18 @@ abstract class AppLocalizations {
   /// **'Read More'**
   String get readMore;
 
+  /// No description provided for @showMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Show More'**
+  String get showMore;
+
+  /// No description provided for @showLess.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Less'**
+  String get showLess;
+
   /// No description provided for @roleDoctor.
   ///
   /// In en, this message translates to:
@@ -1258,6 +1270,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit child info'**
   String get editChildInfo;
+
+  /// No description provided for @childProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Child Profile'**
+  String get childProfile;
+
+  /// No description provided for @childProfileSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'View and edit your child\'s health data'**
+  String get childProfileSubtitle;
+
+  /// No description provided for @viewAnalyses.
+  ///
+  /// In en, this message translates to:
+  /// **'View Analyses'**
+  String get viewAnalyses;
+
+  /// No description provided for @viewAnalysesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Monitor progress and smart analyses'**
+  String get viewAnalysesSubtitle;
+
+  /// No description provided for @userPosts.
+  ///
+  /// In en, this message translates to:
+  /// **'User Posts'**
+  String get userPosts;
+
+  /// No description provided for @profileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get profileTitle;
+
+  /// No description provided for @message.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get message;
 
   /// No description provided for @myPosts.
   ///
