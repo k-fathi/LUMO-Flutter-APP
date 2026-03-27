@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_app_badger/flutter_app_badger.dart';
 import '../../core/services/notification_service.dart';
@@ -112,10 +114,13 @@ class NotificationProvider extends ChangeNotifier {
   /// Updates the app icon badge based on the current unread count.
   void _updateAppBadge() {
     try {
-      if (_unreadCount > 0) {
-        FlutterAppBadger.updateBadgeCount(_unreadCount);
-      } else {
-        FlutterAppBadger.removeBadge();
+      // FlutterAppBadger only supports Android and iOS
+      if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+        if (_unreadCount > 0) {
+          FlutterAppBadger.updateBadgeCount(_unreadCount);
+        } else {
+          FlutterAppBadger.removeBadge();
+        }
       }
     } catch (e) {
       debugPrint('App badger update failed (platform may not support it): $e');
@@ -154,14 +159,11 @@ class NotificationProvider extends ChangeNotifier {
     required int doctorId,
     required String patientName,
   }) async {
-    debugPrint('SIMULATION: Urgent notification sent to Doctor \$doctorId -> Patient \$patientName accepted the request!');
+    debugPrint('SIMULATION: Connection accepted notification sent to Doctor $doctorId -> Patient $patientName');
     
-    // In a real production environment, the Backend (Laravel) should automatically send an FCM Push Notification
-    // to the doctor when the /accept API is called.
-    // As a local simulation/fallback, we can show a local notification if testing on a single device:
     await showNotification(
-      title: 'طلب إضافة مقبول!',
-      body: 'لقد وافق \$patientName على طلب الإضافة الخاص بك. يمكنك الآن متابعة حالته.',
+      title: 'طلب تواصل مقبول',
+      body: 'تم قبول طلب التواصل مع $patientName. يمكنك الآن متابعة حالته.',
       payload: 'doctor_patients_list',
     );
   }
@@ -171,10 +173,10 @@ class NotificationProvider extends ChangeNotifier {
     required int targetUserId,
     required String followerName,
   }) async {
-    // ✅ الـ backend (Laravel) هو المسؤول عن إرسال FCM push notification
-    //    لـ targetUserId عند POST /user/{id}/follow
-    // من جانبنا بس نعمل refresh للـ notifications list
-    debugPrint('Follow action completed — backend handles FCM push to user $targetUserId');
+    // The backend (Laravel) is responsible for sending FCM push notification 
+    // to targetUserId when POST /user/{id}/follow is called.
+    // On the app side, we just refresh the local notification list for the current user.
+    debugPrint('Follow action completed — Backend handles FCM push to user $targetUserId');
     await fetchNotifications();
   }
 

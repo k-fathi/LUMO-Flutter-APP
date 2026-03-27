@@ -24,18 +24,18 @@ class AuthProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
-  // ✅ Callback لـ logout — بيتسجل من بره بدل الـ circular coupling
-  VoidCallback? _onLogoutCallback;
+  // ✅ Callback لـ session change — بيتسجل من بره بدل الـ circular coupling
+  VoidCallback? _onSessionChangeCallback;
 
   UserModel? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _authRepository.isLoggedIn;
 
-  /// يتسجل من main.dart أو app.dart عشان يعمل reset للـ ViewModels عند الـ logout
+  /// يتسجل من main.dart أو app.dart عشان يعمل reset للـ ViewModels عند الـ logout أو الـ login
   /// بدل ما AuthProvider يعتمد على الـ ViewModels مباشرة
-  void setLogoutCallback(VoidCallback callback) {
-    _onLogoutCallback = callback;
+  void setSessionChangeCallback(VoidCallback callback) {
+    _onSessionChangeCallback = callback;
   }
 
   // ─────────────────────────────────────────────
@@ -79,6 +79,7 @@ class AuthProvider extends ChangeNotifier {
         if (refreshed != null) {
           _currentUser = refreshed;
           await _localDataSource.saveCurrentUser(refreshed.toJson());
+          notifyListeners(); // Force UI update with fresh counts
         }
       } catch (e) {
         // ✅ بدل string matching — بنتحقق من نوع الـ exception
@@ -417,12 +418,11 @@ class AuthProvider extends ChangeNotifier {
       // Ensure local state is cleared even if the API call fails
     }
 
-    // ✅ بدل ما نعتمد على getIt<ViewModel> مباشرة (circular coupling)
-    // بننادي الـ callback اللي اتسجل من بره
+    // ✅ بننادي الـ callback اللي اتسجل من بره لتصفير الـ ViewModels
     try {
-      _onLogoutCallback?.call();
+      _onSessionChangeCallback?.call();
     } catch (e) {
-      debugPrint('Logout callback error: $e');
+      debugPrint('Session change callback error (logout): $e');
     }
 
     _currentUser = null;
@@ -438,6 +438,16 @@ class AuthProvider extends ChangeNotifier {
     _currentUser = updatedUser;
     _localDataSource.saveCurrentUser(updatedUser.toJson());
     notifyListeners();
+  }
+
+  void updateFollowingCount(bool increment) {
+    if (_currentUser != null) {
+      final currentCount = _currentUser!.followingCount ?? 0;
+      final newCount = increment ? currentCount + 1 : (currentCount > 0 ? currentCount - 1 : 0);
+      _currentUser = _currentUser!.copyWith(followingCount: newCount);
+      _localDataSource.saveCurrentUser(_currentUser!.toJson());
+      notifyListeners();
+    }
   }
 
   void clearError() {

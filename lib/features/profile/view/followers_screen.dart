@@ -128,7 +128,19 @@ class _FollowersScreenState extends State<FollowersScreen> {
 
               return InkWell(
                 onTap: () async {
-                  await viewModel.toggleFollow(follower.id, currentUserId: currentUserId);
+                  final wasFollowing = isFollowing;
+                  try {
+                    await viewModel.toggleFollow(follower.id, currentUserId: currentUserId);
+                    if (context.mounted) {
+                      context.read<AuthProvider>().updateFollowingCount(!wasFollowing);
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('فشل تحديث حالة المتابعة: $e')),
+                      );
+                    }
+                  }
                 },
                 borderRadius: BorderRadius.circular(12),
                 child: Container(

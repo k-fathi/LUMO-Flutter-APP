@@ -201,6 +201,9 @@ class AppRoutes {
                   ? int.tryParse(args['userId'].toString())
                   : null,
               user: args['user'] as UserModel?,
+              initialName: args['userName'] as String?,
+              initialAvatar: args['userAvatarUrl'] as String?,
+              initialRole: args['userRole']?.toString(),
             ),
           ),
         );

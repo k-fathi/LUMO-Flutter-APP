@@ -1,0 +1,25 @@
+Analyzing LUMO-Flutter-App...                                   
+
+  error • The method 'fetchComments' isn't defined for the type 'CommunityViewModel' • lib/features/community/view/comments_screen.dart:34:42 • undefined_method
+  error • The method 'addComment' isn't defined for the type 'CommunityViewModel' • lib/features/community/view/comments_screen.dart:50:21 • undefined_method
+  error • The named parameter 'currentUserId' isn't defined • lib/features/community/view/comments_screen.dart:313:70 • undefined_named_parameter
+warning • Unused import: 'posts_feed_widget.dart' • lib/features/community/view/community_screen.dart:8:8 • unused_import
+warning • The declaration '_handleRefresh' isn't referenced • lib/features/community/view/community_screen.dart:58:16 • unused_element
+  error • The method 'fetchComments' isn't defined for the type 'CommunityViewModel' • lib/features/community/view/post_detail_screen.dart:42:17 • undefined_method
+  error • The method 'fetchPostById' isn't defined for the type 'CommunityViewModel' • lib/features/community/view/post_detail_screen.dart:46:19 • undefined_method
+  error • The method 'addComment' isn't defined for the type 'CommunityViewModel' • lib/features/community/view/post_detail_screen.dart:69:21 • undefined_method
+  error • The method 'fetchPostById' isn't defined for the type 'CommunityViewModel' • lib/features/community/view/post_detail_screen.dart:135:35 • undefined_method
+  error • The method 'fetchComments' isn't defined for the type 'CommunityViewModel' • lib/features/community/view/post_detail_screen.dart:136:35 • undefined_method
+  error • The named parameter 'currentUserId' isn't defined • lib/features/community/view/post_detail_screen.dart:469:106 • undefined_named_parameter
+   info • The private field _comments could be 'final' • lib/features/community/view_model/community_view_model.dart:31:22 • prefer_final_fields
+   info • Don't use 'BuildContext's across async gaps • lib/features/profile/view/profile_screen.dart:163:29 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/features/profile/view/profile_screen.dart:167:49 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/features/profile/view/profile_screen.dart:177:50 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/features/profile/view/profile_screen.dart:190:50 • use_build_context_synchronously
+  error • The method 'createChat' isn't defined for the type 'ChatViewModel' • lib/features/profile/view/profile_screen.dart:540:55 • undefined_method
+  error • The named parameter 'chatRoomId' is required, but there's no corresponding argument • lib/features/profile/view/profile_screen.dart:544:51 • missing_required_argument
+  error • The named parameter 'otherUserName' is required, but there's no corresponding argument • lib/features/profile/view/profile_screen.dart:544:51 • missing_required_argument
+  error • The named parameter 'receiverId' isn't defined • lib/features/profile/view/profile_screen.dart:545:31 • undefined_named_parameter
+  error • The named parameter 'receiverName' isn't defined • lib/features/profile/view/profile_screen.dart:546:31 • undefined_named_parameter
+
+21 issues found. (ran in 7.2s)

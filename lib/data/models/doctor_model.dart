@@ -56,10 +56,8 @@ class DoctorModel extends UserModel {
       updatedAt: json['updated_at'] != null
           ? DateTime.tryParse(json['updated_at'].toString())
           : null,
-      followersCount:
-          int.tryParse(json['followers_count']?.toString() ?? '') ?? 0,
-      followingCount:
-          int.tryParse(json['following_count']?.toString() ?? '') ?? 0,
+      followersCount: int.tryParse(json['followers_count']?.toString() ?? json['followers']?.toString() ?? '') ?? 0,
+      followingCount: int.tryParse(json['following_count']?.toString() ?? json['following']?.toString() ?? '') ?? 0,
       isVerified: json['is_verified'] == true || json['is_verified'] == 1,
       isActive: json['is_active'] == true ||
           json['is_active'] == 1 ||

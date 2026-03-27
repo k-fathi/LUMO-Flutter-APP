@@ -53,12 +53,55 @@ class ProfileRepository {
       }
     }
 
-    // 2. Fallback to Firebase for others (or if REST failed)
-    if (userId <= 0) return null; // Can't fetch "me" from Firebase without ID
+    // 2. FOR TARGET USER (not me): Fetch followers/following to get counts
+    if (!isMyProfile && _remoteDataSource != null) {
+      try {
+        // Fetch followers/following list to get real-time counts
+        final followers = await _remoteDataSource!.getFollowers(userId);
+        final following = await _remoteDataSource!.getFollowing(userId);
 
-    // 🔥 Avoid hanging on Desktop/Linux where Firebase might not be initialized
+        if (!kIsWeb && !(Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
+          try {
+            final userData = await _firebaseDataSource.getUserById(userId.toString());
+            if (userData != null) {
+              final role = UserRole.fromString(userData['role'] as String? ?? 'parent');
+              
+              // Enrich Firebase data with current counts
+              final enriched = Map<String, dynamic>.from(userData);
+              enriched['followers_count'] = followers.length;
+              enriched['following_count'] = following.length;
+
+              if (role == UserRole.doctor) {
+                return DoctorModel.fromJson(enriched);
+              } else {
+                return ParentModel.fromJson(enriched);
+              }
+            }
+          } catch (e) {
+            debugPrint('Firebase fetch failed for target user: $e');
+          }
+        }
+
+        // Fallback: Build a simple UserModel with calculated counts if Firebase isn't available
+        // Note: Name and Avatar will be supplemented by ProfileScreen from nav arguments
+        return UserModel(
+          id: userId,
+          name: '', // Empty name allows ProfileScreen to use its initialName argument
+          email: '',
+          role: UserRole.parent,
+          followersCount: followers.length,
+          followingCount: following.length,
+        );
+      } catch (e) {
+        debugPrint('Could not get target user profile data: $e');
+      }
+    }
+
+    // Default Fallback
+    if (userId <= 0) return null;
+
     if (!kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
-      debugPrint('Skipping Firebase fallback on desktop platform.');
+      debugPrint('Skipping Firebase fallback on desktop platforms which may not support it or be initialized.');
       return null;
     }
 

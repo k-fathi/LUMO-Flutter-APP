@@ -19,14 +19,19 @@ import '../view_model/profile_view_model.dart';
 class ProfileScreen extends StatefulWidget {
   final UserModel? user;
   final int? userId;
+  final String? initialName;
+  final String? initialAvatar;
+  final String? initialRole;
 
-  const ProfileScreen({super.key, this.user, this.userId});
+  const ProfileScreen({super.key, this.user, this.userId, this.initialName, this.initialAvatar, this.initialRole});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  int _followersDelta = 0;
+
   @override
   void initState() {
     super.initState();
@@ -60,7 +65,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     final user =
         isMyProfile ? currentUser : (profileViewModel.user ?? widget.user);
-    final isDoctor = user?.role.name == 'doctor';
+        
+    // Use initial data as fallback to avoid "مستخدم"
+    final displayName = user?.name.isNotEmpty == true && user?.name != 'مستخدم'
+        ? user!.name 
+        : (widget.initialName ?? 'مستخدم');
+    final displayAvatar = user?.avatarUrl ?? widget.initialAvatar;
+    final displayRole = user?.role.name ?? widget.initialRole ?? 'parent';
+
+    final isDoctor = displayRole == 'doctor';
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
@@ -70,8 +83,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             .where((p) => p.userId == targetUserId)
             .toList();
 
-    final followersShow = profileViewModel.user?.followersCount ?? 0;
-    final followingShow = profileViewModel.user?.followingCount ?? 0;
+    final followersShow = user?.followersCount ?? 0;
+    final followingShow = user?.followingCount ?? 0;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -133,64 +146,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 SliverToBoxAdapter(
                   child: _ProfileHeader(
                     userId: targetUserId,
-                    name: user?.name ?? 'User',
+                    name: displayName,
                     role: isDoctor ? l10n.roleDoctor : l10n.roleParent,
                     isDoctor: isDoctor,
-                    photoUrl: user?.avatarUrl,
-                    followers: followersShow,
+                    photoUrl: displayAvatar,
+                    followers: followersShow + _followersDelta,
                     following: followingShow,
                     isMyProfile: isMyProfile,
                     isFollowing: targetUserId != null &&
                         communityViewModel.isFollowing(targetUserId),
                     onToggleFollow: () async {
-                      final currentUserId =
-                          context.read<AuthProvider>().currentUser?.id;
-                      if (targetUserId != null && currentUserId != null) {
-                        final wasFollowing =
-                            communityViewModel.isFollowing(targetUserId);
+                      if (targetUserId == null) return;
+                      final currentUserId = context.read<AuthProvider>().currentUser?.id;
+                      
+                      // Cannot follow self
+                      if (currentUserId == null || targetUserId == currentUserId) return;
 
-                        // 1. Optimistic UI update for count in ProfileViewModel
-                        profileViewModel.updateFollowerCount(!wasFollowing);
+                      final wasFollowing = communityViewModel.isFollowing(targetUserId);
 
-                        try {
-                          // 2. Centralized toggle in CommunityViewModel
-                          await context.read<CommunityViewModel>().toggleFollow(
-                              targetUserId,
-                              currentUserId: currentUserId);
+                      // 1. Optimistic feedback for UI
+                      setState(() => _followersDelta += wasFollowing ? -1 : 1);
 
-                          // 3. Notify
-                          if (!wasFollowing) {
-                            context
-                                .read<NotificationProvider>()
-                                .sendFollowNotification(
-                                  targetUserId: targetUserId,
-                                  followerName: context
-                                          .read<AuthProvider>()
-                                          .currentUser
-                                          ?.name ??
-                                      '',
-                                );
-                          }
+                      try {
+                        await context.read<CommunityViewModel>().toggleFollow(
+                          targetUserId,
+                          currentUserId: currentUserId,
+                          onFollowingCountChanged: (nowFollowing) {
+                            // Update current user's following count
+                            final myId = context.read<AuthProvider>().currentUser?.id;
+                            if (myId != null && mounted) {
+                              // Small delay to let backend process the follow
+                              Future.delayed(const Duration(seconds: 1), () {
+                                if (mounted) {
+                                  context.read<ProfileViewModel>().loadProfile(myId);
+                                }
+                              });
+                            }
+                          },
+                        );
 
-                          // 4. Feedback
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(!wasFollowing
-                                    ? 'تم متابعة ${user?.name}'
-                                    : 'تم إلغاء متابعة ${user?.name}'),
-                                duration: const Duration(seconds: 2),
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          // 5. Revert on failure
-                          profileViewModel.updateFollowerCount(wasFollowing);
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('فشل تحديث حالة المتابعة: $e')),
-                            );
-                          }
+                        if (!mounted) return;
+
+                        // 2. Refresh target user's profile to sync counters
+                        await context.read<ProfileViewModel>().loadProfile(targetUserId);
+                        
+                        // Reset delta when fresh data arrives
+                        if (mounted) setState(() => _followersDelta = 0);
+
+                        // 3. Feedback
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(!wasFollowing
+                                  ? 'تم متابعة ${user?.name}'
+                                  : 'تم إلغاء متابعة ${user?.name}'),
+                              backgroundColor: !wasFollowing ? Colors.green : null,
+                              duration: const Duration(seconds: 2),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        // 4. Revert delta on failure
+                        setState(() => _followersDelta += wasFollowing ? 1 : -1);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('فشل تحديث المتابعة، حاول مرة أخرى'),
+                              backgroundColor: Colors.red,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
                         }
                       }
                     },
@@ -535,18 +561,29 @@ class _ProfileHeader extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       if (userId != null) {
-                        context.read<ChatViewModel>().createChat(userId!);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ChatRoomScreen(
-                              receiverId: userId!,
-                              receiverName: name,
+                        try {
+                          final chatRoomId = await context.read<ChatViewModel>().startChat(userId!);
+                          if (!context.mounted) return;
+                          
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ChatRoomScreen(
+                                chatRoomId: chatRoomId,
+                                otherUserName: name,
+                                otherUserId: userId!.toString(),
+                                otherUserAvatar: photoUrl,
+                              ),
                             ),
-                          ),
-                        );
+                          );
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('فشل بدء المحادثة: $e')),
+                          );
+                        }
                       }
                     },
                     style: OutlinedButton.styleFrom(

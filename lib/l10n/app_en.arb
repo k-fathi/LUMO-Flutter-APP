@@ -299,7 +299,7 @@
   "searchByEmailOrName": "Search by Parent Name or Email...",
   "sendRequest": "Send Request",
   "requestSent": "Request Sent successfully!",
-  "doctorRequests": "Doctor Requests",
+  "doctorRequests": "Notifications",
   "doctorRequestMessage": "{doctorName} wants to add your child to their clinic",
   "accept": "Accept",
   "reject": "Reject",

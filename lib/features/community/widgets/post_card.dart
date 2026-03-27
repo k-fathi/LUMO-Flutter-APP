@@ -206,6 +206,11 @@ class _PostCardState extends State<PostCard> {
                                     post.userId,
                                     currentUserId: currentUserId,
                                   );
+
+                                  // Update followingCount optimistically
+                                  if (context.mounted) {
+                                    context.read<AuthProvider>().updateFollowingCount(!wasFollowing);
+                                  }
                                   if (!wasFollowing && post.userId != 0) {
                                     Future.microtask(() {
                                       if (context.mounted) {
@@ -221,6 +226,10 @@ class _PostCardState extends State<PostCard> {
                                     });
                                   }
                                 } catch (e) {
+                                  // Revert optimistic update on error
+                                  if (context.mounted) {
+                                    context.read<AuthProvider>().updateFollowingCount(isFollowing);
+                                  }
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(content: Text(e.toString())),
@@ -234,7 +243,7 @@ class _PostCardState extends State<PostCard> {
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
                               child: Text(
-                                isFollowing ? l10n.unfollow : l10n.follow,
+                                isFollowing ? 'متابَع ✓' : l10n.follow,
                                 style: TextStyle(
                                   color: isFollowing ? Colors.grey : AppColors.primary,
                                   fontWeight: isFollowing ? FontWeight.normal : FontWeight.bold,
@@ -339,7 +348,13 @@ class _PostCardState extends State<PostCard> {
     Navigator.pushNamed(
       context,
       RouteNames.profile,
-      arguments: {'userId': post.userId},
+      arguments: {
+        'userId': post.userId,
+        // Pass extra data to avoid "مستخدم" name on Linux
+        'userName': post.userName,
+        'userAvatarUrl': post.userAvatarUrl,
+        'userRole': post.userRole?.name,
+      },
     );
   }
 }

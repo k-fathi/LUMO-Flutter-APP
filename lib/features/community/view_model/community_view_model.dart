@@ -58,12 +58,45 @@ class CommunityViewModel extends ChangeNotifier {
   bool isFollowing(int userId) => _followedUserIds.contains(userId);
   int get followingCount => _followedUserIds.length;
 
+  void resetState() {
+    _posts = [];
+    _explorePosts = [];
+    _followingPosts = [];
+    _myPosts = [];
+    _comments = [];
+    _searchResults = [];
+    _followedUserIds = [];
+    _followingUsers = [];
+    _isLoading = false;
+    _isInitialized = false;
+    _errorMessage = null;
+    _replyingToComment = null;
+    _currentUserId = null;
+    _safeNotify();
+  }
+
   PostModel? findPostById(int id) {
     for (var list in [_explorePosts, _posts, _followingPosts, _myPosts]) {
       final index = list.indexWhere((p) => p.id == id);
       if (index != -1) return list[index];
     }
     return null;
+  }
+
+  Future<void> fetchPostById(int postId) async {
+    _isLoading = true;
+    _errorMessage = null;
+    _safeNotify();
+
+    try {
+      final post = await _repository.getPostById(postId);
+      _updatePostEverywhere(post);
+    } catch (e) {
+      _errorMessage = 'فشل تحميل المنشور: ${e.toString()}';
+    } finally {
+      _isLoading = false;
+      _safeNotify();
+    }
   }
 
   Future<void> fetchPosts({bool force = false, int? userId}) async {
@@ -154,11 +187,15 @@ class CommunityViewModel extends ChangeNotifier {
   }
 
   Future<void> _loadFollowingFeedInternal({int page = 1}) async {
+    // The following feed consists ONLY of posts from people I follow
     final feed = await _repository.getHomeFeed(page: page);
+    
+    final filteredPosts = feed.where((post) => _followedUserIds.contains(post.userId)).toList();
+
     if (page == 1) {
-      _followingPosts = feed;
+      _followingPosts = filteredPosts;
     } else {
-      _followingPosts.addAll(feed);
+      _followingPosts.addAll(filteredPosts);
     }
     _safeNotify();
   }
@@ -360,26 +397,69 @@ class CommunityViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> toggleCommentLike(int commentId) async {
+  Future<void> fetchComments(int postId) async {
+    _isLoading = true;
+    _errorMessage = null;
+    _comments = [];
+    _safeNotify();
+
+    try {
+      _comments = await _repository.getComments(postId);
+    } catch (e) {
+      _errorMessage = 'فشل تحميل التعليقات: ${e.toString()}';
+    } finally {
+      _isLoading = false;
+      _safeNotify();
+    }
+  }
+
+  Future<void> addComment(int postId, String content, {int? parentId}) async {
+    _isLoading = true;
+    _errorMessage = null;
+    _safeNotify();
+
+    try {
+      await _repository.addComment(postId, content, parentId: parentId);
+      // Refresh comments after adding
+      _comments = await _repository.getComments(postId);
+      
+      // Update comment count in posts
+      final post = findPostById(postId);
+      if (post != null) {
+        _updatePostEverywhere(post.copyWith(
+          commentsCount: post.commentsCount + 1,
+        ));
+      }
+    } catch (e) {
+      _errorMessage = 'فشل إضافة التعليق: ${e.toString()}';
+    } finally {
+      _isLoading = false;
+      _safeNotify();
+    }
+  }
+
+  Future<void> toggleCommentLike(int commentId, {int? currentUserId}) async {
     final index = _comments.indexWhere((c) => c.id == commentId);
     if (index == -1) return;
 
     final comment = _comments[index];
-    final isLiked = comment.isLiked;
+    final isLiked = comment.isLikedBy(currentUserId);
     
-    try {
-      final updatedComment = comment.copyWith(
-        isLiked: !isLiked,
-        likesCount: !isLiked ? comment.likesCount + 1 : comment.likesCount - 1,
-      );
-      
-      _comments[index] = updatedComment;
-      _safeNotify();
+    // Optimistic Update
+    final newLikesCount = isLiked ? comment.likesCount - 1 : comment.likesCount + 1;
+    final updatedComment = comment.copyWith(
+      isLiked: !isLiked,
+      likesCount: newLikesCount >= 0 ? newLikesCount : 0,
+    );
+    
+    _comments[index] = updatedComment;
+    _safeNotify();
 
+    try {
       await _repository.toggleCommentLike(commentId);
     } catch (e) {
       _errorMessage = 'فشل التفاعل مع التعليق: ${e.toString()}';
-      _comments[index] = comment;
+      _comments[index] = comment; // Revert
       _safeNotify();
     }
   }
@@ -412,47 +492,55 @@ class CommunityViewModel extends ChangeNotifier {
   }
 
   // Social
-  Future<void> toggleFollow(int userId, {int? currentUserId}) async {
+  Future<void> toggleFollow(int userId, {int? currentUserId, Function(bool isNowFollowing)? onFollowingCountChanged}) async {
+    // Cannot follow self
+    if (userId == _currentUserId || userId == currentUserId) return;
+
     final wasFollowing = _followedUserIds.contains(userId);
-    final newFollowingState = !wasFollowing;
 
     // 1. Optimistic UI Update
-    if (newFollowingState) {
-      _followedUserIds.add(userId);
-    } else {
+    if (wasFollowing) {
       _followedUserIds.remove(userId);
-    }
-
-    // Optimistically update the following feed
-    if (!newFollowingState) {
       _followingPosts.removeWhere((p) => p.userId == userId);
+    } else {
+      _followedUserIds.add(userId);
     }
-
+    
     _safeNotify();
+    onFollowingCountChanged?.call(!wasFollowing);
 
     try {
-      // 2. Call API with the intended state for Firebase sync
+      // 2. Call API
       await _repository.toggleFollow(userId,
-          currentUserId: currentUserId, isFollowing: newFollowingState);
+          currentUserId: currentUserId, isFollowing: wasFollowing);
 
-      // 3. Silent background refresh of following feed
-      _loadFollowingFeedInternal(page: 1);
+      // 3. Background Sync (2 seconds later to allow backend propagation)
+      Future.delayed(const Duration(seconds: 2), () async {
+        if (_isDisposed) return;
+        try {
+          final followingUsers = await _repository.getFollowingUsers();
+          if (_isDisposed) return;
+          
+          // Use whole server truth, avoid merging logic
+          _followedUserIds = followingUsers.map((u) => u.id).toList();
+          _followingUsers = followingUsers;
+          _safeNotify();
+        } catch (_) {
+          // Silent fail for background sync
+        }
+      });
       
-      // Also refresh following list to ensure _followedUserIds is accurate
-      final followingUsers = await _repository.getFollowingUsers();
-      _followedUserIds = followingUsers.map((u) => u.id).toList();
-      _safeNotify();
     } catch (e) {
-      // 4. Graceful Revert on Failure
+      // 4. Rollback
       if (wasFollowing) {
         _followedUserIds.add(userId);
       } else {
         _followedUserIds.remove(userId);
       }
+      onFollowingCountChanged?.call(wasFollowing);
       
-      _errorMessage = 'فشل تحديث حالة المتابعة: ${e.toString()}';
+      _errorMessage = 'فشل تحديث حالة المتابعة';
       _safeNotify();
-      rethrow; // Rethrow so UI can show snackbar
     }
   }
 
@@ -472,18 +560,6 @@ class CommunityViewModel extends ChangeNotifier {
 
   void clearError() {
     _errorMessage = null;
-    _safeNotify();
-  }
-
-  void resetState() {
-    _posts = [];
-    _followingPosts = [];
-    _myPosts = [];
-    _followedUserIds = [];
-    _isInitialized = false;
-    _currentUserId = null;
-    _errorMessage = null;
-    _isLoading = false;
     _safeNotify();
   }
 }

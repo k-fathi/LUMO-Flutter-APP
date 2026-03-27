@@ -12,6 +12,8 @@ import 'shared/providers/locale_provider.dart';
 import 'core/di/dependency_injection.dart';
 import 'shared/providers/auth_provider.dart';
 import 'features/community/view_model/community_view_model.dart';
+import 'features/profile/view_model/profile_view_model.dart';
+import 'features/profile/view_model/profile_view_model.dart';
 import 'features/session/view/floating_timer_overlay.dart';
 
 class LumoAIApp extends StatefulWidget {
@@ -27,9 +29,11 @@ class _LumoAIAppState extends State<LumoAIApp> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = context.read<AuthProvider>();
-      authProvider.setLogoutCallback(() {
-        // CommunityViewModel is the only Singleton — reset it manually
+      authProvider.setSessionChangeCallback(() {
+        // Clear all session-specific data when user changes (login/logout)
         getIt<CommunityViewModel>().resetState();
+        getIt<ProfileViewModel>().resetState();
+        // Add others if necessary
       });
     });
   }

@@ -61,8 +61,8 @@ class UserModel {
       updatedAt: json['updated_at'] != null
           ? DateTime.tryParse(json['updated_at'].toString())
           : null,
-      followersCount: int.tryParse(json['followers_count']?.toString() ?? ''),
-      followingCount: int.tryParse(json['following_count']?.toString() ?? ''),
+      followersCount: int.tryParse(json['followers_count']?.toString() ?? json['followers']?.toString() ?? json['followersCount']?.toString() ?? ''),
+      followingCount: int.tryParse(json['following_count']?.toString() ?? json['following']?.toString() ?? json['followingCount']?.toString() ?? ''),
       isVerified: json['is_verified'] == true || json['is_verified'] == 1,
       isActive: json['is_active'] == true ||
           json['is_active'] == 1 ||

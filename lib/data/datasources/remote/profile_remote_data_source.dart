@@ -40,8 +40,11 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
 
   @override
   Future<List<UserModel>> getFollowers(int userId) async {
-    // API returns followers for the current user only — userId is not passed
-    final response = await _dioClient.get(ApiConstants.getMyFollowers);
+    // If userId is provided, fetch for that user; otherwise defaults to current user
+    final response = await _dioClient.get(
+      ApiConstants.getMyFollowers,
+      queryParameters: userId > 0 ? {'user_id': userId} : null,
+    );
     final data = response.data as Map<String, dynamic>;
     final list = (data['followers'] ?? data['data'] ?? []) as List;
     return list
@@ -51,8 +54,11 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
 
   @override
   Future<List<UserModel>> getFollowing(int userId) async {
-    // API returns followings for the current user only — userId is not passed
-    final response = await _dioClient.get(ApiConstants.getMyFollowings);
+    // If userId is provided, fetch for that user; otherwise defaults to current user
+    final response = await _dioClient.get(
+      ApiConstants.getMyFollowings,
+      queryParameters: userId > 0 ? {'user_id': userId} : null,
+    );
     final data = response.data as Map<String, dynamic>;
     final list = (data['followings'] ?? data['data'] ?? []) as List;
     return list

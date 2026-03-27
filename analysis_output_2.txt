@@ -1,0 +1,10 @@
+Analyzing LUMO-Flutter-App...                                   
+
+warning • Unused import: 'posts_feed_widget.dart' • lib/features/community/view/community_screen.dart:8:8 • unused_import
+warning • The declaration '_handleRefresh' isn't referenced • lib/features/community/view/community_screen.dart:58:16 • unused_element
+   info • Don't use 'BuildContext's across async gaps • lib/features/profile/view/profile_screen.dart:163:29 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/features/profile/view/profile_screen.dart:167:49 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/features/profile/view/profile_screen.dart:177:50 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/features/profile/view/profile_screen.dart:190:50 • use_build_context_synchronously
+
+6 issues found. (ran in 8.5s)

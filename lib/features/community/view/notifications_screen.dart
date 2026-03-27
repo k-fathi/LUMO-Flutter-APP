@@ -101,7 +101,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(isDoctor ? l10n.notifications : l10n.doctorRequests),
+        title: Text(l10n.notifications),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,

@@ -278,7 +278,7 @@
   "searchByEmailOrName": "ابحث باسم أو بريد ولي الأمر...",
   "sendRequest": "إرسال طلب",
   "requestSent": "تم إرسال الطلب بنجاح!",
-  "doctorRequests": "طلبات الأطباء",
+  "doctorRequests": "الإشعارات",
   "doctorRequestMessage": "د. {doctorName} يريد إضافة طفلك إلى عيادته",
   "accept": "قبول",
   "reject": "رفض",

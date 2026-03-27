@@ -78,9 +78,6 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
             // ── Sticky Header ─────────────────────────────────
             const CommunityHeader(),
 
-            // ── Quick Post Widget (Now visible for both tabs) ──
-            const QuickPostWidget(),
-
             // ── Tab Bar ───────────────────────────────────────
             TabBar(
               controller: _tabController,
@@ -127,6 +124,9 @@ class _CommunityFeedWrapper extends StatelessWidget {
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
+          const SliverToBoxAdapter(
+            child: QuickPostWidget(),
+          ),
           Consumer<CommunityViewModel>(
             builder: (context, viewModel, child) {
               final posts = isExplore ? viewModel.explorePosts : viewModel.followingPosts;
