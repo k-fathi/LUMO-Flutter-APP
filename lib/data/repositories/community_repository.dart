@@ -69,29 +69,8 @@ class CommunityRepository {
   // ==================== SOCIAL OPERATIONS ====================
 
   Future<void> toggleFollow(int userId, {int? currentUserId, bool? isFollowing}) async {
-    // 1. Toggle in REST API
+    // REST API only — the backend handles the rest
     await _remoteDataSource.toggleFollow(userId.toString());
-
-    // 2. Sync to Firebase (via ProfileRepository) if currentUserId is known
-    if (currentUserId != null) {
-      try {
-        // If isFollowing is provided (optimistic state), use it to decide Firebase action
-        // Otherwise, fetch from server (less efficient)
-        bool followingState = isFollowing ?? false;
-        if (isFollowing == null) {
-          final following = await _remoteDataSource.getFollowingUsers();
-          followingState = following.any((u) => u.id == userId);
-        }
-        
-        if (followingState) {
-          await _profileRepository.followUser(currentUserId, userId);
-        } else {
-          await _profileRepository.unfollowUser(currentUserId, userId);
-        }
-      } catch (e) {
-        debugPrint('Firebase follow sync failed: $e');
-      }
-    }
   }
 
   Future<List<UserModel>> getFollowingUsers() async {

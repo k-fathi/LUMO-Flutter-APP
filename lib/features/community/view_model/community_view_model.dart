@@ -187,15 +187,15 @@ class CommunityViewModel extends ChangeNotifier {
   }
 
   Future<void> _loadFollowingFeedInternal({int page = 1}) async {
-    // The following feed consists ONLY of posts from people I follow
     final feed = await _repository.getHomeFeed(page: page);
-    
-    final filteredPosts = feed.where((post) => _followedUserIds.contains(post.userId)).toList();
-
     if (page == 1) {
-      _followingPosts = filteredPosts;
+      _followingPosts = feed
+          .where((post) => _followedUserIds.contains(post.userId))
+          .toList();
     } else {
-      _followingPosts.addAll(filteredPosts);
+      _followingPosts.addAll(
+        feed.where((post) => _followedUserIds.contains(post.userId)).toList(),
+      );
     }
     _safeNotify();
   }
@@ -520,16 +520,11 @@ class CommunityViewModel extends ChangeNotifier {
         try {
           final followingUsers = await _repository.getFollowingUsers();
           if (_isDisposed) return;
-          
-          // Use whole server truth, avoid merging logic
           _followedUserIds = followingUsers.map((u) => u.id).toList();
           _followingUsers = followingUsers;
           _safeNotify();
-        } catch (_) {
-          // Silent fail for background sync
-        }
+        } catch (_) {}
       });
-      
     } catch (e) {
       // 4. Rollback
       if (wasFollowing) {
@@ -538,8 +533,7 @@ class CommunityViewModel extends ChangeNotifier {
         _followedUserIds.remove(userId);
       }
       onFollowingCountChanged?.call(wasFollowing);
-      
-      _errorMessage = 'فشل تحديث حالة المتابعة';
+      _errorMessage = 'فشل تحديث المتابعة';
       _safeNotify();
     }
   }

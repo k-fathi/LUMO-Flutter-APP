@@ -26,95 +26,52 @@ class ProfileRepository {
   // ==================== USER PROFILE ====================
 
   Future<UserModel?> getUserProfile(int userId) async {
-    // Check if this is the current user
     final currentUserData = _localDataSource.getCurrentUser();
     final currentUserId = currentUserData != null
         ? int.tryParse(currentUserData['id']?.toString() ?? '')
         : null;
 
-    final isMyProfile = userId == currentUserId || userId <= 0;
+    final isMyProfile = (userId == currentUserId) || userId <= 0;
 
-    // 1. Try REST API only for current user
+    // ── current user: REST API ──
     if (_remoteDataSource != null && isMyProfile) {
       try {
         final profile = await _remoteDataSource!.getProfile();
-        // Persist to local cache
         await _localDataSource.saveCurrentUser(profile.toJson());
         return profile;
       } catch (e) {
-        final isUnauthenticated =
-            e.toString().toLowerCase().contains('unauthenticated') ||
-                e.toString().contains('401');
-
-        if (isUnauthenticated) {
-          rethrow; // Let AuthProvider handle the 401 and log out
-        }
-        debugPrint('REST Profile fetch failed: $e. Falling back to Firebase.');
+        final isUnauth = e.toString().toLowerCase().contains('unauthenticated') ||
+            e.toString().contains('401');
+        if (isUnauth) rethrow;
+        debugPrint('REST Profile fetch failed: $e');
       }
     }
 
-    // 2. FOR TARGET USER (not me): Fetch followers/following to get counts
-    if (!isMyProfile && _remoteDataSource != null) {
-      try {
-        // Fetch followers/following list to get real-time counts
-        final followers = await _remoteDataSource!.getFollowers(userId);
-        final following = await _remoteDataSource!.getFollowing(userId);
-
-        if (!kIsWeb && !(Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
-          try {
-            final userData = await _firebaseDataSource.getUserById(userId.toString());
-            if (userData != null) {
-              final role = UserRole.fromString(userData['role'] as String? ?? 'parent');
-              
-              // Enrich Firebase data with current counts
-              final enriched = Map<String, dynamic>.from(userData);
-              enriched['followers_count'] = followers.length;
-              enriched['following_count'] = following.length;
-
-              if (role == UserRole.doctor) {
-                return DoctorModel.fromJson(enriched);
-              } else {
-                return ParentModel.fromJson(enriched);
-              }
-            }
-          } catch (e) {
-            debugPrint('Firebase fetch failed for target user: $e');
-          }
-        }
-
-        // Fallback: Build a simple UserModel with calculated counts if Firebase isn't available
-        // Note: Name and Avatar will be supplemented by ProfileScreen from nav arguments
-        return UserModel(
-          id: userId,
-          name: '', // Empty name allows ProfileScreen to use its initialName argument
-          email: '',
-          role: UserRole.parent,
-          followersCount: followers.length,
-          followingCount: following.length,
-        );
-      } catch (e) {
-        debugPrint('Could not get target user profile data: $e');
-      }
-    }
-
-    // Default Fallback
     if (userId <= 0) return null;
 
+    // ── Desktop: skip Firebase ──
     if (!kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
-      debugPrint('Skipping Firebase fallback on desktop platforms which may not support it or be initialized.');
       return null;
     }
 
+    // ── target user: Firebase + calculate counters ──
     try {
       final userData = await _firebaseDataSource.getUserById(userId.toString());
       if (userData == null) return null;
 
-      final role = UserRole.fromString(userData['role'] as String? ?? 'parent');
-      if (role == UserRole.doctor) {
-        return DoctorModel.fromJson(userData);
-      } else {
-        return ParentModel.fromJson(userData);
-      }
+      final enriched = Map<String, dynamic>.from(userData);
+
+      // Calculate counters from arrays in Firebase
+      final followerIds = (enriched['follower_ids'] as List?) ?? [];
+      final followingIds = (enriched['following_ids'] as List?) ?? [];
+      
+      // Use array length or count field — whichever is more accurate
+      enriched['followers_count'] = enriched['followers_count'] ?? followerIds.length;
+      enriched['following_count'] = enriched['following_count'] ?? followingIds.length;
+
+      final role = UserRole.fromString(enriched['role']?.toString() ?? 'parent');
+      if (role == UserRole.doctor) return DoctorModel.fromJson(enriched);
+      return ParentModel.fromJson(enriched);
     } catch (e) {
       debugPrint('Firebase fetch failed: $e');
       return null;
@@ -145,7 +102,6 @@ class ProfileRepository {
     String? childMedicalCondition,
     String? childPhotoUrl,
   }) async {
-    // 1. Try the real REST API first (preferred path)
     if (_remoteDataSource != null) {
       try {
         final updatedUser = await _remoteDataSource!.updateProfile(
@@ -159,15 +115,13 @@ class ProfileRepository {
           childMedicalCondition: childMedicalCondition,
           childPhotoUrl: childPhotoUrl,
         );
-        // Persist fresh server data locally
         await _localDataSource.saveCurrentUser(updatedUser.toJson());
         return updatedUser;
       } catch (e) {
-        // If REST API fails, fall through to local/Firebase path
+        // Fallback
       }
     }
 
-    // 2. Offline / fallback: apply changes locally
     final updateData = <String, dynamic>{};
     if (name != null) updateData['name'] = name;
     if (bio != null) updateData['bio'] = bio;
@@ -240,7 +194,7 @@ class ProfileRepository {
         debugPrint('REST getFollowers failed: $e');
       }
     }
-    return []; // Fallback to empty list if no remote source or it fails
+    return [];
   }
 
   Future<List<UserModel>> getFollowing(int userId) async {
@@ -251,7 +205,7 @@ class ProfileRepository {
         debugPrint('REST getFollowing failed: $e');
       }
     }
-    return []; // Fallback to empty list if no remote source or it fails
+    return [];
   }
 
   // ==================== DOCTOR CODE SYSTEM ====================
@@ -276,7 +230,6 @@ class ProfileRepository {
     final codeId = await _firebaseDataSource.createDoctorCode(codeData);
     codeData['id'] = codeId;
 
-    // Save locally for quick access
     await _localDataSource.saveDoctorCode(codeString);
 
     return DoctorCodeModel.fromJson(codeData);
@@ -288,7 +241,6 @@ class ProfileRepository {
 
     final codeModel = DoctorCodeModel.fromJson(codeData);
 
-    // Check if valid
     if (!codeModel.isValid) return null;
 
     return codeModel;
@@ -330,7 +282,6 @@ class ProfileRepository {
         await _firebaseDataSource.createConnectionRequest(requestData);
     requestData['id'] = requestId;
 
-    // Increment code usage
     final codeData = await _firebaseDataSource.getDoctorCodeByCode(doctorCode);
     if (codeData != null) {
       await _firebaseDataSource.incrementCodeUsage(codeData['id'] as String);
@@ -347,9 +298,6 @@ class ProfileRepository {
     };
 
     await _firebaseDataSource.updateConnectionRequest(requestId, updateData);
-
-    // Add to each other's lists
-    // TODO: Implement adding parent to doctor's patient list and vice versa
   }
 
   Future<void> rejectConnectionRequest(String requestId,

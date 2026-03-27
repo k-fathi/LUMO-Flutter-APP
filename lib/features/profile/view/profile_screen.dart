@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -12,18 +11,14 @@ import '../../../core/router/route_names.dart';
 import '../../../shared/widgets/avatar_widget.dart';
 import '../../../data/models/user_model.dart';
 import '../../../shared/providers/notification_provider.dart';
-import '../../chat/view_model/chat_view_model.dart';
-import '../../chat/view/chat_room_screen.dart';
 import '../view_model/profile_view_model.dart';
+import '../../chat/view_model/chat_view_model.dart';
 
 class ProfileScreen extends StatefulWidget {
   final UserModel? user;
   final int? userId;
-  final String? initialName;
-  final String? initialAvatar;
-  final String? initialRole;
 
-  const ProfileScreen({super.key, this.user, this.userId, this.initialName, this.initialAvatar, this.initialRole});
+  const ProfileScreen({super.key, this.user, this.userId});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -46,7 +41,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
 
       if (targetUserId != null) {
-        context.read<ProfileViewModel>().loadProfile(targetUserId);
+        context.read<ProfileViewModel>().loadProfile(targetUserId).then((_) {
+          if (mounted) {
+            setState(() => _followersDelta = 0);
+          }
+        });
       }
     });
   }
@@ -65,15 +64,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     final user =
         isMyProfile ? currentUser : (profileViewModel.user ?? widget.user);
-        
-    // Use initial data as fallback to avoid "مستخدم"
-    final displayName = user?.name.isNotEmpty == true && user?.name != 'مستخدم'
-        ? user!.name 
-        : (widget.initialName ?? 'مستخدم');
-    final displayAvatar = user?.avatarUrl ?? widget.initialAvatar;
-    final displayRole = user?.role.name ?? widget.initialRole ?? 'parent';
-
-    final isDoctor = displayRole == 'doctor';
+    final isDoctor = user?.role.name == 'doctor';
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
@@ -83,8 +74,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             .where((p) => p.userId == targetUserId)
             .toList();
 
-    final followersShow = user?.followersCount ?? 0;
-    final followingShow = user?.followingCount ?? 0;
+    final baseFollowers = profileViewModel.user?.followersCount ?? 0;
+    final followersShow = baseFollowers + _followersDelta;
+    final followingShow = profileViewModel.user?.followingCount ?? 0;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -137,7 +129,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 await context
                     .read<ProfileViewModel>()
                     .loadProfile(targetUserId);
-                if (!context.mounted) return;
               }
               await context.read<CommunityViewModel>().loadMyPosts();
             },
@@ -146,11 +137,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 SliverToBoxAdapter(
                   child: _ProfileHeader(
                     userId: targetUserId,
-                    name: displayName,
+                    name: user?.name ?? 'User',
                     role: isDoctor ? l10n.roleDoctor : l10n.roleParent,
                     isDoctor: isDoctor,
-                    photoUrl: displayAvatar,
-                    followers: followersShow + _followersDelta,
+                    photoUrl: user?.avatarUrl,
+                    followers: followersShow,
                     following: followingShow,
                     isMyProfile: isMyProfile,
                     isFollowing: targetUserId != null &&
@@ -158,13 +149,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onToggleFollow: () async {
                       if (targetUserId == null) return;
                       final currentUserId = context.read<AuthProvider>().currentUser?.id;
-                      
-                      // Cannot follow self
                       if (currentUserId == null || targetUserId == currentUserId) return;
 
                       final wasFollowing = communityViewModel.isFollowing(targetUserId);
 
-                      // 1. Optimistic feedback for UI
+                      // Optimistic for target user's followers
                       setState(() => _followersDelta += wasFollowing ? -1 : 1);
 
                       try {
@@ -172,13 +161,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           targetUserId,
                           currentUserId: currentUserId,
                           onFollowingCountChanged: (nowFollowing) {
-                            // Update current user's following count
-                            final myId = context.read<AuthProvider>().currentUser?.id;
-                            if (myId != null && mounted) {
-                              // Small delay to let backend process the follow
+                            // Update following count for current user after a delay
+                            if (mounted) {
                               Future.delayed(const Duration(seconds: 1), () {
                                 if (mounted) {
-                                  context.read<ProfileViewModel>().loadProfile(myId);
+                                  context.read<ProfileViewModel>().loadProfile(currentUserId);
                                 }
                               });
                             }
@@ -187,13 +174,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                         if (!mounted) return;
 
-                        // 2. Refresh target user's profile to sync counters
+                        // Update followers count for target user from backend
                         await context.read<ProfileViewModel>().loadProfile(targetUserId);
-                        
-                        // Reset delta when fresh data arrives
                         if (mounted) setState(() => _followersDelta = 0);
 
-                        // 3. Feedback
+                        // Refresh notifications
+                        if (!wasFollowing && mounted) {
+                          context.read<NotificationProvider>().fetchNotifications();
+                        }
+
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -201,18 +190,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ? 'تم متابعة ${user?.name}'
                                   : 'تم إلغاء متابعة ${user?.name}'),
                               backgroundColor: !wasFollowing ? Colors.green : null,
-                              duration: const Duration(seconds: 2),
                               behavior: SnackBarBehavior.floating,
+                              duration: const Duration(seconds: 2),
                             ),
                           );
                         }
                       } catch (e) {
-                        // 4. Revert delta on failure
                         setState(() => _followersDelta += wasFollowing ? 1 : -1);
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('فشل تحديث المتابعة، حاول مرة أخرى'),
+                              backgroundColor: Colors.red,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    onMessageTap: () async {
+                      if (targetUserId == null) return;
+                      try {
+                        final chatViewModel = context.read<ChatViewModel>();
+                        final chatRoomId = await chatViewModel.startChat(targetUserId);
+                        if (!context.mounted) return;
+                        Navigator.pushNamed(
+                          context,
+                          RouteNames.chatRoom,
+                          arguments: {
+                            'chatRoomId': chatRoomId,
+                            'otherUserName': user?.name ?? '',
+                            'otherUserAvatar': user?.avatarUrl,
+                            'otherUserId': targetUserId.toString(),
+                          },
+                        );
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('فشل فتح المحادثة: $e'),
                               backgroundColor: Colors.red,
                               behavior: SnackBarBehavior.floating,
                             ),
@@ -401,7 +417,8 @@ class _ProfileHeader extends StatelessWidget {
   final int following;
   final bool isMyProfile;
   final bool isFollowing;
-  final AsyncCallback onToggleFollow;
+  final VoidCallback onToggleFollow;
+  final VoidCallback onMessageTap;
   final VoidCallback onEditProfile;
   final VoidCallback onSettings;
   final VoidCallback onSignOut;
@@ -417,6 +434,7 @@ class _ProfileHeader extends StatelessWidget {
     required this.isMyProfile,
     required this.isFollowing,
     required this.onToggleFollow,
+    required this.onMessageTap,
     required this.onEditProfile,
     required this.onSettings,
     required this.onSignOut,
@@ -517,19 +535,11 @@ class _ProfileHeader extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: BorderRadius.circular(12),
                   elevation: 0,
                 ),
-                child: Text(
-                  l10n.editProfile,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: Text(l10n.editProfile),
               ),
             )
           else
@@ -540,67 +550,26 @@ class _ProfileHeader extends StatelessWidget {
                     onPressed: onToggleFollow,
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
-                          isFollowing ? Colors.grey[200] : AppColors.primary,
+                          isFollowing ? theme.dividerColor : AppColors.primary,
                       foregroundColor:
-                          isFollowing ? Colors.black87 : Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                          isFollowing ? theme.textTheme.bodyLarge?.color : Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: BorderRadius.circular(12),
                       elevation: 0,
                     ),
-                    child: Text(
-                      isFollowing ? l10n.unfollow : l10n.follow,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: Text(isFollowing ? 'متابع' : l10n.follow),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () async {
-                      if (userId != null) {
-                        try {
-                          final chatRoomId = await context.read<ChatViewModel>().startChat(userId!);
-                          if (!context.mounted) return;
-                          
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ChatRoomScreen(
-                                chatRoomId: chatRoomId,
-                                otherUserName: name,
-                                otherUserId: userId!.toString(),
-                                otherUserAvatar: photoUrl,
-                              ),
-                            ),
-                          );
-                        } catch (e) {
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('فشل بدء المحادثة: $e')),
-                          );
-                        }
-                      }
-                    },
+                    onPressed: onMessageTap,
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: BorderRadius.circular(12),
                       side: const BorderSide(color: AppColors.primary),
                     ),
-                    child: Text(
-                      l10n.message,
-                      style: const TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: Text(l10n.message),
                   ),
                 ),
               ],
@@ -617,10 +586,9 @@ class _ProfileHeader extends StatelessWidget {
           count.toString(),
           style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 4),
         Text(
           label,
-          style: AppTextStyles.caption.copyWith(color: Colors.grey),
+          style: AppTextStyles.caption,
         ),
       ],
     );

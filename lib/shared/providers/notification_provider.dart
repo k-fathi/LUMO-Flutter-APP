@@ -159,13 +159,8 @@ class NotificationProvider extends ChangeNotifier {
     required int doctorId,
     required String patientName,
   }) async {
-    debugPrint('SIMULATION: Connection accepted notification sent to Doctor $doctorId -> Patient $patientName');
-    
-    await showNotification(
-      title: 'طلب تواصل مقبول',
-      body: 'تم قبول طلب التواصل مع $patientName. يمكنك الآن متابعة حالته.',
-      payload: 'doctor_patients_list',
-    );
+    debugPrint('Connection accepted: Backend handles FCM for doctor $doctorId');
+    await fetchNotifications();
   }
 
   // Send follow notification — backend handles actual push to target user
