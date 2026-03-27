@@ -13,7 +13,6 @@ import 'core/di/dependency_injection.dart';
 import 'shared/providers/auth_provider.dart';
 import 'features/community/view_model/community_view_model.dart';
 import 'features/profile/view_model/profile_view_model.dart';
-import 'features/profile/view_model/profile_view_model.dart';
 import 'features/session/view/floating_timer_overlay.dart';
 
 class LumoAIApp extends StatefulWidget {

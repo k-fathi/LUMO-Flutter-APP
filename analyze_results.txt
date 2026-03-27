@@ -1,0 +1,21 @@
+Analyzing LUMO-Flutter-App...                                   
+
+warning • Duplicate import • lib/app.dart:16:8 • duplicate_import
+  error • The named parameter 'initialName' isn't defined • lib/core/router/app_routes.dart:204:15 • undefined_named_parameter
+  error • The named parameter 'initialAvatar' isn't defined • lib/core/router/app_routes.dart:205:15 • undefined_named_parameter
+  error • The named parameter 'initialRole' isn't defined • lib/core/router/app_routes.dart:206:15 • undefined_named_parameter
+warning • Unused import: 'package:flutter/foundation.dart' • lib/data/repositories/community_repository.dart:1:8 • unused_import
+warning • The value of the field '_profileRepository' isn't used • lib/data/repositories/community_repository.dart:10:27 • unused_field
+warning • Unused import: 'posts_feed_widget.dart' • lib/features/community/view/community_screen.dart:8:8 • unused_import
+warning • The declaration '_handleRefresh' isn't referenced • lib/features/community/view/community_screen.dart:58:16 • unused_element
+   info • Don't use 'BuildContext's across async gaps • lib/features/profile/view/profile_screen.dart:133:21 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/features/profile/view/profile_screen.dart:168:35 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/features/profile/view/profile_screen.dart:178:31 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/features/profile/view/profile_screen.dart:183:27 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/features/profile/view/profile_screen.dart:187:48 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/features/profile/view/profile_screen.dart:201:48 • use_build_context_synchronously
+  error • The argument type 'BorderRadius' can't be assigned to the parameter type 'OutlinedBorder?'.  • lib/features/profile/view/profile_screen.dart:539:26 • argument_type_not_assignable
+  error • The argument type 'BorderRadius' can't be assigned to the parameter type 'OutlinedBorder?'.  • lib/features/profile/view/profile_screen.dart:557:30 • argument_type_not_assignable
+  error • The argument type 'BorderRadius' can't be assigned to the parameter type 'OutlinedBorder?'.  • lib/features/profile/view/profile_screen.dart:569:30 • argument_type_not_assignable
+
+17 issues found. (ran in 5.1s)

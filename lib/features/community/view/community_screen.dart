@@ -5,7 +5,6 @@ import '../widgets/community_header.dart';
 import '../widgets/quick_post_widget.dart';
 import '../widgets/post_card.dart';
 import '../view_model/community_view_model.dart';
-import 'posts_feed_widget.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/shimmer_loading.dart';
 import '../../../shared/providers/auth_provider.dart';
@@ -53,15 +52,6 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
     _tabController.removeListener(_handleTabSelection);
     _tabController.dispose();
     super.dispose();
-  }
-
-  Future<void> _handleRefresh() async {
-    final viewModel = context.read<CommunityViewModel>();
-    if (_tabController.index == 0) {
-      await viewModel.loadExploreFeed();
-    } else {
-      await viewModel.loadFollowingFeed();
-    }
   }
 
 

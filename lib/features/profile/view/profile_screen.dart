@@ -17,8 +17,18 @@ import '../../chat/view_model/chat_view_model.dart';
 class ProfileScreen extends StatefulWidget {
   final UserModel? user;
   final int? userId;
+  final String? initialName;
+  final String? initialAvatar;
+  final String? initialRole;
 
-  const ProfileScreen({super.key, this.user, this.userId});
+  const ProfileScreen({
+    super.key,
+    this.user,
+    this.userId,
+    this.initialName,
+    this.initialAvatar,
+    this.initialRole,
+  });
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -64,7 +74,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     final user =
         isMyProfile ? currentUser : (profileViewModel.user ?? widget.user);
-    final isDoctor = user?.role.name == 'doctor';
+        
+    // Use initial data as fallback
+    final displayName = user?.name.isNotEmpty == true && user?.name != 'مستخدم'
+        ? user!.name 
+        : (widget.initialName ?? 'مستخدم');
+    final displayAvatar = user?.avatarUrl ?? widget.initialAvatar;
+    final displayRole = user?.role.name ?? widget.initialRole ?? 'parent';
+
+    final isDoctor = displayRole == 'doctor';
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
@@ -137,10 +155,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 SliverToBoxAdapter(
                   child: _ProfileHeader(
                     userId: targetUserId,
-                    name: user?.name ?? 'User',
+                    name: displayName,
                     role: isDoctor ? l10n.roleDoctor : l10n.roleParent,
                     isDoctor: isDoctor,
-                    photoUrl: user?.avatarUrl,
+                    photoUrl: displayAvatar,
                     followers: followersShow,
                     following: followingShow,
                     isMyProfile: isMyProfile,
@@ -536,7 +554,9 @@ class _ProfileHeader extends StatelessWidget {
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: BorderRadius.circular(12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   elevation: 0,
                 ),
                 child: Text(l10n.editProfile),
@@ -554,7 +574,9 @@ class _ProfileHeader extends StatelessWidget {
                       foregroundColor:
                           isFollowing ? theme.textTheme.bodyLarge?.color : Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: BorderRadius.circular(12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       elevation: 0,
                     ),
                     child: Text(isFollowing ? 'متابع' : l10n.follow),
@@ -566,7 +588,9 @@ class _ProfileHeader extends StatelessWidget {
                     onPressed: onMessageTap,
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: BorderRadius.circular(12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       side: const BorderSide(color: AppColors.primary),
                     ),
                     child: Text(l10n.message),

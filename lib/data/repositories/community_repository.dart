@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import '../datasources/remote/community_remote_data_source.dart';
 import '../models/comment_model.dart';
 import '../models/post_model.dart';
@@ -7,9 +6,8 @@ import 'profile_repository.dart';
 
 class CommunityRepository {
   final CommunityRemoteDataSource _remoteDataSource;
-  final ProfileRepository _profileRepository;
 
-  CommunityRepository(this._remoteDataSource, this._profileRepository);
+  CommunityRepository(this._remoteDataSource, ProfileRepository profileRepository);
 
   // ==================== POST OPERATIONS ====================
 
