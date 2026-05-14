@@ -58,38 +58,30 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
           child: Container(height: 1, color: theme.dividerColor),
         ),
       ),
+      // ── FAB: Add Patient ─────────────────────────────────────────
+      floatingActionButton: FloatingActionButton(
+        heroTag: 'addPatientFab',
+        backgroundColor: AppColors.primary,
+        onPressed: () => _showSearchPatientDialog(context),
+        child: const Icon(Icons.person_add_rounded, color: Colors.white),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       body: RefreshIndicator(
         onRefresh: () async {
           await patientProvider.fetchPatients();
         },
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
           children: [
-            // ── 1. Dashboard & Action Card ───────────────────
-            Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 160,
-                    child: _buildDashboardCard(
-                      context,
-                      title: l10n.totalPatients,
-                      count: '${patients.length}',
-                      trendValue: patientProvider.patientsTrend,
-                      icon: Icons.people_alt_rounded,
-                      color: AppColors.primary,
-                      onTap: () {},
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: SizedBox(
-                    height: 160,
-                    child: _buildActionCard(context),
-                  ),
-                ),
-              ],
+            // ── 1. Dashboard Summary Row ───────────────────
+            _buildDashboardCard(
+              context,
+              title: l10n.totalPatients,
+              count: '${patients.length}',
+              trendValue: patientProvider.patientsTrend,
+              icon: Icons.people_alt_rounded,
+              color: AppColors.primary,
+              onTap: () {},
             ),
             const SizedBox(height: 24),
 
@@ -176,7 +168,6 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
               else
                 ...patients.map((p) => _buildPatientCard(context, p)),
             ],
-            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -212,54 +203,17 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Row(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, color: color, size: 28),
-                ),
-                if (trendValue != 0)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: (trendValue >= 0 ? Colors.green : Colors.red)
-                          .withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: IntrinsicWidth(
-                      child: Row(
-                        children: [
-                          Icon(
-                              trendValue >= 0
-                                  ? Icons.trending_up_rounded
-                                  : Icons.trending_down_rounded,
-                              color:
-                                  trendValue >= 0 ? Colors.green : Colors.red,
-                              size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${trendValue >= 0 ? "+" : ""}${trendValue.toStringAsFixed(0)}%',
-                            style: AppTextStyles.caption.copyWith(
-                                color:
-                                    trendValue >= 0 ? Colors.green : Colors.red,
-                                fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 28),
             ),
+            const SizedBox(width: 16),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -267,107 +221,49 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
                   count,
                   style: AppTextStyles.h1.copyWith(
                     fontWeight: FontWeight.w800,
-                    fontSize: 32,
+                    fontSize: 28,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      title,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    Icon(
-                      Icons.arrow_forward_rounded,
-                      color: theme.iconTheme.color?.withValues(alpha: 0.3),
-                      size: 16,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Compact Action Card ─────────────────────────────────────
-  Widget _buildActionCard(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-    return GestureDetector(
-      onTap: () => _showSearchPatientDialog(context),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: theme.brightness == Brightness.light
-                  ? const Color(0xFF2563EB).withValues(alpha: 0.3)
-                  : Colors.black.withValues(alpha: 0.4),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.person_add_rounded,
-                color: Colors.white,
-                size: 28,
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
                 Text(
-                  l10n.addPatient,
-                  style: AppTextStyles.h3.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
+                  title,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
                   ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      l10n.searchPatient,
-                      style: AppTextStyles.caption.copyWith(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const Icon(
-                      Icons.arrow_forward_rounded,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                  ],
                 ),
               ],
             ),
+            const Spacer(),
+            if (trendValue != 0)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: (trendValue >= 0 ? Colors.green : Colors.red)
+                      .withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                        trendValue >= 0
+                            ? Icons.trending_up_rounded
+                            : Icons.trending_down_rounded,
+                        color:
+                            trendValue >= 0 ? Colors.green : Colors.red,
+                        size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${trendValue >= 0 ? "+" : ""}${trendValue.toStringAsFixed(0)}%',
+                      style: AppTextStyles.caption.copyWith(
+                          color:
+                              trendValue >= 0 ? Colors.green : Colors.red,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),
@@ -387,7 +283,6 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
   Widget _buildPatientCard(BuildContext context, UserModel patient) {
     final theme = Theme.of(context);
 
-    // Extract child name and parent name based on model type
     String displayTitle;
     String displaySubtitle;
     String? avatarUrl;
@@ -441,6 +336,17 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(Icons.analytics_outlined, size: 12, color: Colors.grey.shade500),
+                const SizedBox(width: 4),
+                Text(
+                  'بيانات التحسن غير متوفرة',
+                  style: AppTextStyles.caption.copyWith(color: Colors.grey.shade500, fontSize: 11),
                 ),
               ],
             ),

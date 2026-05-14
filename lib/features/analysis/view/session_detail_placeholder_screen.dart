@@ -67,21 +67,6 @@ class _SessionDetailPlaceholderScreenState
           widget.displayIndex != null ? 'جلسة #${widget.displayIndex}' : _sessionData.title,
           style: AppTextStyles.h2.copyWith(fontWeight: FontWeight.w700),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.picture_as_pdf_outlined),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('جاري تحميل التقرير...',
-                      style: TextStyle(fontFamily: 'Cairo')),
-                  backgroundColor: AppColors.primary,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-          ),
-        ],
         bottom: TabBar(
           controller: _tabController,
           labelColor: AppColors.primary,
@@ -91,7 +76,7 @@ class _SessionDetailPlaceholderScreenState
           labelStyle: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
           unselectedLabelStyle: AppTextStyles.body,
           tabs: const [
-            Tab(text: "الملخص البصري", icon: Icon(Icons.analytics_outlined)),
+            Tab(text: "التحليل السلوكي والانفعالي", icon: Icon(Icons.analytics_outlined)),
             Tab(
                 text: "التقرير الطبي",
                 icon: Icon(Icons.medical_information_outlined)),
@@ -101,7 +86,7 @@ class _SessionDetailPlaceholderScreenState
       body: TabBarView(
         controller: _tabController,
         children: [
-          // TAB 1: Visual Summary
+          // TAB 1: Behavioral & Emotional Analysis
           _buildVisualSummaryTab(),
 
           // TAB 2: Clinical Report
@@ -111,7 +96,7 @@ class _SessionDetailPlaceholderScreenState
     );
   }
 
-  // ================= TAB 1: VISUAL SUMMARY =================
+  // ================= TAB 1: BEHAVIORAL & EMOTIONAL ANALYSIS =================
 
   Widget _buildVisualSummaryTab() {
     return SingleChildScrollView(
@@ -129,6 +114,30 @@ class _SessionDetailPlaceholderScreenState
   }
 
   Widget _buildFocusAnalysisBar() {
+    final focusPct = ((_sessionData.averageFocus ?? _sessionData.focusedPercentage) * 100).toInt();
+    final notFocusPct = 100 - focusPct;
+
+    // Determine dominant gaze direction
+    String dominantGaze = 'المنتصف';
+    if (_sessionData.gazeDistribution.isNotEmpty) {
+      String topKey = '';
+      double topVal = -1;
+      _sessionData.gazeDistribution.forEach((key, val) {
+        if (val > topVal) {
+          topVal = val;
+          topKey = key;
+        }
+      });
+      switch (topKey.toUpperCase()) {
+        case 'CENTER': dominantGaze = 'المنتصف'; break;
+        case 'UP': dominantGaze = 'أعلى'; break;
+        case 'DOWN': dominantGaze = 'أسفل'; break;
+        case 'LEFT': dominantGaze = 'يسار'; break;
+        case 'RIGHT': dominantGaze = 'يمين'; break;
+        default: dominantGaze = topKey;
+      }
+    }
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -169,13 +178,13 @@ class _SessionDetailPlaceholderScreenState
           const SizedBox(height: 24),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
-                    '${((( _sessionData.averageFocus ?? _sessionData.focusedPercentage) ) * 100).toInt()}%',
+                    '$focusPct%',
                     style: AppTextStyles.h1.copyWith(
                       fontWeight: FontWeight.w800,
                       fontSize: 32,
@@ -191,30 +200,33 @@ class _SessionDetailPlaceholderScreenState
                   ),
                 ],
               ),
-              ShaderMask(
-                shaderCallback: (Rect bounds) {
-                  return LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: const [
-                      Color(0xFF10B981),
-                      Color(0xFF94A3B8),
-                    ],
-                    stops: [
-                      (_sessionData.averageFocus ?? _sessionData.focusedPercentage),
-                      (_sessionData.averageFocus ?? _sessionData.focusedPercentage),
-                    ],
-                  ).createShader(bounds);
-                },
-                blendMode: BlendMode.srcATop,
-                child: const Icon(Icons.psychology_rounded,
-                    size: 100, color: Colors.white),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: ShaderMask(
+                  shaderCallback: (Rect bounds) {
+                    return LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: const [
+                        Color(0xFF10B981),
+                        Color(0xFF94A3B8),
+                      ],
+                      stops: [
+                        (_sessionData.averageFocus ?? _sessionData.focusedPercentage),
+                        (_sessionData.averageFocus ?? _sessionData.focusedPercentage),
+                      ],
+                    ).createShader(bounds);
+                  },
+                  blendMode: BlendMode.srcATop,
+                  child: const Icon(Icons.psychology_rounded,
+                      size: 100, color: Colors.white),
+                ),
               ),
               Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
-                    '${(((1 - (_sessionData.averageFocus ?? _sessionData.focusedPercentage)) ) * 100).toInt()}%',
+                    '$notFocusPct%',
                     style: AppTextStyles.h1.copyWith(
                       fontWeight: FontWeight.w800,
                       fontSize: 32,
@@ -231,6 +243,33 @@ class _SessionDetailPlaceholderScreenState
                 ],
               ),
             ],
+          ),
+          // ── Gaze Integration ──────────────────────────────
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.center_focus_strong_rounded, size: 18, color: Color(0xFF059669)),
+                const SizedBox(width: 8),
+                Text(
+                  'اتجاه النظر الغالب: $dominantGaze',
+                  style: const TextStyle(
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: Color(0xFF059669),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -469,121 +508,237 @@ class _SessionDetailPlaceholderScreenState
     final bool hasValidSpeech = speechText.isNotEmpty && speechText.toLowerCase() != 'null';
     final bool hasValidTrait = storyTrait.isNotEmpty && storyTrait.toLowerCase() != 'null';
     final hasVoiceData = hasValidSpeech || hasValidTrait;
-    
-    String voiceContent = "لم يتم التقاط أي تفاعل صوتي خلال هذه الجلسة، تم الاعتماد على التحليل البصري فقط.";
-    if (hasVoiceData) {
-      voiceContent = "أظهر المريض تفاعلاً صوتياً.";
-      if (hasValidSpeech) {
-        voiceContent += ' حيث ذكر: "$speechText".';
-      }
-      if (isCorrect != null) {
-        voiceContent += ' وكانت استجابته للأسئلة التفاعلية ${(isCorrect ? "صحيحة" : "خاطئة")}.';
-      }
-    }
 
-    // Dynamic Focus Text
+    // Focus metrics
     final focusPct = ((_sessionData.averageFocus ?? _sessionData.focusedPercentage) * 100).toInt();
-    final focusDesc = focusPct > 70 ? "مستقر" : focusPct > 40 ? "متوسط" : "ضعيف";
+    final focusStatus = focusPct > 70 ? 'مستقر' : focusPct > 40 ? 'متوسط' : 'ضعيف';
+    final focusStatusColor = focusPct > 70 ? const Color(0xFF22C55E) : focusPct > 40 ? const Color(0xFFF59E0B) : const Color(0xFFEF4444);
+
+    // Emotion status
+    final emotionLabel = topEmotion?.label ?? 'غير محددة';
+    final emotionPct = ((topEmotion?.percentage ?? 0.0) * 100).toInt();
+
+    // Voice status
+    String voiceStatus;
+    Color voiceStatusColor;
+    if (hasVoiceData) {
+      voiceStatus = 'تفاعل صوتي';
+      voiceStatusColor = const Color(0xFF3B82F6);
+    } else {
+      voiceStatus = 'بصري فقط';
+      voiceStatusColor = const Color(0xFF94A3B8);
+    }
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildClinicalCard(
-            title: "الحالة المزاجية الغالبة",
-            modelName: "Emotional Intelligence Model",
-            content:
-              "الحالة المزاجية الغالبة للمريض هي ${topEmotion?.label ?? 'غير محددة'} بنسبة ${((topEmotion?.percentage ?? 0.0) * 100).toInt()}%.",
+          // ── Report Header ──────────────────────────────────
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0EA5E9), Color(0xFF3B82F6)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.medical_information_rounded, color: Colors.white, size: 28),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.displayIndex != null ? 'تقرير جلسة #${widget.displayIndex}' : 'التقرير الطبي',
+                        style: const TextStyle(
+                          fontFamily: 'Cairo',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.white,
+                        ),
+                      ),
+                      if (_sessionData.date != null)
+                        Text(
+                          _sessionData.date!,
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 12,
+                            color: Colors.white.withValues(alpha: 0.8),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // ── Clinical Items ──────────────────────────────────
+          _buildReportItem(
             icon: Icons.sentiment_satisfied_alt_rounded,
-            color: const Color(0xFF22C55E), // Green
+            title: 'الحالة المزاجية الغالبة',
+            subtitle: 'Emotional Intelligence Model',
+            trailing: _buildStatusChip(emotionLabel, topEmotion?.color ?? const Color(0xFF22C55E)),
+            content: 'الحالة المزاجية الغالبة: $emotionLabel بنسبة $emotionPct%.',
           ),
-          const SizedBox(height: 16),
-          _buildClinicalCard(
-            title: "التدفق الصوتي والقصص",
-            modelName: "Educational Voice Flow Model",
-            content: voiceContent,
+          _buildReportItem(
             icon: Icons.record_voice_over_rounded,
-            color: const Color(0xFF3B82F6), // Blue
+            title: 'التدفق الصوتي والقصص',
+            subtitle: 'Educational Voice Flow Model',
+            trailing: _buildStatusChip(voiceStatus, voiceStatusColor),
+            content: hasVoiceData
+                ? _buildVoiceContent(hasValidSpeech, speechText, hasValidTrait, storyTrait, isCorrect)
+                : 'لم يتم التقاط أي تفاعل صوتي خلال هذه الجلسة.',
           ),
-          const SizedBox(height: 16),
-          _buildClinicalCard(
-            title: "التواصل البصري",
-            modelName: "Eye Tracking Model",
-            content:
-              "التواصل البصري $focusDesc. تمركزت نقاط النظر نحو الروبوت بنسبة $focusPct%.",
+          _buildReportItem(
             icon: Icons.visibility_rounded,
-            color: const Color(0xFFF59E0B), // Amber
+            title: 'التواصل البصري',
+            subtitle: 'Eye Tracking Model',
+            trailing: _buildStatusChip(focusStatus, focusStatusColor),
+            content: 'تمركزت نقاط النظر نحو الروبوت بنسبة $focusPct%.',
+          ),
+
+          // ── Recommendations ──────────────────────────────────
+          if (_sessionData.recommendations.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _buildReportItem(
+              icon: Icons.lightbulb_outline_rounded,
+              title: 'التوصيات',
+              subtitle: 'AI-Generated Recommendations',
+              trailing: _buildStatusChip('${_sessionData.recommendations.length}', const Color(0xFF8B5CF6)),
+              content: _sessionData.recommendations.map((r) => '• $r').join('\n'),
+            ),
+          ],
+
+          // ── PDF Export Button ──────────────────────────────
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('جاري تجهيز ميزة الطباعة',
+                        style: TextStyle(fontFamily: 'Cairo')),
+                    backgroundColor: AppColors.primary,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+              icon: const Icon(Icons.picture_as_pdf_rounded),
+              label: const Text('تصدير التقرير كـ PDF',
+                  style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 15)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildClinicalCard({
-    required String title,
-    required String modelName,
-    required String content,
+  String _buildVoiceContent(bool hasValidSpeech, String speechText, bool hasValidTrait, String storyTrait, bool? isCorrect) {
+    String content = 'أظهر المريض تفاعلاً صوتياً.';
+    if (hasValidSpeech) {
+      content += ' حيث ذكر: "$speechText".';
+    }
+    if (hasValidTrait) {
+      content += ' السمة القصصية: $storyTrait.';
+    }
+    if (isCorrect != null) {
+      content += ' وكانت استجابته للأسئلة التفاعلية ${(isCorrect ? "صحيحة" : "خاطئة")}.';
+    }
+    return content;
+  }
+
+  Widget _buildStatusChip(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontFamily: 'Cairo',
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReportItem({
     required IconData icon,
-    required Color color,
+    required String title,
+    required String subtitle,
+    required Widget trailing,
+    required String content,
   }) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
         children: [
-          // Icon Column
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            leading: Icon(icon, color: AppColors.primary, size: 26),
+            title: Text(
+              title,
+              style: const TextStyle(
+                fontFamily: 'Cairo',
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
             ),
-            child: Icon(icon, color: color, size: 24),
+            subtitle: Text(
+              subtitle,
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 11,
+                color: Colors.grey.shade500,
+              ),
+            ),
+            trailing: trailing,
           ),
-          const SizedBox(width: 16),
-          // Content Column
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTextStyles.h3.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: color.withValues(alpha: 0.9),
-                  ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                content,
+                style: const TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 13,
+                  height: 1.7,
+                  color: Color(0xFF475569),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  modelName,
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.mutedForeground,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  content,
-                  style: AppTextStyles.body.copyWith(
-                    height: 1.6,
-                    color: const Color(0xFF334155), // Slate-700
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ],

@@ -177,15 +177,116 @@ class _DoctorPatientDetailState extends State<DoctorPatientDetail> {
     );
   }
 
+  Widget _buildKpiRow(List<SessionAnalysisModel> completedSessions, List<SessionAnalysisModel> allSessions) {
+    // Calculate average focus across completed sessions
+    double avgFocus = 0;
+    if (completedSessions.isNotEmpty) {
+      final focusSum = completedSessions.fold<double>(0, (sum, s) {
+        return sum + ((s.averageFocus ?? s.focusedPercentage) * 100);
+      });
+      avgFocus = focusSum / completedSessions.length;
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: _buildKpiCard(
+            icon: Icons.visibility_rounded,
+            label: 'متوسط التركيز',
+            value: '${avgFocus.toInt()}%',
+            color: const Color(0xFF10B981),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildKpiCard(
+            icon: Icons.event_note_rounded,
+            label: 'إجمالي الجلسات',
+            value: '${allSessions.length}',
+            color: AppColors.primary,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildKpiCard(
+            icon: Icons.check_circle_outline_rounded,
+            label: 'مكتملة',
+            value: '${completedSessions.length}',
+            color: const Color(0xFF22C55E),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildKpiCard({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 10,
+              color: Colors.grey,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFocusTrendChart(List<SessionAnalysisModel> completedSessions, List<SessionAnalysisModel> allSessions) {
-    final chartSessions = completedSessions.length > 10
-        ? completedSessions.sublist(completedSessions.length - 10)
-        : completedSessions;
+    // Strictly filter only completed sessions for the chart data source
+    final validSessions = allSessions.reversed.where((s) => s.isComplete).toList();
+
+    final chartSessions = validSessions.length > 10
+        ? validSessions.sublist(validSessions.length - 10)
+        : validSessions;
+
+    if (chartSessions.isEmpty) return const SizedBox.shrink();
 
     final spots = chartSessions.asMap().entries.map((entry) {
-      final focusPct = (entry.value.averageFocus ?? entry.value.focusedPercentage) * 100;
-      return FlSpot(entry.key.toDouble(), focusPct.clamp(0, 100));
+      final session = entry.value;
+      final focusPct = (session.averageFocus ?? session.focusedPercentage) * 100;
+      
+      // Plot sequentially without visual/numerical gaps (x = 1, 2, 3, 4)
+      return FlSpot((entry.key + 1).toDouble(), focusPct.clamp(0, 100));
     }).toList();
+
+    double minX = 1;
+    double maxX = chartSessions.length.toDouble();
+    if (minX == maxX) {
+      minX = 0;
+      maxX += 1;
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -217,6 +318,8 @@ class _DoctorPatientDetailState extends State<DoctorPatientDetail> {
             height: 180,
             child: LineChart(
               LineChartData(
+                minX: minX,
+                maxX: maxX,
                 minY: 0,
                 maxY: 100,
                 gridData: FlGridData(
@@ -234,12 +337,13 @@ class _DoctorPatientDetailState extends State<DoctorPatientDetail> {
                       showTitles: true,
                       interval: 1,
                       getTitlesWidget: (value, meta) {
-                        final idx = value.toInt();
+                        final idx = value.toInt() - 1; // 0-based index for chartSessions
                         if (idx < 0 || idx >= chartSessions.length) {
                           return const SizedBox.shrink();
                         }
                         
                         final session = chartSessions[idx];
+                        // Calculate the actual global session number (e.g., #5)
                         final globalIndex = allSessions.indexOf(session);
                         final displayIndex = allSessions.length - globalIndex;
                         
@@ -515,6 +619,10 @@ class _DoctorPatientDetailState extends State<DoctorPatientDetail> {
               padding: const EdgeInsets.all(16),
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
+                // ── KPI Summary Cards ──────────────────────────
+                _buildKpiRow(completedSessions, allSessions),
+                const SizedBox(height: 12),
+
                 // Focus Trend Chart
                 if (completedSessions.length >= 2)
                   _buildFocusTrendChart(completedSessions, allSessions),
@@ -608,6 +716,9 @@ class _DoctorPatientDetailState extends State<DoctorPatientDetail> {
                       ),
                     );
                   }),
+
+                // Bottom padding so FAB doesn't obscure last item
+                const SizedBox(height: 80),
               ],
             ),
           );
@@ -686,7 +797,7 @@ class _InlineSessionDetailsState extends State<_InlineSessionDetails>
             labelStyle: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
             unselectedLabelStyle: AppTextStyles.body,
             tabs: const [
-              Tab(text: "الملخص البصري", icon: Icon(Icons.analytics_outlined)),
+              Tab(text: "التحليل السلوكي والانفعالي", icon: Icon(Icons.analytics_outlined)),
               Tab(
                   text: "التقرير السريري",
                   icon: Icon(Icons.medical_information_outlined)),
