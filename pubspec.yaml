@@ -18,9 +18,9 @@ dependencies:
   get_it: ^9.2.1
 
   # Firebase
-  firebase_core: ^4.4.0
-  firebase_auth: ^6.1.4
-  cloud_firestore: ^6.1.2
+  firebase_core: ^4.6.0
+  firebase_auth: ^6.3.0
+  cloud_firestore: ^6.2.0
   firebase_storage: ^13.0.6
   firebase_messaging: ^16.1.1
 
@@ -80,9 +80,6 @@ flutter:
 
   assets:
     - assets/images/
-    - assets/images/first-onboarding-img.png
-    - assets/images/second-onboarding-img.png
-    - assets/images/third-onboarding-img.png
     - assets/images/lumo-logo.png
     - assets/images/app_logo.png
     - assets/images_from_web/

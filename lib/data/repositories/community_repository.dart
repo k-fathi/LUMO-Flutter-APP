@@ -2,12 +2,11 @@ import '../datasources/remote/community_remote_data_source.dart';
 import '../models/comment_model.dart';
 import '../models/post_model.dart';
 import '../models/user_model.dart';
-import 'profile_repository.dart';
 
 class CommunityRepository {
   final CommunityRemoteDataSource _remoteDataSource;
 
-  CommunityRepository(this._remoteDataSource, ProfileRepository profileRepository);
+  CommunityRepository(this._remoteDataSource);
 
   // ==================== POST OPERATIONS ====================
 

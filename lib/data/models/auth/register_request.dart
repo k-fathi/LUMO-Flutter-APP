@@ -11,6 +11,7 @@ class RegisterRequest {
   final String? clinicLocation;
   final String? avatarFilePath;
   final String? childPhotoPath;
+  final String? fcmToken;
 
   const RegisterRequest({
     required this.name,
@@ -25,6 +26,7 @@ class RegisterRequest {
     this.clinicLocation,
     this.avatarFilePath,
     this.childPhotoPath,
+    this.fcmToken,
   });
 
   Map<String, dynamic> toJson() {
@@ -40,6 +42,7 @@ class RegisterRequest {
     if (childAge != null) map['child_age'] = childAge;
     if (doctorNumber != null) map['doctor_number'] = doctorNumber;
     if (clinicLocation != null) map['clinic_location'] = clinicLocation;
+    if (fcmToken != null) map['fcm_token'] = fcmToken;
     return map;
   }
 }

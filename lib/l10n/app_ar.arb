@@ -180,6 +180,8 @@
   "requestAccepted": "تم قبول الطلب",
   "requestRejected": "تم رفض الطلب",
 
+  "errorUpdateFollow": "فشل تحديث المتابعة",
+  "errorUserNotFound": "ملف المستخدم هذا غير متوفر للعرض",
   "searchUsers": "البحث عن مستخدمين",
   "searchPosts": "البحث عن منشورات",
   "noResults": "لا توجد نتائج",
@@ -204,6 +206,8 @@
   "roleDoctor": "طبيب",
   "roleParent": "ولي أمر",
   "deletePostTitle": "حذف المنشور",
+  "deletePostConfirm": "هل أنت متأكد من حذف هذا المنشور؟",
+  "followingStatus": "متابَع ✓",
   "yesDelete": "نعم، احذف",
 
   "viewPatients": "مرضاي",

@@ -7,10 +7,11 @@ import '../../../core/theme/app_text_styles.dart';
 ///
 /// React: bg-white border-t border-[#E3F2FD] px-6 py-4
 /// Paperclip icon + rounded-full E3F2FD input + gradient send button
-class ChatInputWidget extends StatelessWidget {
+class ChatInputWidget extends StatefulWidget {
   final TextEditingController controller;
   final VoidCallback onSend;
   final VoidCallback? onAttach;
+  final ValueChanged<String>? onTextChanged;
   final bool isLoading;
 
   const ChatInputWidget({
@@ -18,8 +19,30 @@ class ChatInputWidget extends StatelessWidget {
     required this.controller,
     required this.onSend,
     this.onAttach,
+    this.onTextChanged,
     this.isLoading = false,
   });
+
+  @override
+  State<ChatInputWidget> createState() => _ChatInputWidgetState();
+}
+
+class _ChatInputWidgetState extends State<ChatInputWidget> {
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_handleTextChange);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_handleTextChange);
+    super.dispose();
+  }
+
+  void _handleTextChange() {
+    widget.onTextChanged?.call(widget.controller.text);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,10 +68,10 @@ class ChatInputWidget extends StatelessWidget {
                   border: Border.all(color: const Color(0xFFE3F2FD)),
                 ),
                 child: TextField(
-                  controller: controller,
+                  controller: widget.controller,
                   textAlign: TextAlign.right,
                   style: AppTextStyles.body,
-                  enabled: !isLoading,
+                  enabled: !widget.isLoading,
                   decoration: InputDecoration(
                     hintText: 'اكتب رسالة...',
                     hintStyle: AppTextStyles.body.copyWith(
@@ -81,8 +104,8 @@ class ChatInputWidget extends StatelessWidget {
               ),
               child: IconButton(
                 padding: EdgeInsets.zero,
-                onPressed: isLoading ? null : onSend,
-                icon: isLoading
+                onPressed: widget.isLoading ? null : widget.onSend,
+                icon: widget.isLoading
                     ? const SizedBox(
                         width: 20,
                         height: 20,

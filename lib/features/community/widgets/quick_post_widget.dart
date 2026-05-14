@@ -6,6 +6,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 import '../view/create_post_screen.dart';
+import '../../../core/router/route_names.dart';
 
 ///
 /// Container at the top (below header).
@@ -43,7 +44,16 @@ class QuickPostWidget extends StatelessWidget {
                 final user = auth.currentUser;
                 return AvatarWidget(
                   imageUrl: user?.avatarUrl,
+                  name: user?.name,
                   size: 40,
+                  onTap: () {
+                    final userId = user?.id;
+                    Navigator.pushNamed(
+                      context,
+                      RouteNames.profile,
+                      arguments: userId != null ? {'userId': userId} : null,
+                    );
+                  },
                 );
               },
             ),

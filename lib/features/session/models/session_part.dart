@@ -17,8 +17,13 @@ class SessionPart {
         return 'قصص';
       case 'education':
         return 'تعليم';
+      case 'drawing':
+        return 'رسم';
+      case 'animals':
+        return 'أصوات حيوانات';
       default:
-        return type;
+        // Safe fallback for unknown types
+        return type.isEmpty ? 'غير محدد' : type;
     }
   }
 }

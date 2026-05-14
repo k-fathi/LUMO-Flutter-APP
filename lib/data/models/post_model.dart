@@ -47,19 +47,6 @@ class PostModel {
         ? json['user']
         : (json['author'] is Map<String, dynamic> ? json['author'] : null);
 
-    final String rawRole = json['user_role']?.toString() ??
-        userMap?['role']?.toString() ??
-        json['role']?.toString() ??
-        '';
-    final UserRole? userRole = rawRole.trim().isEmpty
-        ? null
-        : UserRole.fromString(rawRole);
-
-    final int parsedId = int.tryParse(json['id']?.toString() ?? '0') ?? 0;
-    final int parsedUserId = int.tryParse(
-            json['user_id']?.toString() ?? userMap?['id']?.toString() ?? '0') ??
-        0;
-
     // --- الفلتر السحري لتنظيف الاسم من الـ null ---
     String rawName = json['user_name']?.toString() ??
         userMap?['name']?.toString() ??
@@ -67,12 +54,47 @@ class PostModel {
         json['name']?.toString() ??
         '';
 
-    // بنمسح كلمة null لو الباك إند باعت كنص أو أي قيم تانية غير مرغوب فيها
     rawName = rawName.replaceAll('null', '').replaceAll('NULL', '').trim();
     if (rawName.isEmpty || rawName == 'مستخدم') {
-      rawName = 'مستخدم'; // القيمة الاحتياطية النضيفة
+      rawName = 'مستخدم';
     }
     // ------------------------------------------------
+
+    String rawRole = json['user_role']?.toString() ??
+        userMap?['role']?.toString() ??
+        json['role']?.toString() ??
+        '';
+        
+    // Fallback: If role is missing, infer it from the name
+    if (rawRole.trim().isEmpty) {
+      final nameLower = rawName.toLowerCase();
+      if (nameLower.contains('doctor') || nameLower.contains('دكتور') || nameLower.contains('dr.')) {
+        rawRole = 'doctor';
+      } else if (nameLower.contains('parent') || nameLower.contains('أب') || nameLower.contains('أم')) {
+        rawRole = 'parent';
+      }
+    }
+
+    final UserRole? userRole = rawRole.trim().isEmpty
+        ? null
+        : UserRole.fromString(rawRole);
+
+    final int parsedId = int.tryParse(json['id']?.toString() ?? '0') ?? 0;
+    final String rawUserId = (json['user_id'] ??
+            json['userId'] ??
+            json['author_id'] ??
+            json['authorId'] ??
+            json['created_by'] ??
+            json['created_by_id'] ??
+            json['owner_id'] ??
+            userMap?['id'] ??
+            userMap?['user_id'] ??
+            userMap?['userId'])
+        ?.toString() ??
+        '0';
+    final int parsedUserId = int.tryParse(rawUserId) ?? 0;
+
+
 
     return PostModel(
       id: parsedId,

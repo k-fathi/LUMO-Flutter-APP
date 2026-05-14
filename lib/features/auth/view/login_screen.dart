@@ -131,11 +131,10 @@ class _LoginScreenState extends State<LoginScreen> with FormValidationMixin {
                           ),
                         ],
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(18.0),
+                      child: ClipOval(
                         child: Image.asset(
                           'assets/images/lumo-logo.png',
-                          fit: BoxFit.contain,
+                          fit: BoxFit.cover,
                         ),
                       ),
                     ),

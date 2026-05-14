@@ -41,26 +41,29 @@ class AIMessageBubble extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
-                      color: isUser
-                          ? AppColors.primary
-                          : Theme.of(context).cardColor,
+                      color: isUser ? Colors.white : null,
+                      gradient: !isUser
+                          ? const LinearGradient(
+                              colors: [Color(0xFF5E5CE6), Color(0xFF30B0E8)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : null,
                       borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(20),
-                        topRight: const Radius.circular(20),
-                        bottomLeft: Radius.circular(isUser ? 20 : 4),
-                        bottomRight: Radius.circular(isUser ? 4 : 20),
+                        topLeft: const Radius.circular(24),
+                        topRight: const Radius.circular(24),
+                        bottomLeft: Radius.circular(isUser ? 24 : 0),
+                        bottomRight: Radius.circular(isUser ? 4 : 24),
                       ),
-                      border: !isUser
-                          ? Border.all(
-                              color: Theme.of(context).dividerColor, width: 0.5)
+                      border: isUser
+                          ? Border.all(color: const Color(0xFFE5E7EB), width: 1)
                           : null,
                       boxShadow: [
-                        if (!isUser)
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.02),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
                       ],
                     ),
                     child: message.hasError
@@ -70,11 +73,8 @@ class AIMessageBubble extends StatelessWidget {
                             style: AppTextStyles.body.copyWith(
                               height: 1.5, // Better readability
                               color: isUser
-                                  ? Colors.white
-                                  : Theme.of(context)
-                                      .textTheme
-                                      .bodyLarge
-                                      ?.color,
+                                  ? const Color(0xFF1F2937) // Navy/Dark Gray
+                                  : Colors.white,
                             ),
                           ),
                   ),

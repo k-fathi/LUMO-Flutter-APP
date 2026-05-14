@@ -493,6 +493,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get errorUpdateFollow => 'Failed to update follow status';
+
+  @override
+  String get errorUserNotFound => 'This user profile is not available';
+
+  @override
   String get searchUsers => 'Search users';
 
   @override
@@ -560,6 +566,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deletePostTitle => 'Delete Post';
+
+  @override
+  String get followingStatus => 'Following ✓';
 
   @override
   String get yesDelete => 'Yes, Delete';
@@ -749,7 +758,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sendRequest => 'Send Request';
 
   @override
-  String get doctorRequests => 'Doctor Requests';
+  String get doctorRequests => 'Notifications';
 
   @override
   String doctorRequestMessage(Object doctorName) {

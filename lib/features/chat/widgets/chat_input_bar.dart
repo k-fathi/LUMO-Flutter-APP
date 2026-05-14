@@ -74,12 +74,20 @@ class _ChatInputBarState extends State<ChatInputBar> {
         ),
         child: Row(
           children: [
+            // Attach Photo Button
+            IconButton(
+              padding: const EdgeInsets.all(8),
+              constraints: const BoxConstraints(),
+              icon: const Icon(Icons.add_circle_outline_rounded),
+              color: AppColors.mutedForeground,
+              onPressed: () {}, // TODO: Implement attachment
+            ),
+            
             // Text Field - Refined for better prominence
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  borderRadius: BorderRadius.circular(24),
+                  color: Colors.transparent,
                 ),
                 child: TextField(
                   controller: _controller,
@@ -93,11 +101,11 @@ class _ChatInputBarState extends State<ChatInputBar> {
                   decoration: InputDecoration(
                     hintText:
                         AppLocalizations.of(context)!.chatInputPlaceholder,
-                    hintStyle: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.mutedForeground,
+                    hintStyle: AppTextStyles.body.copyWith(
+                      color: const Color(0xFFC7C7CC),
                     ),
                     contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
+                      horizontal: 8,
                       vertical: 12,
                     ),
                     border: InputBorder.none,
@@ -107,7 +115,18 @@ class _ChatInputBarState extends State<ChatInputBar> {
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            
+            // Microphone Button (shown when no text)
+            if (!_hasText)
+              IconButton(
+                padding: const EdgeInsets.all(8),
+                constraints: const BoxConstraints(),
+                icon: const Icon(Icons.mic_none_rounded),
+                color: AppColors.mutedForeground,
+                onPressed: () {}, // TODO: Implement voice recording
+              ),
+              
+            const SizedBox(width: 4),
 
             // Send Button - Gradient Circle
             GestureDetector(
@@ -118,7 +137,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                 height: 40,
                 decoration: BoxDecoration(
                   gradient: (_hasText && !widget.disabled)
-                      ? (widget.accentGradient ?? AppColors.primaryGradient)
+                      ? (widget.accentGradient ?? const LinearGradient(colors: [Color(0xFF5E5CE6), Color(0xFF30B0E8)]))
                       : null,
                   color:
                       (_hasText && !widget.disabled) ? null : AppColors.muted,
@@ -126,8 +145,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                   boxShadow: (_hasText && !widget.disabled)
                       ? [
                           BoxShadow(
-                            color: (widget.accentColor ?? AppColors.primary)
-                                .withValues(alpha: 0.3),
+                            color: const Color(0xFF30B0E8).withValues(alpha: 0.3),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),

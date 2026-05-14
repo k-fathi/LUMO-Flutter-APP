@@ -205,20 +205,39 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         children: [
           Row(
             children: [
-              AvatarWidget(
-                imageUrl: isDoctor ? request.parentAvatarUrl : request.doctorAvatarUrl,
-                name: isDoctor ? request.parentName : request.doctorName,
-                size: 40,
-                fallbackIcon: isDoctor ? Icons.person : Icons.medical_services_rounded,
+              GestureDetector(
+                onTap: () {
+                  final userId = isDoctor ? request.parentId : request.doctorId;
+                  final uid = int.tryParse(userId.toString());
+                  if (uid != null && uid != 0) {
+                    Navigator.pushNamed(context, RouteNames.profile, arguments: {'userId': uid});
+                  }
+                },
+                child: AvatarWidget(
+                  imageUrl: isDoctor ? request.parentAvatarUrl : request.doctorAvatarUrl,
+                  name: isDoctor ? request.parentName : request.doctorName,
+                  size: 40,
+                  fallbackIcon: isDoctor ? Icons.person : Icons.medical_services_rounded,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  isDoctor
-                      ? l10n.doctorNotificationAccepted(request.childName)
-                      : l10n.doctorRequestMessage(request.doctorName),
-                  style:
-                      AppTextStyles.body.copyWith(fontWeight: FontWeight.w600),
+                child: GestureDetector(
+                  onTap: () {
+                    final userId = isDoctor ? request.parentId : request.doctorId;
+                    final uid = int.tryParse(userId.toString());
+                    if (uid != null && uid != 0) {
+                      Navigator.pushNamed(context, RouteNames.profile, arguments: {'userId': uid});
+                    }
+                  },
+                  behavior: HitTestBehavior.opaque,
+                  child: Text(
+                    isDoctor
+                        ? l10n.doctorNotificationAccepted(request.childName)
+                        : l10n.doctorRequestMessage(request.doctorName),
+                    style:
+                        AppTextStyles.body.copyWith(fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
               Text(

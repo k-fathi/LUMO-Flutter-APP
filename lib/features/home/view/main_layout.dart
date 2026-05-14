@@ -77,7 +77,16 @@ class _MainLayoutState extends State<MainLayout> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected: (index) => setState(() => _currentIndex = index),
+        onDestinationSelected: (index) {
+          setState(() => _currentIndex = index);
+          // Reload chat rooms when Chat tab is selected
+          if (index == 3) {
+            final userId = context.read<AuthProvider>().currentUser?.id;
+            if (userId != null) {
+              context.read<ChatViewModel>().loadChatRooms(userId);
+            }
+          }
+        },
         backgroundColor: theme.bottomAppBarTheme.color ?? theme.cardColor,
         indicatorColor: AppColors.primary.withValues(alpha: 0.15),
         elevation: 0,

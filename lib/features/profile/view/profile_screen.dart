@@ -17,18 +17,8 @@ import '../../chat/view_model/chat_view_model.dart';
 class ProfileScreen extends StatefulWidget {
   final UserModel? user;
   final int? userId;
-  final String? initialName;
-  final String? initialAvatar;
-  final String? initialRole;
 
-  const ProfileScreen({
-    super.key,
-    this.user,
-    this.userId,
-    this.initialName,
-    this.initialAvatar,
-    this.initialRole,
-  });
+  const ProfileScreen({super.key, this.user, this.userId});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -51,7 +41,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
 
       if (targetUserId != null) {
-        context.read<ProfileViewModel>().loadProfile(targetUserId).then((_) {
+        // If we already have a user object (from post/comment payload),
+        // load followers/followings lists to power counts on desktop.
+        final profileVM = context.read<ProfileViewModel>();
+        if (widget.user != null) {
+          profileVM.updateUser(widget.user!);
+          profileVM.loadFollowers(targetUserId);
+          profileVM.loadFollowing(targetUserId);
+        }
+
+        profileVM.loadProfile(targetUserId, fallbackUser: widget.user).then((_) {
           if (mounted) {
             setState(() => _followersDelta = 0);
           }
@@ -74,15 +73,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     final user =
         isMyProfile ? currentUser : (profileViewModel.user ?? widget.user);
-        
-    // Use initial data as fallback
-    final displayName = user?.name.isNotEmpty == true && user?.name != 'مستخدم'
-        ? user!.name 
-        : (widget.initialName ?? 'مستخدم');
-    final displayAvatar = user?.avatarUrl ?? widget.initialAvatar;
-    final displayRole = user?.role.name ?? widget.initialRole ?? 'parent';
-
-    final isDoctor = displayRole == 'doctor';
+    final isDoctor = user?.role.name == 'doctor';
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
@@ -92,9 +83,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
             .where((p) => p.userId == targetUserId)
             .toList();
 
-    final baseFollowers = profileViewModel.user?.followersCount ?? 0;
-    final followersShow = baseFollowers + _followersDelta;
-    final followingShow = profileViewModel.user?.followingCount ?? 0;
+    final int baseFollowers = (profileViewModel.user?.id == targetUserId
+            ? profileViewModel.user?.followersCount
+            : widget.user?.followersCount) ??
+        0;
+    final followersShow = isMyProfile 
+        ? (currentUser?.followersCount ?? 0)
+        : (baseFollowers + _followersDelta).clamp(0, 1 << 30);
+
+    final int baseFollowing = isMyProfile
+        ? (currentUser?.followingCount ?? 0)
+        : ((profileViewModel.user?.id == targetUserId
+            ? profileViewModel.user?.followingCount
+            : widget.user?.followingCount) ?? 0);
+
+    final followingShow = isMyProfile
+        ? baseFollowing
+        : (baseFollowing + _followersDelta).clamp(0, 1 << 30);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -143,22 +148,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           return RefreshIndicator(
             onRefresh: () async {
+              final profileVM = context.read<ProfileViewModel>();
+              final communityVM = context.read<CommunityViewModel>();
               if (targetUserId != null) {
-                await context
-                    .read<ProfileViewModel>()
-                    .loadProfile(targetUserId);
+                await profileVM.loadProfile(targetUserId);
               }
-              await context.read<CommunityViewModel>().loadMyPosts();
+              await communityVM.loadMyPosts();
             },
             child: CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(
                   child: _ProfileHeader(
                     userId: targetUserId,
-                    name: displayName,
+                    name: user?.name ?? 'User',
                     role: isDoctor ? l10n.roleDoctor : l10n.roleParent,
                     isDoctor: isDoctor,
-                    photoUrl: displayAvatar,
+                    photoUrl: user?.avatarUrl,
                     followers: followersShow,
                     following: followingShow,
                     isMyProfile: isMyProfile,
@@ -166,43 +171,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         communityViewModel.isFollowing(targetUserId),
                     onToggleFollow: () async {
                       if (targetUserId == null) return;
-                      final currentUserId = context.read<AuthProvider>().currentUser?.id;
+                      final profileVM = context.read<ProfileViewModel>();
+                      final communityVM = context.read<CommunityViewModel>();
+                      final notificationProvider =
+                          context.read<NotificationProvider>();
+                      final messenger = ScaffoldMessenger.of(context);
+                      final auth = context.read<AuthProvider>();
+                      final currentUserId = auth.currentUser?.id;
                       if (currentUserId == null || targetUserId == currentUserId) return;
 
-                      final wasFollowing = communityViewModel.isFollowing(targetUserId);
+                      final wasFollowing = communityVM.isFollowing(targetUserId);
 
-                      // Optimistic for target user's followers
+                      // Optimistic update للـ target user followers count
                       setState(() => _followersDelta += wasFollowing ? -1 : 1);
+                      // Optimistic update لـ communityVM
+                      communityVM.setFollowingState(targetUserId, !wasFollowing);
 
                       try {
-                        await context.read<CommunityViewModel>().toggleFollow(
-                          targetUserId,
-                          currentUserId: currentUserId,
-                          onFollowingCountChanged: (nowFollowing) {
-                            // Update following count for current user after a delay
-                            if (mounted) {
-                              Future.delayed(const Duration(seconds: 1), () {
-                                if (mounted) {
-                                  context.read<ProfileViewModel>().loadProfile(currentUserId);
-                                }
-                              });
-                            }
-                          },
-                        );
+                        // 1. تحديث Firebase (follower_ids, following_ids) + REST API
+                        final targetUser = profileVM.user ?? widget.user;
+                        if (targetUser != null) {
+                          if (!wasFollowing) {
+                            await auth.followUser(targetUser);
+                          } else {
+                            await auth.unfollowUser(targetUser);
+                          }
+                        } else {
+                          // Fallback: REST only
+                          await communityVM.toggleFollow(
+                            targetUserId,
+                            currentUserId: currentUserId,
+                          );
+                          // Mutual-follow: update current user counts
+                          auth.updateFollowingCount(!wasFollowing);
+                        }
 
                         if (!mounted) return;
 
-                        // Update followers count for target user from backend
-                        await context.read<ProfileViewModel>().loadProfile(targetUserId);
+                        // Reload target user profile counts from backend (source of truth)
+                        await profileVM.loadProfile(targetUserId);
+
                         if (mounted) setState(() => _followersDelta = 0);
 
                         // Refresh notifications
                         if (!wasFollowing && mounted) {
-                          context.read<NotificationProvider>().fetchNotifications();
+                          notificationProvider.fetchNotifications();
                         }
 
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          messenger.showSnackBar(
                             SnackBar(
                               content: Text(!wasFollowing
                                   ? 'تم متابعة ${user?.name}'
@@ -214,9 +231,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           );
                         }
                       } catch (e) {
+                        // Rollback optimistic updates
                         setState(() => _followersDelta += wasFollowing ? 1 : -1);
+                        communityVM.setFollowingState(targetUserId, wasFollowing);
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          messenger.showSnackBar(
                             const SnackBar(
                               content: Text('فشل تحديث المتابعة، حاول مرة أخرى'),
                               backgroundColor: Colors.red,
@@ -554,9 +573,7 @@ class _ProfileHeader extends StatelessWidget {
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
                 ),
                 child: Text(l10n.editProfile),
@@ -574,9 +591,7 @@ class _ProfileHeader extends StatelessWidget {
                       foregroundColor:
                           isFollowing ? theme.textTheme.bodyLarge?.color : Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
                     child: Text(isFollowing ? 'متابع' : l10n.follow),
@@ -588,9 +603,7 @@ class _ProfileHeader extends StatelessWidget {
                     onPressed: onMessageTap,
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       side: const BorderSide(color: AppColors.primary),
                     ),
                     child: Text(l10n.message),

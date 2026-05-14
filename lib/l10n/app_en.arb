@@ -179,6 +179,8 @@
   "requestSent": "Request sent",
   "requestAccepted": "Request accepted",
   "requestRejected": "Request rejected",
+  "errorUpdateFollow": "Failed to update follow status",
+  "errorUserNotFound": "This user profile is not available",
 
   "searchUsers": "Search users",
   "searchPosts": "Search posts",
@@ -204,6 +206,8 @@
   "roleDoctor": "Doctor",
   "roleParent": "Parent",
   "deletePostTitle": "Delete Post",
+  "deletePostConfirm": "Are you sure you want to delete this post?",
+  "followingStatus": "Following ✓",
   "yesDelete": "Yes, Delete",
 
   "viewPatients": "View Patients",

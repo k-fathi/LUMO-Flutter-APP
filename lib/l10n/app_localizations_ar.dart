@@ -493,6 +493,12 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get errorUpdateFollow => 'فشل تحديث المتابعة';
+
+  @override
+  String get errorUserNotFound => 'ملف المستخدم هذا غير متوفر للعرض';
+
+  @override
   String get searchUsers => 'البحث عن مستخدمين';
 
   @override
@@ -560,6 +566,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get deletePostTitle => 'حذف المنشور';
+
+  @override
+  String get followingStatus => 'متابَع ✓';
 
   @override
   String get yesDelete => 'نعم، احذف';
@@ -749,7 +758,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get sendRequest => 'إرسال طلب';
 
   @override
-  String get doctorRequests => 'طلبات الأطباء';
+  String get doctorRequests => 'الإشعارات';
 
   @override
   String doctorRequestMessage(Object doctorName) {

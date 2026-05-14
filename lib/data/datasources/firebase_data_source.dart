@@ -1,8 +1,10 @@
 import '../../core/services/firebase_auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../../core/services/firebase_firestore_service.dart';
 import '../../core/services/firebase_storage_service.dart';
 import '../../core/utils/firebase_collections.dart';
+import '../../core/utils/debug_logger.dart';
 
 class FirebaseDataSource {
   final FirebaseAuthService _authService;
@@ -244,6 +246,7 @@ class FirebaseDataSource {
     required List<String> participantIds,
     required Map<String, String> participantNames,
     required Map<String, String?> participantAvatars,
+    required String receiverId,
   }) async {
     final messageId = await _firestoreService.createSubcollectionDocument(
       collection: FirebaseCollections.chats,
@@ -252,20 +255,76 @@ class FirebaseDataSource {
       data: messageData,
     );
 
-    // Update chat room's last message AND ensure participant metadata exists
-    // Using set + merge=true so it works even if the room document doesn't exist yet
-    await _firestoreService.instance
+    // Update chat room metadata + unread counts (receiver++).
+    final chatDoc = _firestoreService.instance
         .collection(FirebaseCollections.chats)
-        .doc(chatRoomId)
-        .set({
-      'participant_ids': participantIds,
-      'participant_names': participantNames,
-      'participant_avatars': participantAvatars,
-      'last_message': messageData['content'],
-      'last_message_sender_id': messageData['sender_id'],
-      'last_message_timestamp': messageData['timestamp'],
-      'updated_at': DateTime.now().toIso8601String(),
-    }, SetOptions(merge: true));
+        .doc(chatRoomId);
+
+    await _firestoreService.runTransaction((tx) async {
+      final snap = await tx.get(chatDoc);
+      final data = snap.data() ?? <String, dynamic>{};
+
+      final Map<String, dynamic> existingUnread =
+          (data['unread_counts'] as Map?)?.cast<String, dynamic>() ??
+              <String, dynamic>{};
+      final Map<String, int> unreadCounts = {
+        for (final e in existingUnread.entries)
+          e.key: int.tryParse(e.value.toString()) ?? 0,
+      };
+
+      final senderId = messageData['sender_id']?.toString();
+      if (senderId != null) {
+        unreadCounts[senderId] = 0; // sender has no unread in this room
+      }
+      unreadCounts[receiverId] = (unreadCounts[receiverId] ?? 0) + 1;
+      // #region agent log
+      DebugLogger.log(
+        runId: 'baseline',
+        hypothesisId: 'C',
+        location: 'firebase_data_source.dart:sendMessage',
+        message: 'Computed unread_counts in transaction',
+        data: {
+          'chatRoomId': chatRoomId,
+          'senderId': senderId,
+          'receiverId': receiverId,
+          'receiverUnread': unreadCounts[receiverId],
+        },
+      );
+      // #endregion
+      // #region agent log
+      debugPrint('[ae3196][C] tx unread_counts chatRoomId=$chatRoomId sender=$senderId receiver=$receiverId receiverUnread=${unreadCounts[receiverId]}');
+      // #endregion
+      // #region agent log
+      // ignore: avoid_print
+      print('[ae3196][C] tx unread_counts chatRoomId=$chatRoomId sender=$senderId receiver=$receiverId receiverUnread=${unreadCounts[receiverId]}');
+      // #endregion
+
+      final Map<String, dynamic> existingTyping =
+          (data['typing_status'] as Map?)?.cast<String, dynamic>() ??
+              <String, dynamic>{};
+      final Map<String, bool> typingStatus = {
+        for (final e in existingTyping.entries) e.key: e.value == true,
+      };
+      for (final pid in participantIds) {
+        typingStatus[pid] = false;
+      }
+
+      tx.set(
+        chatDoc,
+        {
+          'participant_ids': participantIds,
+          'participant_names': participantNames,
+          'participant_avatars': participantAvatars,
+          'last_message': messageData['content'],
+          'last_message_sender_id': messageData['sender_id'],
+          'last_message_timestamp': messageData['timestamp'],
+          'updated_at': DateTime.now().toIso8601String(),
+          'unread_counts': unreadCounts,
+          'typing_status': typingStatus,
+        },
+        SetOptions(merge: true),
+      );
+    });
 
     return messageId;
   }
@@ -289,6 +348,72 @@ class FirebaseDataSource {
       'status': 'read',
       'read_at': DateTime.now().toIso8601String(),
     });
+  }
+
+  /// Batch-update visible unread messages to 'read'.
+  Future<void> markVisibleMessagesAsRead(
+      String chatRoomId, List<String> messageIds) async {
+    if (messageIds.isEmpty) return;
+    await _firestoreService.batchWrite(
+      messageIds.map((id) => {
+        'collection': '${FirebaseCollections.chats}/$chatRoomId/${FirebaseCollections.messages}',
+        'docId': id,
+        'type': 'update',
+        'data': <String, dynamic>{
+          'status': 'read',
+          'read_at': DateTime.now().toIso8601String(),
+        },
+      }).toList(),
+    );
+  }
+
+  Future<void> markChatAsRead(String chatRoomId, String userId) async {
+    final chatDoc = _firestoreService.instance
+        .collection(FirebaseCollections.chats)
+        .doc(chatRoomId);
+
+    await _firestoreService.runTransaction((tx) async {
+      final snap = await tx.get(chatDoc);
+      final data = snap.data() ?? <String, dynamic>{};
+      final Map<String, dynamic> existingUnread =
+          (data['unread_counts'] as Map?)?.cast<String, dynamic>() ??
+              <String, dynamic>{};
+
+      final Map<String, int> unreadCounts = {
+        for (final e in existingUnread.entries)
+          e.key: int.tryParse(e.value.toString()) ?? 0,
+      };
+
+      unreadCounts[userId] = 0;
+      // #region agent log
+      DebugLogger.log(
+        runId: 'baseline',
+        hypothesisId: 'D',
+        location: 'firebase_data_source.dart:markChatAsRead',
+        message: 'markChatAsRead set unread to 0',
+        data: {'chatRoomId': chatRoomId, 'userId': userId},
+      );
+      // #endregion
+      // #region agent log
+      debugPrint('[ae3196][D] markChatAsRead chatRoomId=$chatRoomId userId=$userId');
+      // #endregion
+      // #region agent log
+      // ignore: avoid_print
+      print('[ae3196][D] markChatAsRead chatRoomId=$chatRoomId userId=$userId');
+      // #endregion
+      tx.set(chatDoc, {'unread_counts': unreadCounts}, SetOptions(merge: true));
+    });
+  }
+
+  Future<void> updateTypingStatus(
+      String chatRoomId, String userId, bool isTyping) async {
+    await _firestoreService.instance
+        .collection(FirebaseCollections.chats)
+        .doc(chatRoomId)
+        .set(
+      {'typing_status': {userId: isTyping}},
+      SetOptions(merge: true),
+    );
   }
 
   // ==================== ANALYSIS OPERATIONS ====================

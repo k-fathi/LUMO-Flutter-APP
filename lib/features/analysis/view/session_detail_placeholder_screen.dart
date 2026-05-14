@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/session_analysis_model.dart';
+import '../../session/view_model/session_view_model.dart';
 
 
 class SessionDetailPlaceholderScreen extends StatefulWidget {
-  const SessionDetailPlaceholderScreen({super.key});
+  final int? displayIndex;
+  const SessionDetailPlaceholderScreen({super.key, this.displayIndex});
 
   @override
   State<SessionDetailPlaceholderScreen> createState() =>
@@ -19,37 +22,34 @@ class _SessionDetailPlaceholderScreenState
   late TabController _tabController;
   int _chartType = 0; // 0 = Bars, 1 = Pie
 
-  // Mock Session Data for Visuals
-  late final SessionAnalysisModel _sessionData;
+  // Fallback mock data
+  final SessionAnalysisModel _fallbackData = SessionAnalysisModel(
+    id: 'session_1',
+    title: 'جلسة #1 - تقييم الروبوت التلقائي',
+    summary: 'خلال هذه الجلسة، أظهر الطفل تقدماً ملحوظاً في حل الألغاز التعاونية مع الروبوت.',
+    duration: '٢٥ دقيقة',
+    engagementLevel: 'ممتاز',
+    recommendations: ['التركيز على مهارات تبادل الأدوار'],
+    emotionDistribution: [
+      EmotionData('happy', '😊', 'سعيد', 0.35, const Color(0xFF22C55E)),
+      EmotionData('neutral', '😐', 'محايد', 0.20, const Color(0xFF94A3B8)),
+    ],
+    focusedPercentage: 0.85,
+    notFocusedPercentage: 0.15,
+  );
+
+  SessionAnalysisModel get _sessionData {
+    try {
+      return context.read<SessionViewModel>().sessionDetails ?? _fallbackData;
+    } catch (_) {
+      return _fallbackData;
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-
-    // Derived from Gamified Screen
-    _sessionData = SessionAnalysisModel(
-      id: 'session_1',
-      title: 'جلسة #1 - تقييم الروبوت التلقائي',
-      summary:
-          'خلال هذه الجلسة، أظهر الطفل تقدماً ملحوظاً في حل الألغاز التعاونية مع الروبوت. وتواصل بصري بنسبة ٧٥٪.',
-      duration: '٢٥ دقيقة',
-      engagementLevel: 'ممتاز',
-      recommendations: [
-        'التركيز على مهارات تبادل الأدوار',
-        'استخدام الروبوت كمحفز للنطق الوجداني',
-      ],
-      emotionDistribution: [
-        EmotionData('happy', '😊', 'سعيد', 0.35, const Color(0xFF22C55E)),
-        EmotionData('calm', '😌', 'هادئ', 0.15, AppColors.primary),
-        EmotionData('sad', '😢', 'حزين', 0.15, AppColors.destructive),
-        EmotionData('angry', '😠', 'غاضب', 0.05, const Color(0xFFF97316)),
-        EmotionData('fear', '😨', 'خائف', 0.10, const Color(0xFF6366F1)),
-        EmotionData('surprise', '😲', 'متفاجئ', 0.20, const Color(0xFFA855F7)),
-      ],
-      focusedPercentage: 0.85,
-      notFocusedPercentage: 0.15,
-    );
   }
 
   @override
@@ -64,7 +64,7 @@ class _SessionDetailPlaceholderScreenState
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: Text(
-          _sessionData.title,
+          widget.displayIndex != null ? 'جلسة #${widget.displayIndex}' : _sessionData.title,
           style: AppTextStyles.h2.copyWith(fontWeight: FontWeight.w700),
         ),
         actions: [
@@ -175,7 +175,7 @@ class _SessionDetailPlaceholderScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${(_sessionData.focusedPercentage * 100).toInt()}%',
+                    '${((( _sessionData.averageFocus ?? _sessionData.focusedPercentage) ) * 100).toInt()}%',
                     style: AppTextStyles.h1.copyWith(
                       fontWeight: FontWeight.w800,
                       fontSize: 32,
@@ -201,8 +201,8 @@ class _SessionDetailPlaceholderScreenState
                       Color(0xFF94A3B8),
                     ],
                     stops: [
-                      _sessionData.focusedPercentage,
-                      _sessionData.focusedPercentage,
+                      (_sessionData.averageFocus ?? _sessionData.focusedPercentage),
+                      (_sessionData.averageFocus ?? _sessionData.focusedPercentage),
                     ],
                   ).createShader(bounds);
                 },
@@ -214,7 +214,7 @@ class _SessionDetailPlaceholderScreenState
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '${(_sessionData.notFocusedPercentage * 100).toInt()}%',
+                    '${(((1 - (_sessionData.averageFocus ?? _sessionData.focusedPercentage)) ) * 100).toInt()}%',
                     style: AppTextStyles.h1.copyWith(
                       fontWeight: FontWeight.w800,
                       fontSize: 32,
@@ -450,8 +450,40 @@ class _SessionDetailPlaceholderScreenState
   // ================= TAB 2: CLINICAL REPORT =================
 
   Widget _buildClinicalReportTab() {
-    final topEmotion = _sessionData.emotionDistribution
-        .reduce((a, b) => a.percentage > b.percentage ? a : b);
+    final emotions = _sessionData.emotionDistribution;
+    EmotionData? topEmotion;
+    if (emotions.isNotEmpty) {
+      topEmotion = emotions[0];
+      for (final e in emotions) {
+        if (e.percentage > topEmotion!.percentage) topEmotion = e;
+      }
+    }
+
+    // Dynamic Voice Text
+    final speechText = _sessionData.analytics?['speech_text']?.toString().trim() ?? '';
+    final storyTrait = _sessionData.analytics?['story_trait']?.toString().trim() ?? '';
+    final isCorrect = _sessionData.analytics?['is_correct'] as bool?;
+    
+    // The backend might return the keys with empty strings, nulls, or default booleans
+    // even for image-only sessions. So we check if there's actual text.
+    final bool hasValidSpeech = speechText.isNotEmpty && speechText.toLowerCase() != 'null';
+    final bool hasValidTrait = storyTrait.isNotEmpty && storyTrait.toLowerCase() != 'null';
+    final hasVoiceData = hasValidSpeech || hasValidTrait;
+    
+    String voiceContent = "لم يتم التقاط أي تفاعل صوتي خلال هذه الجلسة، تم الاعتماد على التحليل البصري فقط.";
+    if (hasVoiceData) {
+      voiceContent = "أظهر المريض تفاعلاً صوتياً.";
+      if (hasValidSpeech) {
+        voiceContent += ' حيث ذكر: "$speechText".';
+      }
+      if (isCorrect != null) {
+        voiceContent += ' وكانت استجابته للأسئلة التفاعلية ${(isCorrect ? "صحيحة" : "خاطئة")}.';
+      }
+    }
+
+    // Dynamic Focus Text
+    final focusPct = ((_sessionData.averageFocus ?? _sessionData.focusedPercentage) * 100).toInt();
+    final focusDesc = focusPct > 70 ? "مستقر" : focusPct > 40 ? "متوسط" : "ضعيف";
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -463,7 +495,7 @@ class _SessionDetailPlaceholderScreenState
             title: "الحالة المزاجية الغالبة",
             modelName: "Emotional Intelligence Model",
             content:
-                "الحالة المزاجية الغالبة للمريض هي ${topEmotion.label} بنسبة ${(topEmotion.percentage * 100).toInt()}%.",
+              "الحالة المزاجية الغالبة للمريض هي ${topEmotion?.label ?? 'غير محددة'} بنسبة ${((topEmotion?.percentage ?? 0.0) * 100).toInt()}%.",
             icon: Icons.sentiment_satisfied_alt_rounded,
             color: const Color(0xFF22C55E), // Green
           ),
@@ -471,8 +503,7 @@ class _SessionDetailPlaceholderScreenState
           _buildClinicalCard(
             title: "التدفق الصوتي والقصص",
             modelName: "Educational Voice Flow Model",
-            content:
-                "تفاعل المريض صوتياً وأجاب على أسئلة القصة التفاعلية بشكل صحيح (True).",
+            content: voiceContent,
             icon: Icons.record_voice_over_rounded,
             color: const Color(0xFF3B82F6), // Blue
           ),
@@ -481,7 +512,7 @@ class _SessionDetailPlaceholderScreenState
             title: "التواصل البصري",
             modelName: "Eye Tracking Model",
             content:
-                "التواصل البصري مستقر. تمركزت نقاط النظر نحو الروبوت بنسبة ${(_sessionData.focusedPercentage * 100).toInt()}%.",
+              "التواصل البصري $focusDesc. تمركزت نقاط النظر نحو الروبوت بنسبة $focusPct%.",
             icon: Icons.visibility_rounded,
             color: const Color(0xFFF59E0B), // Amber
           ),

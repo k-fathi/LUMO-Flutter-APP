@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/date_formatter.dart';
+import '../../core/router/route_names.dart';
 import '../../data/models/comment_model.dart';
 import 'package:intl/intl.dart' show Bidi;
 import 'avatar_widget.dart';
@@ -17,44 +18,61 @@ class CommentCard extends StatelessWidget {
     this.onDelete,
   });
 
+  void _navigateToProfile(BuildContext context) {
+    if (comment.userId != 0) {
+      Navigator.pushNamed(
+        context,
+        RouteNames.profile,
+        arguments: {'userId': comment.userId},
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey[50], // surface
+        color: Colors.grey[50],
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!), // border color
+        border: Border.all(color: Colors.grey[200]!),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              AvatarWidget(
-                imageUrl: comment.userAvatarUrl,
-                name: comment.userName,
-                size: 32,
+              GestureDetector(
+                onTap: () => _navigateToProfile(context),
+                child: AvatarWidget(
+                  imageUrl: comment.userAvatarUrl,
+                  name: comment.userName,
+                  size: 32,
+                ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      comment.userName,
-                      style: AppTextStyles.body.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                child: GestureDetector(
+                  onTap: () => _navigateToProfile(context),
+                  behavior: HitTestBehavior.opaque,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        comment.userName,
+                        style: AppTextStyles.body.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
-                    Text(
-                      DateFormatter.formatRelativeTime(comment.createdAt),
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.mutedForeground,
+                      Text(
+                        DateFormatter.formatRelativeTime(comment.createdAt),
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.mutedForeground,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               if (onDelete != null)

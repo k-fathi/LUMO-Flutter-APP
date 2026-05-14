@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/network/api_constants.dart';
 import '../../models/message_model.dart';
+import '../../../core/utils/debug_logger.dart';
 
 abstract class ChatRemoteDataSource {
   Future<List<MessageModel>> getChatHistory();
@@ -45,7 +47,15 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
   @override
   Future<List<dynamic>> getMyChats() async {
     final response = await _dioClient.get(ApiConstants.myChats);
-    return response.data['chats'];
+    final data = response.data;
+    if (data == null) return [];
+    if (data is Map) {
+      final chats = data['chats'];
+      if (chats == null) return [];
+      return chats as List<dynamic>;
+    }
+    if (data is List) return data;
+    return [];
   }
 
   @override
@@ -54,17 +64,46 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
       ApiConstants.startChat,
       data: {'receiver_id': receiverId},
     );
-    final data = response.data as Map<String, dynamic>;
-    
-    // ✅ Backend بيرجع الـ chatRoomId الثابت — تأكد من الـ key مع الـ backend
-    final roomId = data['chat_room_id']?.toString() ??
-        data['room']?['id']?.toString() ??
-        data['id']?.toString();
-        
-    if (roomId == null) {
-      throw Exception('Backend لم يرجع chat_room_id');
+
+    final raw = response.data;
+    final Map<String, dynamic> data =
+        raw is Map<String, dynamic> ? raw : <String, dynamic>{};
+
+    String? roomId;
+
+    if (data.containsKey('chat') && data['chat'] is Map) {
+      roomId = data['chat']['id']?.toString();
+    } else if (data.containsKey('chat_room_id')) {
+      roomId = data['chat_room_id']?.toString();
     }
-    
+
+    if (roomId == null || roomId == 'null') {
+      debugPrint('❌ startChat no room id inside: $data');
+      throw Exception('لم يرجع الباك إند ID المحادثة. محتوى الرد: $data');
+    }
+
+    debugPrint('✅ startChat roomId: $roomId');
+    // #region agent log
+    DebugLogger.log(
+      runId: 'baseline',
+      hypothesisId: 'A',
+      location: 'chat_remote_data_source.dart:startChat',
+      message: 'startChat parsed roomId',
+      data: {
+        'receiverId': receiverId,
+        'hasChatKey': data.containsKey('chat'),
+        'hasChatRoomIdKey': data.containsKey('chat_room_id'),
+        'roomId': roomId,
+      },
+    );
+    // #endregion
+    // #region agent log
+    debugPrint('[ae3196][A] REST startChat parsed roomId=$roomId hasChatKey=${data.containsKey('chat')} hasChatRoomIdKey=${data.containsKey('chat_room_id')}');
+    // #endregion
+    // #region agent log
+    // ignore: avoid_print
+    print('[ae3196][A] REST startChat parsed roomId=$roomId hasChatKey=${data.containsKey('chat')} hasChatRoomIdKey=${data.containsKey('chat_room_id')}');
+    // #endregion
     return roomId;
   }
 

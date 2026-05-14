@@ -175,6 +175,10 @@ class Validators {
       return 'اسم الطفل مطلوب';
     }
 
+    if (value.trim().contains(' ')) {
+      return 'اسم الطفل يجب أن يكون كلمة واحدة فقط';
+    }
+
     if (value.length < 2) {
       return 'اسم الطفل قصير جداً';
     }

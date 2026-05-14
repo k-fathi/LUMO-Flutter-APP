@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../data/models/user_model.dart';
+import '../../../data/models/parent_model.dart';
+import '../../../data/models/doctor_model.dart';
 import '../../../data/repositories/profile_repository.dart';
 
 /// Profile View Model - manages profile screen state and logic
@@ -43,9 +45,14 @@ class ProfileViewModel extends ChangeNotifier {
   }
 
   /// Load user profile - BUG FIX #4: Prevent infinite rebuilds with proper state management
-  Future<void> loadProfile(int userId) async {
+  Future<void> loadProfile(int userId, {UserModel? fallbackUser}) async {
     // Skip if already loading this exact user to prevent StackOverflow
     if (_isLoading && _user?.id == userId) return;
+    
+    // Inject fallback user immediately so UI doesn't flicker blank
+    if (_user?.id != userId && fallbackUser != null) {
+      _user = fallbackUser;
+    }
     
     _isLoading = true;
     _errorMessage = null;
@@ -54,7 +61,42 @@ class ProfileViewModel extends ChangeNotifier {
     try {
       final userData = await repository.getUserProfile(userId);
       if (userData != null) {
-        _user = userData;
+        UserModel updatedUserData = userData;
+        
+        // Prevent backend from zeroing out existing valid counters
+        final oldUser = _user ?? fallbackUser;
+        final updatedFollowers = updatedUserData.followersCount ?? 0;
+        final updatedFollowing = updatedUserData.followingCount ?? 0;
+        final oldFollowers = oldUser?.followersCount ?? 0;
+        final oldFollowing = oldUser?.followingCount ?? 0;
+
+        // The user specifies this is a Mutual Connection system (Friendship).
+        // Since Laravel stores directional follows, we enforce symmetry on the frontend.
+        final maxUpdated = updatedFollowers > updatedFollowing ? updatedFollowers : updatedFollowing;
+        final maxOld = oldFollowers > oldFollowing ? oldFollowers : oldFollowing;
+        final count = maxUpdated > 0 ? maxUpdated : maxOld;
+
+        if (updatedUserData is DoctorModel) {
+          updatedUserData = updatedUserData.copyWith(
+            followersCount: count,
+            followingCount: count,
+          );
+        } else if (updatedUserData is ParentModel) {
+          updatedUserData = updatedUserData.copyWith(
+            followersCount: count,
+            followingCount: count,
+          );
+        } else {
+           updatedUserData = updatedUserData.copyWith(
+            followersCount: count,
+            followingCount: count,
+          );
+        }
+        
+        _user = updatedUserData;
+      } else {
+        // On desktop (or when backend doesn't expose user-by-id),
+        // keep existing _user (typically set from navigation args).
       }
     } catch (e) {
       _errorMessage = 'فشل تحميل الملف الشخصي: $e';
@@ -75,6 +117,9 @@ class ProfileViewModel extends ChangeNotifier {
 
     try {
       _followers = await repository.getFollowers(userId);
+      if (_user != null && _user!.id == userId) {
+        _user = _user!.copyWith(followersCount: _followers.length);
+      }
     } catch (e) {
       _errorMessage = 'فشل تحميل المتابعين: $e';
     } finally {
@@ -94,6 +139,9 @@ class ProfileViewModel extends ChangeNotifier {
 
     try {
       _following = await repository.getFollowing(userId);
+      if (_user != null && _user!.id == userId) {
+        _user = _user!.copyWith(followingCount: _following.length);
+      }
     } catch (e) {
       _errorMessage = 'فشل تحميل قائمة المتابعة: $e';
     } finally {
@@ -153,6 +201,11 @@ class ProfileViewModel extends ChangeNotifier {
   /// Clear error
   void clearError() {
     _errorMessage = null;
+    notifyListeners();
+  }
+
+  void updateUser(UserModel newUser) {
+    _user = newUser;
     notifyListeners();
   }
 }

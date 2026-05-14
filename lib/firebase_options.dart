@@ -42,30 +42,31 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'YOUR_WEB_API_KEY',
-    appId: '1:YOUR_APP_ID:web:YOUR_WEB_APP_ID',
-    messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-    projectId: 'lumo-ai-medical',
-    authDomain: 'lumo-ai-medical.firebaseapp.com',
-    storageBucket: 'lumo-ai-medical.appspot.com',
-    measurementId: 'YOUR_MEASUREMENT_ID',
+    apiKey: 'AIzaSyCaLP4Ng0pe8AlX_0KUxgkfg7Kv9YA3nhY',
+    appId: '1:230335947923:web:d677f108b0cc9914519966',
+    messagingSenderId: '230335947923',
+    projectId: 'devops-roadmap-x3',
+    authDomain: 'devops-roadmap-x3.firebaseapp.com',
+    storageBucket: 'devops-roadmap-x3.firebasestorage.app',
+    measurementId: 'G-YPE10L62ZC',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'YOUR_ANDROID_API_KEY',
-    appId: '1:YOUR_APP_ID:android:YOUR_ANDROID_APP_ID',
-    messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-    projectId: 'lumo-ai-medical',
-    storageBucket: 'lumo-ai-medical.appspot.com',
+    apiKey: 'AIzaSyBLEcPQOgPLsL7lzKSLwabet0FwCNyo00k',
+    appId: '1:230335947923:android:efad94b6139d5f48519966',
+    messagingSenderId: '230335947923',
+    projectId: 'devops-roadmap-x3',
+    storageBucket: 'devops-roadmap-x3.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'YOUR_IOS_API_KEY',
-    appId: '1:YOUR_APP_ID:ios:YOUR_IOS_APP_ID',
-    messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-    projectId: 'lumo-ai-medical',
-    storageBucket: 'lumo-ai-medical.appspot.com',
-    iosBundleId: 'com.lumoai.medical',
+    apiKey: 'AIzaSyATqUT11hs_J-N2PvwYBxnAiuVyOX-VpSw',
+    appId: '1:230335947923:ios:707449d249e1c156519966',
+    messagingSenderId: '230335947923',
+    projectId: 'devops-roadmap-x3',
+    storageBucket: 'devops-roadmap-x3.firebasestorage.app',
+    iosClientId: '230335947923-amv3ga12bhchg29uv5kr00tc03ip33jf.apps.googleusercontent.com',
+    iosBundleId: 'com.example.kareemFinal',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(

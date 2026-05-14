@@ -21,6 +21,7 @@ import '../../features/ai_helper/view/ai_chat_screen.dart';
 import '../../features/analysis/view/parent_analysis_screen.dart';
 import '../../features/analysis/view/doctor_patients_screen.dart';
 import '../../features/analysis/view/doctor_patient_detail.dart';
+import '../../features/analysis/view/image_analysis_screen.dart';
 import '../../features/analysis/view/session_detail_placeholder_screen.dart';
 import '../../features/profile/view/profile_screen.dart';
 import '../../features/profile/view/edit_profile_screen.dart';
@@ -38,6 +39,8 @@ import '../../features/home/view_model/home_view_model.dart';
 import '../../features/chat/view_model/chat_view_model.dart';
 import '../../features/ai_helper/view_model/ai_view_model.dart';
 import '../../features/analysis/view_model/analysis_view_model.dart';
+import '../../features/analysis/view_model/image_analysis_view_model.dart';
+import '../../features/session/view_model/session_view_model.dart';
 import '../../features/profile/view_model/profile_view_model.dart';
 import 'package:provider/provider.dart';
 
@@ -80,6 +83,7 @@ class AppRoutes {
           OtpVerificationScreen(
             phone: args['phone'] as String,
             isPasswordReset: args['isPasswordReset'] as bool? ?? false,
+            password: args['password'] as String?,
           ),
         );
 
@@ -176,8 +180,11 @@ class AppRoutes {
       case RouteNames.doctorPatientDetail:
         final args = settings.arguments as Map<String, dynamic>;
         return RouteTransitions.slideRight(
-          ChangeNotifierProvider(
-            create: (_) => getIt<AnalysisViewModel>(),
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider(create: (_) => getIt<AnalysisViewModel>()),
+              ChangeNotifierProvider(create: (_) => getIt<SessionViewModel>()),
+            ],
             child: DoctorPatientDetail(
               parentId: int.tryParse(args['parentId'].toString()) ?? 0,
               parentName: args['parentName'] as String,
@@ -188,7 +195,19 @@ class AppRoutes {
 
       case RouteNames.sessionDetailPlaceholder:
         return RouteTransitions.slideRight(
-            const SessionDetailPlaceholderScreen());
+          ChangeNotifierProvider(
+            create: (_) => getIt<SessionViewModel>(),
+            child: const SessionDetailPlaceholderScreen(),
+          ),
+        );
+
+      case RouteNames.imageAnalysis:
+        return RouteTransitions.slideRight(
+          ChangeNotifierProvider(
+            create: (_) => getIt<ImageAnalysisViewModel>(),
+            child: const ImageAnalysisScreen(),
+          ),
+        );
 
       // ==================== PROFILE ====================
       case RouteNames.profile:
@@ -201,9 +220,6 @@ class AppRoutes {
                   ? int.tryParse(args['userId'].toString())
                   : null,
               user: args['user'] as UserModel?,
-              initialName: args['userName'] as String?,
-              initialAvatar: args['userAvatarUrl'] as String?,
-              initialRole: args['userRole']?.toString(),
             ),
           ),
         );

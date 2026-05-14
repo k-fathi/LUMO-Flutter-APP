@@ -9,6 +9,7 @@ import '../../data/repositories/analysis_repository.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/chat_repository.dart';
 import '../../data/repositories/community_repository.dart';
+import '../../data/repositories/lumo_api_repository.dart';
 import '../../data/repositories/profile_repository.dart';
 import '../../data/repositories/patient_repository.dart';
 import '../../data/repositories/session_repository.dart';
@@ -24,6 +25,7 @@ import '../services/firebase_auth_service.dart';
 import '../services/firebase_firestore_service.dart';
 import '../services/firebase_storage_service.dart';
 import '../services/local_storage_service.dart';
+import '../services/lumo_api_service.dart';
 import '../services/mock_api_service.dart';
 import '../services/notification_service.dart';
 import '../services/shared_preferences_service.dart';
@@ -31,6 +33,7 @@ import '../../features/home/view_model/home_view_model.dart';
 import '../../features/ai_helper/view_model/ai_view_model.dart';
 import '../../features/chat/view_model/chat_view_model.dart';
 import '../../features/analysis/view_model/analysis_view_model.dart';
+import '../../features/analysis/view_model/image_analysis_view_model.dart';
 import '../../features/community/view_model/community_view_model.dart';
 import '../../features/profile/view_model/profile_view_model.dart';
 import '../../features/session/view_model/session_view_model.dart';
@@ -80,6 +83,15 @@ class DependencyInjection {
 
     getIt.registerLazySingleton<MockApiService>(
       () => MockApiService(),
+    );
+
+    // LUMO Microservices
+    getIt.registerLazySingleton<LumoApiService>(
+      () => LumoApiService(),
+    );
+
+    getIt.registerLazySingleton<LumoApiRepository>(
+      () => LumoApiRepository(getIt<LumoApiService>()),
     );
 
     // Network & API
@@ -146,7 +158,6 @@ class DependencyInjection {
     getIt.registerLazySingleton<CommunityRepository>(
       () => CommunityRepository(
         getIt<CommunityRemoteDataSource>(),
-        getIt<ProfileRepository>(),
       ),
     );
 
@@ -171,8 +182,8 @@ class DependencyInjection {
 
     getIt.registerLazySingleton<AIRepository>(
       () => AIRepository(
-        getIt<MockDataSource>(),
         getIt<LocalDataSource>(),
+        getIt<LumoApiService>(),
       ),
     );
 
@@ -248,6 +259,10 @@ class DependencyInjection {
 
     getIt.registerFactory<AnalysisViewModel>(
       () => AnalysisViewModel(getIt<AnalysisRepository>()),
+    );
+
+    getIt.registerFactory<ImageAnalysisViewModel>(
+      () => ImageAnalysisViewModel(getIt<LumoApiRepository>()),
     );
 
     getIt.registerLazySingleton<CommunityViewModel>(

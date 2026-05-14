@@ -11,6 +11,7 @@ import '../../session/view_model/session_view_model.dart';
 import '../../analysis/view/session_config_bottom_sheet.dart';
 import 'message_bubble.dart';
 import 'chat_input_widget.dart';
+import '../widgets/typing_indicator.dart';
 import '../../../core/router/route_names.dart';
 
 class ChatRoomScreen extends StatefulWidget {
@@ -35,12 +36,19 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   late ChatViewModel _viewModel;
+  int? _currentUserId; // Saved in initState to avoid unsafe context.read in dispose()
 
   @override
   void initState() {
     super.initState();
     _viewModel = context.read<ChatViewModel>();
-    _initChat();
+    // Save early — context is safe here and unsafe in dispose()
+    _currentUserId = context.read<AuthProvider>().currentUser?.id;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _initChat();
+      }
+    });
   }
 
   Future<void> _initChat() async {
@@ -55,6 +63,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
   @override
   void dispose() {
+    // Use the saved userId — context is deactivated here so context.read is unsafe
+    if (_currentUserId != null) {
+      _viewModel.stopTyping(widget.chatRoomId, _currentUserId!);
+    }
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -92,6 +104,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       return;
     }
 
+    // Stop typing indicator immediately on send
+    _viewModel.stopTyping(widget.chatRoomId, currentUser.id);
+
     _messageController.clear();
 
     _viewModel.sendMessage(
@@ -100,10 +115,19 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       senderName: currentUser.name,
       senderAvatarUrl: currentUser.avatarUrl,
       content: content,
-      receiverId: receiverId, // ✅
+      receiverId: receiverId,
+      receiverName: widget.otherUserName,
+      receiverAvatarUrl: widget.otherUserAvatar,
     );
 
     _scrollToBottom();
+  }
+
+  void _handleTextChanged(String text) {
+    if (text.trim().isEmpty) return;
+    final currentUser = context.read<AuthProvider>().currentUser;
+    if (currentUser == null) return;
+    _viewModel.setTyping(widget.chatRoomId, currentUser.id);
   }
 
   void _navigateToProfile() {
@@ -210,30 +234,32 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     ),
                   ),
                 ),
-                Consumer<SessionViewModel>(
-                  builder: (context, sessionVM, child) {
-                    if (sessionVM.isActive) {
-                      return IconButton(
-                        icon: const Icon(Icons.stop_circle_rounded,
-                            color: Colors.redAccent, size: 32),
-                        onPressed: () => sessionVM.endSession(),
-                        tooltip: 'إنهاء الجلسة',
-                      );
-                    }
-                    return IconButton(
-                      icon: const Icon(Icons.play_circle_fill_rounded,
-                          color: Colors.white, size: 32),
-                      onPressed: () {
-                        SessionConfigBottomSheet.show(
-                          context,
-                          receiverId:
-                              int.tryParse(widget.otherUserId ?? '') ?? 0,
+                // RBAC: Only doctors can create/control sessions
+                if (authProvider.currentUser?.role.isDoctor == true)
+                  Consumer<SessionViewModel>(
+                    builder: (context, sessionVM, child) {
+                      if (sessionVM.isActive) {
+                        return IconButton(
+                          icon: const Icon(Icons.stop_circle_rounded,
+                              color: Colors.redAccent, size: 32),
+                          onPressed: () => sessionVM.endSession(),
+                          tooltip: 'إنهاء الجلسة',
                         );
-                      },
-                      tooltip: 'بدء جلسة',
-                    );
-                  },
-                ),
+                      }
+                      return IconButton(
+                        icon: const Icon(Icons.play_circle_fill_rounded,
+                            color: Colors.white, size: 32),
+                        onPressed: () {
+                          SessionConfigBottomSheet.show(
+                            context,
+                            receiverId:
+                                int.tryParse(widget.otherUserId ?? '') ?? 0,
+                          );
+                        },
+                        tooltip: 'بدء جلسة',
+                      );
+                    },
+                  ),
               ],
             ),
           ),
@@ -265,15 +291,33 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
                 }
 
+                final room = viewModel.currentChatRoom;
+                final isOtherTyping =
+                    room?.isOtherParticipantTyping(currentUserId) ?? false;
+                final itemCount = viewModel.messages.length +
+                    (isOtherTyping ? 1 : 0);
+
                 return ColoredBox(
                   color: messagesBackground,
-                  // BUG FIX #9: Reverse ListView for proper message display (newest at bottom)
                   child: ListView.builder(
                     controller: _scrollController,
-                    reverse: true,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    itemCount: viewModel.messages.length,
+                    itemCount: itemCount,
                     itemBuilder: (context, index) {
+                      // Show typing indicator as the last item
+                      if (isOtherTyping &&
+                          index == viewModel.messages.length) {
+                        return Padding(
+                          padding: const EdgeInsets.only(
+                              left: 24, right: 64, top: 4, bottom: 4),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: TypingIndicator(
+                              dotColor: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        );
+                      }
                       final message = viewModel.messages[index];
                       final isMe = message.senderId.toString() == currentUserId;
                       return MessageBubble(message: message, isMe: isMe);
@@ -290,6 +334,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 controller: _messageController,
                 onSend: _handleSend,
                 onAttach: null,
+                onTextChanged: _handleTextChanged,
                 isLoading: viewModel.isSending,
               );
             },

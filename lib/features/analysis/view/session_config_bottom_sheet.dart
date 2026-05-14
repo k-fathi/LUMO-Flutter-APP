@@ -39,6 +39,7 @@ class SessionConfigBottomSheet extends StatefulWidget {
 
 class _SessionConfigBottomSheetState extends State<SessionConfigBottomSheet> {
   final List<SessionPart> _tempParts = [];
+  DateTime? _scheduledDate;
 
   void _addPart() async {
     final result = await showDialog<SessionPart>(
@@ -53,6 +54,29 @@ class _SessionConfigBottomSheetState extends State<SessionConfigBottomSheet> {
     }
   }
 
+  Future<void> _pickDateTime() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _scheduledDate ?? DateTime.now().add(const Duration(hours: 1)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 90)),
+      locale: const Locale('ar'),
+    );
+    if (date == null || !mounted) return;
+
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(
+        _scheduledDate ?? DateTime.now().add(const Duration(hours: 1)),
+      ),
+    );
+    if (time == null || !mounted) return;
+
+    setState(() {
+      _scheduledDate = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    });
+  }
+
   void _handleSubmit() async {
     if (_tempParts.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -62,8 +86,8 @@ class _SessionConfigBottomSheetState extends State<SessionConfigBottomSheet> {
     }
 
     final viewModel = context.read<SessionViewModel>();
-    await viewModel.startSession(
-      receiverId: widget.receiverId,
+    await viewModel.createSession(
+      patientId: widget.receiverId,
       parts: _tempParts,
     );
 
@@ -80,6 +104,17 @@ class _SessionConfigBottomSheetState extends State<SessionConfigBottomSheet> {
         );
       }
     }
+  }
+
+  String get _formattedSchedule {
+    if (_scheduledDate == null) return 'اختر التاريخ والوقت';
+    final d = _scheduledDate!;
+    final months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    final hour = d.hour > 12 ? d.hour - 12 : (d.hour == 0 ? 12 : d.hour);
+    final period = d.hour >= 12 ? 'م' : 'ص';
+    final minute = d.minute.toString().padLeft(2, '0');
+    return '${d.day} ${months[d.month - 1]} ${d.year} - $hour:$minute $period';
   }
 
   @override
@@ -134,7 +169,49 @@ class _SessionConfigBottomSheetState extends State<SessionConfigBottomSheet> {
             ],
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+
+          // Date/Time Picker
+          InkWell(
+            onTap: _pickDateTime,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.calendar_month_rounded,
+                      color: AppColors.primary, size: 22),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _formattedSchedule,
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 14,
+                        fontWeight: _scheduledDate != null ? FontWeight.w600 : FontWeight.normal,
+                        color: _scheduledDate != null
+                            ? theme.textTheme.bodyLarge?.color
+                            : AppColors.mutedForeground,
+                      ),
+                    ),
+                  ),
+                  if (_scheduledDate != null)
+                    GestureDetector(
+                      onTap: () => setState(() => _scheduledDate = null),
+                      child: Icon(Icons.close_rounded,
+                          size: 18, color: AppColors.mutedForeground),
+                    ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
 
           // Parts List
           Flexible(
@@ -171,7 +248,7 @@ class _SessionConfigBottomSheetState extends State<SessionConfigBottomSheet> {
 
           // Start Button
           AppButton(
-            text: 'بدء الجلسة الآن',
+            text: 'إضافة الجلسة',
             onPressed: _handleSubmit,
             isLoading: context.watch<SessionViewModel>().isLoading,
           ),
@@ -282,6 +359,12 @@ class _AddPartDialogState extends State<_AddPartDialog> {
               DropdownMenuItem(
                   value: 'education',
                   child: Text('تعليم', style: TextStyle(fontFamily: 'Cairo'))),
+              DropdownMenuItem(
+                  value: 'drawing',
+                  child: Text('رسم', style: TextStyle(fontFamily: 'Cairo'))),
+              DropdownMenuItem(
+                  value: 'animals',
+                  child: Text('أصوات حيوانات', style: TextStyle(fontFamily: 'Cairo'))),
             ],
             onChanged: (val) => setState(() => _selectedType = val!),
           ),

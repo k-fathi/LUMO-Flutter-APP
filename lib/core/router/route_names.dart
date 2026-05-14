@@ -37,6 +37,7 @@ class RouteNames {
   static const String doctorPatients = '/doctor-patients';
   static const String doctorPatientDetail = '/doctor-patient-detail';
   static const String sessionDetailPlaceholder = '/session-detail-placeholder';
+  static const String imageAnalysis = '/image-analysis';
 
   // Profile
   static const String profile = '/profile';

@@ -1,10 +1,11 @@
-import 'dart:async' show unawaited;
+
 import 'package:flutter/foundation.dart';
 import '../datasources/firebase_data_source.dart';
 import '../datasources/local_data_source.dart';
 import '../models/chat_room_model.dart';
 import '../models/message_model.dart';
 import '../datasources/remote/chat_remote_data_source.dart';
+import '../../core/enums/message_status.dart';
 
 class ChatRepository {
   final FirebaseDataSource _firebaseDataSource;
@@ -55,8 +56,23 @@ class ChatRepository {
   }
 
   Future<List<ChatRoomModel>> getMyChats() async {
-    final List<dynamic> chatsData = await _chatRemoteDataSource.getMyChats();
-    return chatsData.map((json) => ChatRoomModel.fromJson(json)).toList();
+    try {
+      final List<dynamic> chatsData = await _chatRemoteDataSource.getMyChats();
+      // Cache for offline/restart persistence
+      await _localDataSource.cacheChats(chatsData.cast<Map<String, dynamic>>());
+      return chatsData.map((json) => ChatRoomModel.fromJson(json)).toList();
+    } catch (e) {
+      debugPrint('REST getMyChats failed, falling back to cache: $e');
+      return getCachedChats();
+    }
+  }
+
+  List<ChatRoomModel> getCachedChats() {
+    final cachedData = _localDataSource.getCachedChats();
+    if (cachedData != null) {
+      return cachedData.map((data) => ChatRoomModel.fromJson(data)).toList();
+    }
+    return [];
   }
 
   Future<ChatRoomModel?> getChatRoom(String chatRoomId) async {
@@ -118,21 +134,87 @@ class ChatRepository {
     final participantNames = {senderId.toString(): senderName};
     final participantAvatars = {senderId.toString(): senderAvatarUrl};
 
-    final messageId = await _firebaseDataSource.sendMessage(
-      chatRoomId: chatRoomId,
-      messageData: messageData,
-      participantIds: participantIds,
-      participantNames: participantNames,
-      participantAvatars: participantAvatars,
-    );
+    String messageId = '';
+    try {
+      messageId = await _firebaseDataSource.sendMessage(
+        chatRoomId: chatRoomId,
+        messageData: messageData,
+        participantIds: participantIds,
+        participantNames: participantNames,
+        participantAvatars: participantAvatars,
+        receiverId: receiverId.toString(),
+      );
+    } catch (e) {
+      debugPrint('Firebase sendMessage failed (Likely unsupported platform like Linux): $e');
+      messageId = 'local_${now.millisecondsSinceEpoch}';
+    }
     messageData['id'] = messageId;
     
     await _localDataSource.clearChatDraft(chatRoomId);
 
-    // ✅ Silent sync — مرر receiverId مباشرة
-    unawaited(_syncToLaravel(chatRoomId, senderId, receiverId, content));
+    // Sync to Laravel regardless of Firebase success (Crucial for Linux testing)
+    await _syncToLaravel(chatRoomId, senderId, receiverId, content);
 
-    return MessageModel.fromJson(messageData);
+    final sentMessage = MessageModel.fromJson(messageData);
+    
+    // Manually cache message so it persists across restarts on Linux
+    final cachedMessages = getCachedMessages(chatRoomId);
+    cachedMessages.add(sentMessage);
+    await _localDataSource.cacheMessages(chatRoomId, cachedMessages.map((m) => m.toJson()).toList());
+
+    // Update room list cache too, so the 'last message' and room existence persist on Linux
+    await _updateLocalRoomCache(
+      chatRoomId: chatRoomId,
+      senderId: senderId,
+      senderName: senderName,
+      senderAvatar: senderAvatarUrl,
+      content: content,
+      timestamp: now,
+      receiverId: receiverId,
+    );
+
+    return sentMessage;
+  }
+
+  /// Syncs an individual message's effect to the local rooms list cache.
+  Future<void> _updateLocalRoomCache({
+    required String chatRoomId,
+    required int senderId,
+    required String senderName,
+    required String? senderAvatar,
+    required String content,
+    required DateTime timestamp,
+    required int receiverId,
+  }) async {
+    final rooms = getCachedChats();
+    final index = rooms.indexWhere((r) => r.id == chatRoomId);
+    
+    if (index != -1) {
+      final updated = rooms[index].copyWith(
+        lastMessage: content,
+        lastMessageSenderId: senderId.toString(),
+        lastMessageTimestamp: timestamp,
+        updatedAt: timestamp,
+      );
+      rooms[index] = updated;
+    } else {
+      // Room doesn't exist in cache (likely newly started on Linux)
+      // Create a mock room entry to keep it in the list
+      final newRoom = ChatRoomModel(
+        id: chatRoomId,
+        participantIds: [senderId.toString(), receiverId.toString()],
+        participantNames: {senderId.toString(): senderName},
+        participantAvatars: {senderId.toString(): senderAvatar},
+        lastMessage: content,
+        lastMessageSenderId: senderId.toString(),
+        lastMessageTimestamp: timestamp,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      );
+      rooms.add(newRoom);
+    }
+    
+    await _localDataSource.cacheChats(rooms.map((r) => r.toJson()).toList());
   }
 
   /// BUG FIX #11: Robust silent sync to Laravel with improved receiver detection
@@ -176,6 +258,29 @@ class ChatRepository {
 
   Future<void> markMessageAsRead(String chatRoomId, String messageId) async {
     await _firebaseDataSource.markMessageAsRead(chatRoomId, messageId);
+  }
+
+  Future<void> markChatAsRead(String chatRoomId, int userId) async {
+    await _firebaseDataSource.markChatAsRead(chatRoomId, userId.toString());
+  }
+
+  /// Batch-mark all visible unread messages from the OTHER user as 'read'.
+  Future<void> markVisibleMessagesAsRead(
+      String chatRoomId, List<MessageModel> messages, int currentUserId) async {
+    final unreadIds = messages
+        .where((m) =>
+            m.senderId != currentUserId &&
+            m.status != MessageStatus.read)
+        .map((m) => m.id)
+        .toList();
+    if (unreadIds.isEmpty) return;
+    await _firebaseDataSource.markVisibleMessagesAsRead(chatRoomId, unreadIds);
+  }
+
+  Future<void> updateTypingStatus(
+      String chatRoomId, int userId, bool isTyping) async {
+    await _firebaseDataSource.updateTypingStatus(
+        chatRoomId, userId.toString(), isTyping);
   }
 
   // ==================== DRAFT OPERATIONS ====================

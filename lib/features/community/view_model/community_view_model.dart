@@ -514,7 +514,7 @@ class CommunityViewModel extends ChangeNotifier {
       await _repository.toggleFollow(userId,
           currentUserId: currentUserId, isFollowing: wasFollowing);
 
-      // 3. Background Sync (2 seconds later to allow backend propagation)
+      // 3. Background sync — server truth after delay
       Future.delayed(const Duration(seconds: 2), () async {
         if (_isDisposed) return;
         try {
@@ -536,6 +536,17 @@ class CommunityViewModel extends ChangeNotifier {
       _errorMessage = 'فشل تحديث المتابعة';
       _safeNotify();
     }
+  }
+
+  void setFollowingState(int userId, bool isNowFollowing) {
+    if (isNowFollowing) {
+      if (!_followedUserIds.contains(userId)) {
+        _followedUserIds.add(userId);
+      }
+    } else {
+      _followedUserIds.remove(userId);
+    }
+    _safeNotify();
   }
 
   Future<void> searchUsers(String query, {String? role}) async {

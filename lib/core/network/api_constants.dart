@@ -53,8 +53,18 @@ class ApiConstants {
   static const String aiConsult = '/ai/consult';
 
   // Sessions
-  static const String startSession = '/session/start';
-  static const String endSession = '/session/end';
+  static const String createSession = '/sessions';
+  static const String sessionDetails = '/sessions/{id}';
+  static const String updateSession = '/sessions/{id}'; // uses POST with _method=PUT
+  static const String deleteSession = '/sessions/{id}'; // uses POST with _method=DELETE
+  static const String startSession = '/sessions/{id}/start';
+  static const String endSession = '/sessions/{id}/end';
+  static const String patientSessions = '/sessions/list/{id}';
+  static const String mySessions = '/sessions/list';
+
+  // Segments
+  static const String startSegment = '/segments/{id}/start';
+  static const String completeSegment = '/segments/{id}/complete';
 
   // Doctor-Patient Request System
   static const String getPatients = '/doctor/patients';

@@ -1055,6 +1055,18 @@ abstract class AppLocalizations {
   /// **'Request rejected for {name}'**
   String requestRejected(Object name);
 
+  /// No description provided for @errorUpdateFollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update follow status'**
+  String get errorUpdateFollow;
+
+  /// No description provided for @errorUserNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This user profile is not available'**
+  String get errorUserNotFound;
+
   /// No description provided for @searchUsers.
   ///
   /// In en, this message translates to:
@@ -1180,6 +1192,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete Post'**
   String get deletePostTitle;
+
+  /// No description provided for @followingStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Following ✓'**
+  String get followingStatus;
 
   /// No description provided for @yesDelete.
   ///
@@ -1538,7 +1556,7 @@ abstract class AppLocalizations {
   /// No description provided for @doctorRequests.
   ///
   /// In en, this message translates to:
-  /// **'Doctor Requests'**
+  /// **'Notifications'**
   String get doctorRequests;
 
   /// No description provided for @doctorRequestMessage.

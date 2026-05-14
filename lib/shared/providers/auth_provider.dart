@@ -5,12 +5,14 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 import '../../data/models/auth/auth_models.dart';
 import '../../data/models/user_model.dart';
+import '../../data/models/doctor_model.dart';
+import '../../data/models/parent_model.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/profile_repository.dart';
 import '../../data/datasources/local_data_source.dart';
+import '../../core/di/dependency_injection.dart';
+import 'notification_provider.dart';
 import '../../core/network/api_exception.dart';
-
-// ✅ شلنا imports الـ ViewModels — مش المفروض AuthProvider يعتمد عليهم
 
 class AuthProvider extends ChangeNotifier {
   final AuthRepository _authRepository;
@@ -24,7 +26,7 @@ class AuthProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
-  // ✅ Callback لـ session change — بيتسجل من بره بدل الـ circular coupling
+ 
   VoidCallback? _onSessionChangeCallback;
 
   UserModel? get currentUser => _currentUser;
@@ -32,8 +34,7 @@ class AuthProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _authRepository.isLoggedIn;
 
-  /// يتسجل من main.dart أو app.dart عشان يعمل reset للـ ViewModels عند الـ logout أو الـ login
-  /// بدل ما AuthProvider يعتمد على الـ ViewModels مباشرة
+ 
   void setSessionChangeCallback(VoidCallback callback) {
     _onSessionChangeCallback = callback;
   }
@@ -69,7 +70,7 @@ class AuthProvider extends ChangeNotifier {
 
     // ── Priority 2: Refresh from API ──
     final userIdStr = _localDataSource.getCurrentUserId();
-    // ✅ حتى لو مفيش userId بس فيه token (زي بعد الـ OTP)، نحاول نجيب الـ profile
+  
     if (userIdStr != null || _authRepository.isLoggedIn) {
       final userId = int.tryParse(userIdStr ?? '0') ?? 0;
       try {
@@ -77,8 +78,54 @@ class AuthProvider extends ChangeNotifier {
             .getUserProfile(userId)
             .timeout(const Duration(seconds: 10));
         if (refreshed != null) {
-          _currentUser = refreshed;
-          await _localDataSource.saveCurrentUser(refreshed.toJson());
+          UserModel updatedRefreshed = refreshed;
+          // The backend getProfile endpoint might return 0 for counters.
+          // Fetch actual lists to set the exact true count.
+          try {
+            final followersList = await _profileRepository.getFollowers(userId);
+            final followingList = await _profileRepository.getFollowing(userId);
+            
+            if (updatedRefreshed is DoctorModel) {
+              updatedRefreshed = updatedRefreshed.copyWith(
+                followersCount: followersList.length,
+                followingCount: followingList.length,
+              );
+            } else if (updatedRefreshed is ParentModel) {
+              updatedRefreshed = updatedRefreshed.copyWith(
+                followersCount: followersList.length,
+                followingCount: followingList.length,
+              );
+            } else {
+               updatedRefreshed = updatedRefreshed.copyWith(
+                followersCount: followersList.length,
+                followingCount: followingList.length,
+              );
+            }
+          } catch (e) {
+            debugPrint('Failed to fetch exact follow lists: $e');
+            // If it fails, fallback to keeping local cache counts so we don't zero it
+            if (_currentUser != null) {
+               if (updatedRefreshed is DoctorModel) {
+                  updatedRefreshed = updatedRefreshed.copyWith(
+                    followersCount: _currentUser?.followersCount,
+                    followingCount: _currentUser?.followingCount,
+                  );
+                } else if (updatedRefreshed is ParentModel) {
+                  updatedRefreshed = updatedRefreshed.copyWith(
+                    followersCount: _currentUser?.followersCount,
+                    followingCount: _currentUser?.followingCount,
+                  );
+                } else {
+                  updatedRefreshed = updatedRefreshed.copyWith(
+                    followersCount: _currentUser?.followersCount,
+                    followingCount: _currentUser?.followingCount,
+                  );
+                }
+            }
+          }
+
+          _currentUser = updatedRefreshed;
+          await _localDataSource.saveCurrentUser(updatedRefreshed.toJson());
           notifyListeners(); // Force UI update with fresh counts
         }
       } catch (e) {
@@ -105,7 +152,6 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// ✅ تحقق من الـ 401 بطريقة صح بدل string matching
   bool _isUnauthenticatedError(Object e) {
     if (e is ApiException) {
       return e.statusCode == 401;
@@ -115,7 +161,6 @@ class AuthProvider extends ChangeNotifier {
     return msg.contains('401') || msg.contains('unauthenticated');
   }
 
-  /// ✅ تحويل الخطأ لرسالة عربية مفهومة للمستخدم
   String _mapErrorToMessage(Object e) {
     if (e is ApiException) {
       if (e.statusCode == 401) {
@@ -217,6 +262,9 @@ class AuthProvider extends ChangeNotifier {
     _errorMessage = null;
 
     try {
+      // ✅ Include FCM token on registration — matches login() behaviour
+      final fcmToken = await _getFcmToken();
+
       final request = RegisterRequest(
         name: name,
         email: email,
@@ -230,11 +278,16 @@ class AuthProvider extends ChangeNotifier {
         clinicLocation: clinicLocation,
         avatarFilePath: userImageUrl,
         childPhotoPath: childImageUrl,
+        fcmToken: fcmToken,
       );
 
       final AuthResponse response = await _authRepository.register(request);
 
       if (!response.status) {
+        if (response.message.toLowerCase().contains('registration successful')) {
+          _errorMessage = null;
+          return true;
+        }
         _errorMessage = response.message;
         return false;
       }
@@ -247,7 +300,15 @@ class AuthProvider extends ChangeNotifier {
       }
       return true;
     } catch (e) {
-      _errorMessage = _mapErrorToMessage(e);
+      final mappedError = _mapErrorToMessage(e);
+      final rawError = e.toString().toLowerCase();
+      // Handle backend returning successful registration message as a 4xx HTTP error
+      if (mappedError.toLowerCase().contains('registration successful') || rawError.contains('registration successful')) {
+         _errorMessage = null;
+         return true;
+      }
+      
+      _errorMessage = mappedError;
       debugPrint('Register error: $e');
       return false;
     } finally {
@@ -269,12 +330,11 @@ class AuthProvider extends ChangeNotifier {
       final response = await _authRepository.verifyOtp(
         VerifyOtpRequest(phone: phone, otp: otp),
       );
-      
-      // ✅ لو نجح الـ OTP، نحاول نجيب بيانات المستخدم فوراً
-      if (response.status) {
-        await init();
-      }
-      
+      // ✅ Do NOT call init() here — there is no persisted token yet at this
+      // point (the backend only returns a token on the subsequent login call).
+      // Calling init() would hit the isLoggedIn guard and return immediately,
+      // wasting time and causing loading-state flicker on the OTP screen.
+      // The OTP screen itself handles the auto-login after this returns.
       return response;
     } catch (e) {
       _errorMessage = _mapErrorToMessage(e);
@@ -441,13 +501,43 @@ class AuthProvider extends ChangeNotifier {
   }
 
   void updateFollowingCount(bool increment) {
-    if (_currentUser != null) {
-      final currentCount = _currentUser!.followingCount ?? 0;
-      final newCount = increment ? currentCount + 1 : (currentCount > 0 ? currentCount - 1 : 0);
+    if (_currentUser == null) return;
+
+    final currentCount = _currentUser!.followingCount ?? 0;
+    int newCount = increment ? currentCount + 1 : currentCount - 1;
+    if (newCount < 0) newCount = 0;
+
+    if (_currentUser is DoctorModel) {
+      _currentUser = (_currentUser as DoctorModel).copyWith(followingCount: newCount);
+    } else if (_currentUser is ParentModel) {
+      _currentUser = (_currentUser as ParentModel).copyWith(followingCount: newCount);
+    } else {
       _currentUser = _currentUser!.copyWith(followingCount: newCount);
-      _localDataSource.saveCurrentUser(_currentUser!.toJson());
-      notifyListeners();
     }
+
+    _localDataSource.saveCurrentUser(_currentUser!.toJson());
+    notifyListeners();
+  }
+
+  void updateFollowersCount(bool increment) {
+    if (_currentUser == null) return;
+
+    final currentCount = _currentUser!.followersCount ?? 0;
+    int newCount = increment ? currentCount + 1 : currentCount - 1;
+    if (newCount < 0) newCount = 0;
+
+    if (_currentUser is DoctorModel) {
+      _currentUser =
+          (_currentUser as DoctorModel).copyWith(followersCount: newCount);
+    } else if (_currentUser is ParentModel) {
+      _currentUser =
+          (_currentUser as ParentModel).copyWith(followersCount: newCount);
+    } else {
+      _currentUser = _currentUser!.copyWith(followersCount: newCount);
+    }
+
+    _localDataSource.saveCurrentUser(_currentUser!.toJson());
+    notifyListeners();
   }
 
   void clearError() {
@@ -476,6 +566,99 @@ class AuthProvider extends ChangeNotifier {
       rethrow;
     } finally {
       _setLoading(false);
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  //  Follow / Unfollow
+  // ─────────────────────────────────────────────
+
+  /// Follows a user, updates counts, and sends a notification.
+  /// Returns the updated [UserModel] of the user who was followed on success.
+  Future<UserModel?> followUser(UserModel userToFollow) async {
+    if (_currentUser == null) return null;
+    _setLoading(true);
+    _errorMessage = null;
+
+    try {
+      // 1. تحديث البيانات في الباك اند (Firebase & REST)
+      try {
+        await _profileRepository.followUser(_currentUser!.id, userToFollow.id);
+        await _profileRepository.toggleFollow(userToFollow.id);
+      } catch (e) {
+        debugPrint('Backend follow sync failed: $e');
+      }
+
+      // 2. تحديث عدد من يتابعهم الـ current user فقط (following)
+      //    لا نمس followersCount للـ current user لأنه يتحكم فيه الـ target user
+      updateFollowingCount(true);
+
+      // 3. إرسال إشعار للمستخدم الذي تمت متابعته.
+      try {
+        final notificationProvider = getIt<NotificationProvider>();
+        await notificationProvider.sendFollowNotification(
+          targetUserId: userToFollow.id,
+          followerName: _currentUser!.name,
+        );
+      } catch (e) {
+        debugPrint('Could not send follow notification: $e');
+      }
+
+      // 4. إرجاع موديل محدّث ليستخدمه الـ ViewModel في تحديث الواجهة.
+      final updatedUserToFollow = _updateUserCountersLocally(userToFollow, 1);
+      return updatedUserToFollow;
+    } catch (e) {
+      _errorMessage = _mapErrorToMessage(e);
+      debugPrint('Follow user error: $e');
+      return null;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Unfollows a user and updates counts.
+  /// Returns the updated [UserModel] of the user who was unfollowed on success.
+  Future<UserModel?> unfollowUser(UserModel userToUnfollow) async {
+    if (_currentUser == null) return null;
+    _setLoading(true);
+    _errorMessage = null;
+
+    try {
+      // 1. تحديث البيانات في الباك اند (Firebase & REST)
+      try {
+        await _profileRepository.unfollowUser(_currentUser!.id, userToUnfollow.id);
+        await _profileRepository.toggleFollow(userToUnfollow.id);
+      } catch (e) {
+        debugPrint('Backend unfollow sync failed: $e');
+      }
+
+      // 2. تحديث عدد من يتابعهم الـ current user فقط (following)
+      updateFollowingCount(false);
+
+      // 3. إرجاع موديل محدّث ليستخدمه الـ ViewModel في تحديث الواجهة.
+      final updatedUserToUnfollow = _updateUserCountersLocally(userToUnfollow, -1);
+      return updatedUserToUnfollow;
+    } catch (e) {
+      _errorMessage = _mapErrorToMessage(e);
+      debugPrint('Unfollow user error: $e');
+      return null;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// دالة مساعدة لتحديث العدادات باستخدام copyWith
+  UserModel _updateUserCountersLocally(UserModel user, int followersChange) {
+    final currentCount = user.followersCount ?? 0;
+    int newCount = currentCount + followersChange;
+    if (newCount < 0) newCount = 0;
+
+    if (user is DoctorModel) {
+      return user.copyWith(followersCount: newCount);
+    } else if (user is ParentModel) {
+      return user.copyWith(followersCount: newCount);
+    } else {
+      return user.copyWith(followersCount: newCount);
     }
   }
 

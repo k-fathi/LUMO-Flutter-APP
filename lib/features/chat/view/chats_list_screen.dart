@@ -15,6 +15,7 @@ import 'chat_room_screen.dart';
 import '../../ai_helper/view/ai_chat_screen.dart';
 import '../../community/view_model/community_view_model.dart';
 import '../../../shared/widgets/avatar_widget.dart';
+import '../../../core/router/route_names.dart';
 
 class ChatsListScreen extends StatefulWidget {
   const ChatsListScreen({super.key});
@@ -31,15 +32,17 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       if (!mounted) return;
       final auth = context.read<AuthProvider>();
       final userId = auth.currentUser?.id;
-      
+
       context.read<ChatViewModel>().loadChatRooms(userId);
-      
+
       if (auth.currentUser?.role == UserRole.doctor) {
         context.read<PatientProvider>().fetchPatients();
       } else if (auth.currentUser is ParentModel) {
         final parent = auth.currentUser as ParentModel;
         if (parent.connectedDoctorIds.isNotEmpty) {
-          context.read<PatientProvider>().fetchDoctors(parent.connectedDoctorIds);
+          context
+              .read<PatientProvider>()
+              .fetchDoctors(parent.connectedDoctorIds);
         }
       }
     });
@@ -118,7 +121,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         ),
       ),
       body: Consumer3<ChatViewModel, AuthProvider, PatientProvider>(
-        builder: (context, chatViewModel, authProvider, patientProvider, child) {
+        builder:
+            (context, chatViewModel, authProvider, patientProvider, child) {
           final currentUser = authProvider.currentUser;
           if (currentUser == null) return const SizedBox.shrink();
 
@@ -132,16 +136,19 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             patientProvider.patients,
           );
 
-          if (items.isEmpty || (items.length == 1 && items[0] == 'AI_BOT' && chatViewModel.chatRooms.isEmpty)) {
-             if (items.length == 1 && items[0] == 'AI_BOT') {
-                return ListView(
-                  children: [
-                    _buildAiChatTile(context, theme, l10n),
-                    const SizedBox(height: 100),
-                    _buildEmptyState(l10n, theme),
-                  ],
-                );
-             }
+          if (items.isEmpty ||
+              (items.length == 1 &&
+                  items[0] == 'AI_BOT' &&
+                  chatViewModel.chatRooms.isEmpty)) {
+            if (items.length == 1 && items[0] == 'AI_BOT') {
+              return ListView(
+                children: [
+                  _buildAiChatTile(context, theme, l10n),
+                  const SizedBox(height: 100),
+                  _buildEmptyState(l10n, theme),
+                ],
+              );
+            }
             return _buildEmptyState(l10n, theme);
           }
 
@@ -236,24 +243,66 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     final otherAvatar =
         room.getOtherParticipantAvatar(currentUser.id.toString());
 
+    final otherId = room.getOtherParticipantId(currentUser.id.toString());
+
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: AvatarWidget(
-        name: otherName,
-        imageUrl: otherAvatar,
-        size: 50,
+      leading: GestureDetector(
+        onTap: () {
+          final uid = int.tryParse(otherId);
+          if (uid != null && uid != 0) {
+            final fallbackUser = ParentModel(
+              id: uid,
+              name: otherName,
+              email: '',
+              childName: '',
+              childAge: 0,
+              avatarUrl: otherAvatar,
+            );
+            Navigator.pushNamed(
+              context,
+              RouteNames.profile,
+              arguments: {'userId': uid, 'user': fallbackUser},
+            );
+          }
+        },
+        child: AvatarWidget(
+          name: otherName,
+          imageUrl: otherAvatar,
+          size: 50,
+        ),
       ),
-      title: Text(otherName, style: AppTextStyles.label),
+      title: GestureDetector(
+        onTap: () {
+          final uid = int.tryParse(otherId);
+          if (uid != null && uid != 0) {
+            final fallbackUser = ParentModel(
+              id: uid,
+              name: otherName,
+              email: '',
+              childName: '',
+              childAge: 0,
+              avatarUrl: otherAvatar,
+            );
+            Navigator.pushNamed(
+              context,
+              RouteNames.profile,
+              arguments: {'userId': uid, 'user': fallbackUser},
+            );
+          }
+        },
+        child: Text(otherName, style: AppTextStyles.label),
+      ),
       subtitle: Text(
         room.lastMessage ?? 'إبدأ المحادثة الآن',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          fontWeight: room.getUnreadCount(currentUser.id.toString()) > 0 
-              ? FontWeight.bold 
+          fontWeight: room.getUnreadCount(currentUser.id.toString()) > 0
+              ? FontWeight.bold
               : FontWeight.normal,
-          color: room.getUnreadCount(currentUser.id.toString()) > 0 
-              ? theme.textTheme.bodyLarge?.color 
+          color: room.getUnreadCount(currentUser.id.toString()) > 0
+              ? theme.textTheme.bodyLarge?.color
               : theme.textTheme.bodySmall?.color,
         ),
       ),
@@ -292,7 +341,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                 chatRoomId: room.id,
                 otherUserName: otherName,
                 otherUserAvatar: otherAvatar,
-                otherUserId: room.getOtherParticipantId(currentUser.id.toString()),
+                otherUserId: otherId,
               ),
             ),
           ),
@@ -305,49 +354,73 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       UserModel currentUser, ThemeData theme) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: AvatarWidget(
-        name: user.name,
-        imageUrl: user.profileImage ?? user.avatarUrl,
-        size: 50,
+      leading: GestureDetector(
+        onTap: () {
+          if (user.id != 0) {
+            Navigator.pushNamed(
+              context,
+              RouteNames.profile,
+              arguments: {'userId': user.id, 'user': user},
+            );
+          }
+        },
+        child: AvatarWidget(
+          name: user.name,
+          imageUrl: user.profileImage ?? user.avatarUrl,
+          size: 50,
+        ),
       ),
-      title: Text(user.name, style: AppTextStyles.label),
+      title: GestureDetector(
+        onTap: () {
+          if (user.id != 0) {
+            Navigator.pushNamed(
+              context,
+              RouteNames.profile,
+              arguments: {'userId': user.id, 'user': user},
+            );
+          }
+        },
+        child: Text(user.name, style: AppTextStyles.label),
+      ),
       subtitle: const Text('إبدأ المحادثة الآن',
           maxLines: 1, overflow: TextOverflow.ellipsis),
-    onTap: () async {
-      // ✅ FIX C-1 + C-2: استدعي POST /chat/start لتجيب chatRoomId ثابت من الـ backend
-      try {
-        final chatViewModel = context.read<ChatViewModel>();
-        final chatRoomId = await chatViewModel.startChat(user.id);
+      onTap: () async {
+        // ✅ FIX C-1 + C-2: استدعي POST /chat/start لتجيب chatRoomId ثابت من الـ backend
+        try {
+          final chatViewModel = context.read<ChatViewModel>();
+          final chatRoomId = await chatViewModel.startChat(user.id);
 
-        if (context.mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              // ✅ FIX C-4: مرر الـ ChatViewModel الموجود بدل إنشاء واحد جديد
-              builder: (_) => ChangeNotifierProvider.value(
-                value: chatViewModel,
-                child: ChatRoomScreen(
-                  chatRoomId: chatRoomId,
-                  otherUserName: user.name,
-                  otherUserAvatar: user.profileImage ?? user.avatarUrl,
-                  otherUserId: user.id.toString(),
+          if (context.mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                // ✅ FIX C-4: مرر الـ ChatViewModel الموجود بدل إنشاء واحد جديد
+                builder: (_) => ChangeNotifierProvider.value(
+                  value: chatViewModel,
+                  child: ChatRoomScreen(
+                    chatRoomId: chatRoomId,
+                    otherUserName: user.name,
+                    otherUserAvatar: user.profileImage ?? user.avatarUrl,
+                    otherUserId: user.id.toString(),
+                  ),
                 ),
               ),
-            ),
-          );
+            );
+          }
+        } catch (e) {
+          debugPrint('❌❌❌ FAIL CHAT START: $e');
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text(
+                    'فشل بدء المحادثة، راجع الـ Console لمعرفة الخطأ'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
         }
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('فشل بدء المحادثة: $e'),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
-    },
+      },
     );
   }
 
@@ -374,13 +447,13 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   }
 
   void _showNewChatBottomSheet(
-      BuildContext context, ThemeData theme, AppLocalizations l10n) {
-    final authProvider = context.read<AuthProvider>();
+      BuildContext parentContext, ThemeData theme, AppLocalizations l10n) {
+    final authProvider = parentContext.read<AuthProvider>();
     final currentUser = authProvider.currentUser;
     if (currentUser == null) return;
 
     showModalBottomSheet(
-      context: context,
+      context: parentContext,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => DraggableScrollableSheet(
@@ -395,7 +468,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             return Container(
               decoration: BoxDecoration(
                 color: theme.scaffoldBackgroundColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(32)),
               ),
               child: Column(
                 children: [
@@ -415,7 +489,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                       children: [
                         Text(
                           "رسالة جديدة",
-                          style: AppTextStyles.h2.copyWith(fontWeight: FontWeight.bold),
+                          style: AppTextStyles.h2
+                              .copyWith(fontWeight: FontWeight.bold),
                         ),
                         const Spacer(),
                         IconButton(
@@ -437,12 +512,15 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: TextField(
-                        onChanged: (value) => setModalState(() => searchQuery = value),
+                        onChanged: (value) =>
+                            setModalState(() => searchQuery = value),
                         decoration: InputDecoration(
                           hintText: "ابحث عن الاسم...",
-                          prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey),
+                          prefixIcon: const Icon(Icons.search_rounded,
+                              color: Colors.grey),
                           border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 12),
                         ),
                       ),
                     ),
@@ -454,30 +532,39 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Row(
                       children: [
-                        _buildCategoryChip(context, "الكل", activeTab == 0, () => setModalState(() => activeTab = 0)),
-                        _buildCategoryChip(context, "مرتبط", activeTab == 1, () => setModalState(() => activeTab = 1)),
-                        _buildCategoryChip(context, "أتابعهم", activeTab == 2, () => setModalState(() => activeTab = 2)),
-                        _buildCategoryChip(context, "الأخيرة", activeTab == 3, () => setModalState(() => activeTab = 3)),
+                        _buildCategoryChip(context, "الكل", activeTab == 0,
+                            () => setModalState(() => activeTab = 0)),
+                        _buildCategoryChip(context, "مرتبط", activeTab == 1,
+                            () => setModalState(() => activeTab = 1)),
+                        _buildCategoryChip(context, "أتابعهم", activeTab == 2,
+                            () => setModalState(() => activeTab = 2)),
+                        _buildCategoryChip(context, "الأخيرة", activeTab == 3,
+                            () => setModalState(() => activeTab = 3)),
                       ],
                     ),
                   ),
                   const SizedBox(height: 8),
                   Expanded(
-                    child: Consumer3<PatientProvider, CommunityViewModel, ChatViewModel>(
-                      builder: (context, patientProv, commProv, chatProv, child) {
+                    child: Consumer3<PatientProvider, CommunityViewModel,
+                        ChatViewModel>(
+                      builder:
+                          (context, patientProv, commProv, chatProv, child) {
                         // Aggregate Contacts
-                        final connected = currentUser.role == UserRole.doctor 
-                            ? patientProv.patients 
+                        final connected = currentUser.role == UserRole.doctor
+                            ? patientProv.patients
                             : patientProv.doctors;
                         final following = commProv.followingUsers;
-                        
+
                         // Extract recent participants from chat rooms
                         final Map<String, UserModel> recentMap = {};
                         for (final room in chatProv.chatRooms) {
-                          final otherId = room.getOtherParticipantId(currentUser.id.toString());
-                          final otherName = room.getOtherParticipantName(currentUser.id.toString());
-                          final otherAvatar = room.getOtherParticipantAvatar(currentUser.id.toString());
-                          
+                          final otherId = room
+                              .getOtherParticipantId(currentUser.id.toString());
+                          final otherName = room.getOtherParticipantName(
+                              currentUser.id.toString());
+                          final otherAvatar = room.getOtherParticipantAvatar(
+                              currentUser.id.toString());
+
                           if (!recentMap.containsKey(otherId)) {
                             recentMap[otherId] = UserModel(
                               id: int.tryParse(otherId) ?? 0,
@@ -514,7 +601,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 
                         // Filter by search
                         if (searchQuery.isNotEmpty) {
-                          pool = pool.where((u) => u.name.toLowerCase().contains(searchQuery.toLowerCase())).toList();
+                          pool = pool
+                              .where((u) => u.name
+                                  .toLowerCase()
+                                  .contains(searchQuery.toLowerCase()))
+                              .toList();
                         }
 
                         if (pool.isEmpty) {
@@ -522,9 +613,12 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.person_search_rounded, size: 64, color: theme.dividerColor),
+                                Icon(Icons.person_search_rounded,
+                                    size: 64, color: theme.dividerColor),
                                 const SizedBox(height: 16),
-                                Text("لا يوجد نتائج", style: TextStyle(color: theme.disabledColor)),
+                                Text("لا يوجد نتائج",
+                                    style:
+                                        TextStyle(color: theme.disabledColor)),
                               ],
                             ),
                           );
@@ -532,33 +626,52 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 
                         return ListView.builder(
                           controller: scrollController,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
                           itemCount: pool.length,
                           itemBuilder: (context, index) {
                             final user = pool[index];
                             return ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                              leading: AvatarWidget(
-                                name: user.name,
-                                imageUrl: user.avatarUrl,
-                                size: 44,
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 4),
+                              leading: GestureDetector(
+                                onTap: () {
+                                  Navigator.pop(context); // close bottom sheet
+                                  Navigator.pushNamed(
+                                    parentContext,
+                                    RouteNames.profile,
+                                    arguments: {'userId': user.id, 'user': user},
+                                  );
+                                },
+                                child: AvatarWidget(
+                                  name: user.name,
+                                  imageUrl: user.avatarUrl,
+                                  size: 44,
+                                ),
                               ),
-                              title: Text(user.name, style: AppTextStyles.label.copyWith(fontWeight: FontWeight.w600)),
-                              subtitle: Text(user.role == UserRole.doctor ? "طبيب" : "مستخدم"),
+                              title: Text(user.name,
+                                  style: AppTextStyles.label
+                                      .copyWith(fontWeight: FontWeight.w600)),
+                              subtitle: Text(user.role == UserRole.doctor
+                                  ? "طبيب"
+                                  : "مستخدم"),
                               onTap: () async {
                                 Navigator.pop(context); // أقفل الـ bottom sheet
 
                                 // ✅ FIX C-1 + C-2: استدعي POST /chat/start لتجيب chatRoomId ثابت من الـ backend
                                 try {
-                                  final chatViewModel = context.read<ChatViewModel>();
-                                  final chatRoomId = await chatViewModel.startChat(user.id);
+                                  final chatViewModel =
+                                      parentContext.read<ChatViewModel>();
+                                  final chatRoomId =
+                                      await chatViewModel.startChat(user.id);
 
-                                  if (context.mounted) {
+                                  if (parentContext.mounted) {
                                     Navigator.push(
-                                      context,
+                                      parentContext,
                                       MaterialPageRoute(
                                         // ✅ FIX C-4: مرر الـ ChatViewModel الموجود بدل إنشاء واحد جديد
-                                        builder: (_) => ChangeNotifierProvider.value(
+                                        builder: (_) =>
+                                            ChangeNotifierProvider.value(
                                           value: chatViewModel,
                                           child: ChatRoomScreen(
                                             chatRoomId: chatRoomId,
@@ -571,10 +684,13 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                     );
                                   }
                                 } catch (e) {
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                  debugPrint('FAIL CHAT START: $e');
+                                  if (parentContext.mounted) {
+                                    ScaffoldMessenger.of(parentContext)
+                                        .showSnackBar(
                                       SnackBar(
-                                        content: Text('فشل بدء المحادثة: $e'),
+                                        content: const Text(
+                                            'فشل بدء المحادثة، راجع الـ Console لمعرفة الخطأ'),
                                         backgroundColor: Colors.red,
                                         behavior: SnackBarBehavior.floating,
                                       ),
@@ -597,7 +713,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     );
   }
 
-  Widget _buildCategoryChip(BuildContext context, String label, bool isSelected, VoidCallback onTap) {
+  Widget _buildCategoryChip(
+      BuildContext context, String label, bool isSelected, VoidCallback onTap) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
@@ -613,7 +730,10 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: isSelected ? AppColors.primary : Colors.grey.withValues(alpha: 0.3)),
+          side: BorderSide(
+              color: isSelected
+                  ? AppColors.primary
+                  : Colors.grey.withValues(alpha: 0.3)),
         ),
       ),
     );

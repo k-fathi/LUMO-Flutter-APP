@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
@@ -139,25 +140,45 @@ class _SignupScreenState extends State<SignupScreen> with FormValidationMixin {
       if (!mounted) return;
 
       if (success) {
-        if (!mounted) return;
-        
-        // If registration was successful but user is null, it means OTP is required
-        if (authProvider.currentUser == null) {
-          Navigator.pushNamed(
-            context,
-            RouteNames.otpVerification,
-            arguments: {
-              'phone': _phoneController.text.trim(),
-              'isPasswordReset': false,
-            },
-          );
-        } else {
+        // ── Case 1: Backend returned token + user directly ──
+        if (authProvider.isAuthenticated && authProvider.currentUser != null) {
+          if (!mounted) return;
           Navigator.pushNamedAndRemoveUntil(
             context,
             RouteNames.mainLayout,
             (route) => false,
           );
+          return;
         }
+
+        // ── Case 2: Try auto-login with the same credentials ──
+        final loginSuccess = await authProvider.login(
+          phone: _phoneController.text.trim(),
+          password: _passwordController.text,
+        );
+
+        if (!mounted) return;
+
+        if (loginSuccess && authProvider.currentUser != null) {
+          // Auto-login succeeded → go to main app
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            RouteNames.mainLayout,
+            (route) => false,
+          );
+          return;
+        }
+
+        // ── Case 3: Auto-login failed (OTP required) → send to OTP screen ──
+        Navigator.pushNamed(
+          context,
+          RouteNames.otpVerification,
+          arguments: {
+            'phone': _phoneController.text.trim(),
+            'password': _passwordController.text,
+            'isPasswordReset': false,
+          },
+        );
       } else {
         if (!mounted) return;
         _showErrorSnackBar(authProvider.errorMessage ?? 'فشل إنشاء الحساب');
@@ -292,11 +313,10 @@ class _SignupScreenState extends State<SignupScreen> with FormValidationMixin {
                           ),
                         ],
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(18.0),
+                      child: ClipOval(
                         child: Image.asset(
                           'assets/images/lumo-logo.png',
-                          fit: BoxFit.contain,
+                          fit: BoxFit.cover,
                         ),
                       ),
                     ),
@@ -387,8 +407,11 @@ class _SignupScreenState extends State<SignupScreen> with FormValidationMixin {
                   AppTextField(
                     controller: _childNameController,
                     label: 'اسم الطفل',
-                    hint: 'أدخل اسم الطفل',
+                    hint: 'أدخل اسم الطفل فقط',
                     prefixIcon: Icons.favorite_border,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                    ],
                     validator: validateChildName,
                   ),
                   const SizedBox(height: 20),

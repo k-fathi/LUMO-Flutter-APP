@@ -28,7 +28,7 @@ class MessageBubble extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
       child: Row(
         mainAxisAlignment:
-            isMe ? MainAxisAlignment.start : MainAxisAlignment.end,
+            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
           Flexible(
             child: ConstrainedBox(
@@ -152,15 +152,21 @@ class MessageBubble extends StatelessWidget {
                         if (isMe) ...[
                           const SizedBox(width: 4),
                           Icon(
-                            message.isRead
-                                ? Icons.done_all_rounded
-                                : message.isDelivered
-                                    ? Icons.done_all_rounded
-                                    : Icons.done_rounded,
+                            message.isSending
+                                ? Icons.schedule_rounded
+                                : message.isFailed
+                                    ? Icons.error_outline_rounded
+                                    : message.isRead
+                                        ? Icons.done_all_rounded
+                                        : message.isDelivered
+                                            ? Icons.done_all_rounded
+                                            : Icons.done_rounded,
                             size: 14,
-                            color: message.isRead
-                                ? Colors.white
-                                : Colors.white.withValues(alpha: 0.7),
+                            color: message.isFailed
+                                ? Colors.redAccent
+                                : message.isRead
+                                    ? const Color(0xFF80DEEA) // blue ticks
+                                    : Colors.white.withValues(alpha: 0.7),
                           ),
                         ],
                       ],

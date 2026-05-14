@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/gradient_app_bar.dart';
 import '../../../shared/widgets/avatar_widget.dart';
+import '../../../core/router/route_names.dart';
 
 /// Followers Screen - Matches React FollowersScreen
 class FollowersScreen extends StatefulWidget {
@@ -175,7 +176,7 @@ class _FollowersScreenState extends State<FollowersScreen> {
   void _navigateToProfile(BuildContext context, int userId) {
     Navigator.pushNamed(
       context,
-      '/profile',
+      RouteNames.profile,
       arguments: {'userId': userId},
     );
   }

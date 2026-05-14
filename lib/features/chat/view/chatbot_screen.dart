@@ -10,19 +10,6 @@ import '../../ai_helper/view_model/ai_view_model.dart';
 import '../../ai_helper/view/ai_message_bubble.dart';
 import '../widgets/chat_input_bar.dart';
 
-// AI Chatbot theme colors (now driven by theme)
-LinearGradient _kAiGradient(BuildContext context) {
-  final theme = Theme.of(context);
-  return LinearGradient(
-    colors: [
-      theme.colorScheme.primary,
-      theme.colorScheme.primary.withValues(alpha: 0.8),
-    ],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
-}
-
 class ChatbotScreen extends StatefulWidget {
   const ChatbotScreen({super.key});
 
@@ -130,67 +117,105 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      extendBodyBehindAppBar:
-          true, // Allow content to flow under transparent appbar
+      backgroundColor: const Color(0xFFF8F9FB),
+      extendBodyBehindAppBar: false, // Since app bar is white and has shadow, no need to extend
       appBar: AppBar(
-        backgroundColor:
-            Colors.transparent, // Let BackdropFilter handle background
-        foregroundColor: theme.textTheme.titleLarge?.color,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1E293B),
+        elevation: 1,
+        shadowColor: Colors.black.withValues(alpha: 0.05),
+        scrolledUnderElevation: 1,
+        centerTitle: false,
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Color(0xFFF1F5F9), // Light gray
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              alignment: Alignment.center,
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.chevron_left_rounded, color: Color(0xFF475569), size: 24),
+            ),
+          ),
         ),
         title: Row(
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(10),
+                color: const Color(0xFF3B82F6), // Blue background
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF30B0E8).withValues(alpha: 0.4),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: Image.asset('assets/images_from_web/web_bot.png',
-                  width: 22, height: 22, fit: BoxFit.contain),
+              alignment: Alignment.center,
+              child: const Text(
+                'L',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 22,
+                ),
+              ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  l10n.appName,
+                  'LUMO Assistant',
                   style: AppTextStyles.label.copyWith(
-                    color: theme.colorScheme.onPrimary,
-                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF0F172A),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
                   ),
                 ),
-                Text(
-                  l10n.aiAlwaysOnline,
-                  style: AppTextStyles.caption.copyWith(
-                    color: theme.colorScheme.onPrimary.withValues(alpha: 0.75),
-                    fontSize: 11,
-                  ),
+                Row(
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF10B981), // Green dot
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Online',
+                      style: AppTextStyles.caption.copyWith(
+                        color: const Color(0xFF10B981),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'usually replies instantly',
+                      style: AppTextStyles.caption.copyWith(
+                        color: const Color(0xFF94A3B8),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ],
         ),
-        flexibleSpace: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              color: theme.scaffoldBackgroundColor.withValues(alpha: 0.8),
-            ),
-          ),
-        ),
         actions: [
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert_rounded),
+            icon: const Icon(Icons.more_vert_rounded, color: Color(0xFF475569)),
             onSelected: (value) {
               if (value == 'clear') {
                 _showClearDialog();
@@ -213,23 +238,61 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       ),
       body: Consumer<AIViewModel>(
         builder: (context, viewModel, child) {
-          // Check if we only have the welcome message (and it's not currently sending)
-          // Actually if history is just the welcome message, we count it as empty-ish for the UI
           final isActuallyEmpty =
               viewModel.messages.length <= 1 && !viewModel.isSending;
 
-          return Column(
+          return Stack(
             children: [
-              Expanded(
-                child: isActuallyEmpty
-                    ? _buildEmptyState(l10n)
-                    : _buildActiveChat(viewModel),
+              // Background Ethereal Blobs
+              Positioned(
+                top: -50,
+                left: -50,
+                child: ImageFiltered(
+                  imageFilter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+                  child: Container(
+                    width: 250,
+                    height: 250,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFFE0E7FF).withValues(alpha: 0.8),
+                    ),
+                  ),
+                ),
               ),
-              ChatInputBar(
-                onSend: _sendMessage,
-                accentColor: theme.colorScheme.primary,
-                accentGradient: _kAiGradient(context),
-                disabled: viewModel.isSending,
+              Positioned(
+                bottom: -100,
+                right: -100,
+                child: ImageFiltered(
+                  imageFilter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+                  child: Container(
+                    width: 350,
+                    height: 350,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFFECFDF5).withValues(alpha: 0.8),
+                    ),
+                  ),
+                ),
+              ),
+              // Main Content
+              Column(
+                children: [
+                  Expanded(
+                    child: isActuallyEmpty
+                        ? _buildEmptyState(l10n)
+                        : _buildActiveChat(viewModel),
+                  ),
+                  ChatInputBar(
+                    onSend: _sendMessage,
+                    accentColor: const Color(0xFF3B82F6),
+                    accentGradient: const LinearGradient(
+                      colors: [Color(0xFF5E5CE6), Color(0xFF30B0E8)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    disabled: viewModel.isSending,
+                  ),
+                ],
               ),
             ],
           );

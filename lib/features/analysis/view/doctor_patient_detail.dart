@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -7,47 +8,14 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/custom_app_bar.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/providers/patient_provider.dart';
-import '../view_model/analysis_view_model.dart';
+import '../../session/view_model/session_view_model.dart';
 import '../../session/models/session_part.dart';
-import 'analysis_card_widget.dart';
+import '../../../data/models/session_analysis_model.dart';
 import 'session_config_bottom_sheet.dart';
+import 'session_detail_placeholder_screen.dart';
 
-import 'edit_analysis_dialog.dart';
-
-// --- Data Models for Visual Summary ---
-class EmotionData {
-  final String id;
-  final String emoji;
-  final String label;
-  final double percentage; // 0.0 to 1.0
-  final Color color;
-
-  EmotionData(this.id, this.emoji, this.label, this.percentage, this.color);
-}
-
-class SessionAnalysisData {
-  final String id;
-  final String title;
-  final String summary;
-  final String duration;
-  final String engagementLevel;
-  final List<String> recommendations;
-  final List<EmotionData> emotionDistribution;
-  final double focusedPercentage;
-  final double notFocusedPercentage;
-
-  SessionAnalysisData({
-    required this.id,
-    required this.title,
-    required this.summary,
-    required this.duration,
-    required this.engagementLevel,
-    required this.recommendations,
-    required this.emotionDistribution,
-    required this.focusedPercentage,
-    required this.notFocusedPercentage,
-  });
-}
+// EmotionData & SessionAnalysisModel are imported from
+// '../../../data/models/session_analysis_model.dart'
 
 class DoctorPatientDetail extends StatefulWidget {
   final int parentId;
@@ -68,7 +36,275 @@ class DoctorPatientDetail extends StatefulWidget {
 class _DoctorPatientDetailState extends State<DoctorPatientDetail> {
   // New State Variable for the Robot Mock Flow
   bool hasSessionData = false;
-  int _selectedSessionIndex = 0; // 0: All Sessions, 1: Session #1
+  String _selectedFilter = 'الكل';
+  
+  bool _isFabExpanded = false;
+  Timer? _fabCollapseTimer;
+
+  @override
+  void dispose() {
+    _fabCollapseTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadPatientSessions();
+    });
+  }
+
+  Future<void> _loadPatientSessions() async {
+    final sessionViewModel = context.read<SessionViewModel>();
+    await sessionViewModel.loadPatientSessions(widget.parentId);
+
+    if (!mounted || sessionViewModel.errorMessage == null) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          sessionViewModel.errorMessage!,
+          style: const TextStyle(fontFamily: 'Cairo'),
+        ),
+        backgroundColor: AppColors.destructive,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _handleSessionTap(SessionAnalysisModel session, int displayIndex) async {
+    if (!session.isComplete) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('الجلسة لم تكتمل بعد لإظهار التحليلات'),
+          backgroundColor: AppColors.primary,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final sessionId = int.tryParse(session.id);
+    if (sessionId == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تعذر فتح تفاصيل الجلسة'),
+          backgroundColor: AppColors.destructive,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final sessionViewModel = context.read<SessionViewModel>();
+    await sessionViewModel.loadSessionDetails(sessionId);
+
+    if (!mounted) return;
+
+    if (sessionViewModel.errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            sessionViewModel.errorMessage!,
+            style: const TextStyle(fontFamily: 'Cairo'),
+          ),
+          backgroundColor: AppColors.destructive,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final details = sessionViewModel.sessionDetails;
+    if (details == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تعذر الحصول على تفاصيل الجلسة'),
+          backgroundColor: AppColors.destructive,
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChangeNotifierProvider.value(
+          value: context.read<SessionViewModel>(),
+          child: SessionDetailPlaceholderScreen(displayIndex: displayIndex),
+        ),
+      ),
+    );
+  }
+
+  String _formatSessionDate(SessionAnalysisModel session) {
+    // Prefer date from session list API
+    final dateToFormat = session.date ?? session.startedAt ?? session.endedAt;
+    if (dateToFormat == null || dateToFormat.isEmpty) {
+      return 'تاريخ غير متوفر';
+    }
+
+    // Extract date part if it contains time (ISO format like "2026-05-13T10:00:00")
+    final datePart = dateToFormat.split('T').first;
+    return datePart.isEmpty ? dateToFormat : datePart;
+  }
+
+  Widget _buildStatusChip(SessionAnalysisModel session) {
+    final isComplete = session.isComplete;
+    final backgroundColor = isComplete
+        ? AppColors.success.withValues(alpha: 0.12)
+        : AppColors.primary.withValues(alpha: 0.12);
+    final foregroundColor = isComplete ? AppColors.success : AppColors.primary;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        isComplete ? 'مكتملة' : 'قيد الانتظار',
+        style: TextStyle(
+          color: foregroundColor,
+          fontWeight: FontWeight.bold,
+          fontFamily: 'Cairo',
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFocusTrendChart(List<SessionAnalysisModel> completedSessions, List<SessionAnalysisModel> allSessions) {
+    final chartSessions = completedSessions.length > 10
+        ? completedSessions.sublist(completedSessions.length - 10)
+        : completedSessions;
+
+    final spots = chartSessions.asMap().entries.map((entry) {
+      final focusPct = (entry.value.averageFocus ?? entry.value.focusedPercentage) * 100;
+      return FlSpot(entry.key.toDouble(), focusPct.clamp(0, 100));
+    }).toList();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.trending_up_rounded, color: AppColors.primary, size: 22),
+              const SizedBox(width: 8),
+              const Text(
+                'تطور التركيز عبر الجلسات',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 180,
+            child: LineChart(
+              LineChartData(
+                minY: 0,
+                maxY: 100,
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: 25,
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: Colors.grey.shade200,
+                    strokeWidth: 1,
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: 1,
+                      getTitlesWidget: (value, meta) {
+                        final idx = value.toInt();
+                        if (idx < 0 || idx >= chartSessions.length) {
+                          return const SizedBox.shrink();
+                        }
+                        
+                        final session = chartSessions[idx];
+                        final globalIndex = allSessions.indexOf(session);
+                        final displayIndex = allSessions.length - globalIndex;
+                        
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            '#$displayIndex',
+                            style: const TextStyle(fontSize: 10, color: Colors.grey),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: 25,
+                      reservedSize: 36,
+                      getTitlesWidget: (value, meta) => Text(
+                        '${value.toInt()}%',
+                        style: const TextStyle(fontSize: 10, color: Colors.grey),
+                      ),
+                    ),
+                  ),
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                ),
+                borderData: FlBorderData(show: false),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: spots,
+                    isCurved: true,
+                    curveSmoothness: 0.3,
+                    color: AppColors.primary,
+                    barWidth: 3,
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (spot, percent, bar, index) =>
+                          FlDotCirclePainter(
+                        radius: 4,
+                        color: Colors.white,
+                        strokeWidth: 2,
+                        strokeColor: AppColors.primary,
+                      ),
+                    ),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppColors.primary.withValues(alpha: 0.2),
+                          AppColors.primary.withValues(alpha: 0.0),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -213,30 +449,49 @@ class _DoctorPatientDetailState extends State<DoctorPatientDetail> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        isExtended: _isFabExpanded,
         onPressed: () {
-          SessionConfigBottomSheet.show(
-            context,
-            receiverId: widget.parentId,
-            onSubmit: (List<SessionPart> parts) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('جاري بدء الجلسة...', style: TextStyle(fontFamily: 'Cairo')),
-                  backgroundColor: AppColors.primary,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-          );
+          if (!_isFabExpanded) {
+            setState(() => _isFabExpanded = true);
+            _fabCollapseTimer?.cancel();
+            _fabCollapseTimer = Timer(const Duration(seconds: 3), () {
+              if (mounted) setState(() => _isFabExpanded = false);
+            });
+          } else {
+            setState(() => _isFabExpanded = false);
+            _fabCollapseTimer?.cancel();
+            SessionConfigBottomSheet.show(
+              context,
+              receiverId: widget.parentId,
+              onSubmit: (List<SessionPart> parts) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'تم إنشاء الجلسة بنجاح، في انتظار بدء الروبوت',
+                      style: TextStyle(fontFamily: 'Cairo'),
+                    ),
+                    backgroundColor: AppColors.primary,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+            );
+          }
         },
         icon: const Icon(Icons.timer_rounded),
         label: const Text('إعداد جلسة جديدة',
             style: TextStyle(fontFamily: 'Cairo')),
         backgroundColor: AppColors.primary,
       ),
-      body: Consumer<AnalysisViewModel>(
-        builder: (context, viewModel, child) {
-          // If no mock session has occurred and real records are empty, show empty state
-          if (!hasSessionData && viewModel.analyses.isEmpty) {
+      body: Consumer<SessionViewModel>(
+        builder: (context, sessionViewModel, child) {
+          final allSessions = sessionViewModel.patientSessions;
+
+          if (sessionViewModel.isLoading && allSessions.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (allSessions.isEmpty) {
             return const EmptyState(
               icon: Icons.analytics_outlined,
               title: 'لا توجد تحليلات بعد',
@@ -244,210 +499,119 @@ class _DoctorPatientDetailState extends State<DoctorPatientDetail> {
             );
           }
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Session Selector Header
-              if (hasSessionData || viewModel.analyses.isNotEmpty)
-                Container(
-                  color: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          // Apply filter
+          final sessions = _selectedFilter == 'الكل'
+              ? allSessions
+              : _selectedFilter == 'مكتملة'
+                  ? allSessions.where((s) => s.isComplete).toList()
+                  : allSessions.where((s) => !s.isComplete).toList();
+
+          // Cumulative focus data (completed sessions only, reversed for chronological order)
+          final completedSessions = allSessions.where((s) => s.isComplete).toList().reversed.toList();
+
+          return RefreshIndicator(
+            onRefresh: _loadPatientSessions,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                // Focus Trend Chart
+                if (completedSessions.length >= 2)
+                  _buildFocusTrendChart(completedSessions, allSessions),
+
+                // Filter Chips
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
                     child: Row(
-                      children: [
-                        ChoiceChip(
-                          label: const Text('كل الجلسات',
-                              style: TextStyle(fontFamily: 'Cairo')),
-                          selected: _selectedSessionIndex == 0,
-                          onSelected: (selected) {
-                            if (selected) {
-                              setState(() => _selectedSessionIndex = 0);
-                            }
-                          },
-                          selectedColor:
-                              AppColors.primary.withValues(alpha: 0.2),
-                          backgroundColor: Colors.grey.shade100,
-                          labelStyle: TextStyle(
-                            color: _selectedSessionIndex == 0
-                                ? AppColors.primary
-                                : Colors.grey.shade600,
-                            fontWeight: _selectedSessionIndex == 0
-                                ? FontWeight.bold
-                                : FontWeight.normal,
+                      children: ['الكل', 'مكتملة', 'قيد الانتظار'].map((label) {
+                        final isSelected = _selectedFilter == label;
+                        return Padding(
+                          padding: const EdgeInsetsDirectional.only(end: 8),
+                          child: FilterChip(
+                            label: Text(label, style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 13,
+                              color: isSelected ? Colors.white : AppColors.primary,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            )),
+                            selected: isSelected,
+                            onSelected: (_) => setState(() => _selectedFilter = label),
+                            selectedColor: AppColors.primary,
+                            backgroundColor: AppColors.primary.withValues(alpha: 0.08),
+                            checkmarkColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              side: BorderSide(
+                                color: isSelected ? AppColors.primary : AppColors.primary.withValues(alpha: 0.3),
+                              ),
+                            ),
                           ),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20)),
-                          showCheckmark: false,
-                        ),
-                        const SizedBox(width: 8),
-                        ChoiceChip(
-                          label: const Text('جلسة #1',
-                              style: TextStyle(fontFamily: 'Cairo')),
-                          selected: _selectedSessionIndex == 1,
-                          onSelected: (bool selected) {
-                            if (selected) {
-                              setState(() {
-                                _selectedSessionIndex = 1;
-                              });
-                            }
-                          },
-                          selectedColor:
-                              AppColors.primary.withValues(alpha: 0.2),
-                          backgroundColor: Colors.grey.shade100,
-                          labelStyle: TextStyle(
-                            color: _selectedSessionIndex == 1
-                                ? AppColors.primary
-                                : Colors.grey.shade600,
-                            fontWeight: _selectedSessionIndex == 1
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                          ),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20)),
-                          showCheckmark: false,
-                        ),
-                      ],
+                        );
+                      }).toList(),
                     ),
                   ),
                 ),
 
-              // Divider
-              Divider(height: 1, color: Colors.grey.shade200),
-
-              // Dynamic Body Target
-              Expanded(
-                child: _selectedSessionIndex == 0
-                    ? _buildAllSessionsList(viewModel)
-                    : const _InlineSessionDetails(),
-              ),
-            ],
+                // Session List
+                if (sessions.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 40),
+                    child: Center(
+                      child: Text('لا توجد جلسات بهذا التصنيف',
+                          style: TextStyle(fontFamily: 'Cairo', color: Colors.grey)),
+                    ),
+                  )
+                else
+                  ...sessions.asMap().entries.map((entry) {
+                    final session = entry.value;
+                    // Calculate displayIndex based on position in allSessions
+                    final globalIndex = allSessions.indexOf(session);
+                    final displayIndex = allSessions.length - globalIndex;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Card(
+                        elevation: 0,
+                        color: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(color: Colors.grey.shade200),
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          title: Text(
+                            'جلسة #$displayIndex',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Cairo',
+                              fontSize: 16,
+                            ),
+                          ),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              _formatSessionDate(session),
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 13,
+                                fontFamily: 'Cairo',
+                              ),
+                            ),
+                          ),
+                          trailing: _buildStatusChip(session),
+                          onTap: () => _handleSessionTap(session, displayIndex),
+                        ),
+                      ),
+                    );
+                  }),
+              ],
+            ),
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildAllSessionsList(AnalysisViewModel viewModel) {
-    // If no real data and no simulated data
-    if (viewModel.analyses.isEmpty && !hasSessionData) {
-      return const EmptyState(
-        icon: Icons.analytics_outlined,
-        title: 'لا توجد تحليلات بعد',
-        message: 'ستظهر التحليلات هنا فور انتهاء الروبوت من الجلسة',
-      );
-    }
-
-    // Combine Real Analyses + Front-End Mock (if hasSessionData but no actual analyses yet or we just want to inject it)
-    final itemCount = viewModel.analyses.length +
-        (hasSessionData && viewModel.analyses.isEmpty ? 1 : 0);
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: itemCount,
-      itemBuilder: (context, index) {
-        // If we are showing the mock injected session
-        if (hasSessionData && viewModel.analyses.isEmpty && index == 0) {
-          return Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: Colors.grey.shade200),
-            ),
-            child: ListTile(
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              title: const Text('جلسة #1',
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Cairo',
-                      fontSize: 16)),
-              subtitle: const Text('تقييم الروبوت التلقائي',
-                  style: TextStyle(
-                      color: Colors.grey, fontSize: 13, fontFamily: 'Cairo')),
-              trailing: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text('85%',
-                    style: TextStyle(
-                        color: AppColors.success, fontWeight: FontWeight.bold)),
-              ),
-              onTap: () {
-                setState(() {
-                  _selectedSessionIndex = 1;
-                });
-              },
-            ),
-          );
-        }
-
-        final analysis = viewModel.analyses[
-            index - (hasSessionData && viewModel.analyses.isEmpty ? 1 : 0)];
-        return AnalysisCardWidget(
-          analysis: analysis,
-          showActions: true,
-          onTap: () {
-            setState(() {
-              _selectedSessionIndex = 1;
-            });
-          },
-          onEdit: () {
-            EditAnalysisDialog.show(
-              context,
-              analysis: analysis,
-              onSubmit: (state, notes) async {
-                await viewModel.updateAnalysis(
-                  analysisId: analysis.id,
-                  currentState: state,
-                  notes: notes.isEmpty ? null : notes,
-                );
-
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('تم تحديث التحليل بنجاح'),
-                    backgroundColor: AppColors.success,
-                  ),
-                );
-              },
-            );
-          },
-          onDelete: () {
-            _showDeleteDialog(analysis.id);
-          },
-        );
-      },
-    );
-  }
-
-  void _showDeleteDialog(String analysisId) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('حذف التحليل'),
-        content: const Text('هل أنت متأكد من حذف هذا التحليل؟'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('إلغاء'),
-          ),
-          TextButton(
-            onPressed: () {
-              context.read<AnalysisViewModel>().deleteAnalysis(analysisId);
-              Navigator.pop(context);
-            },
-            style: TextButton.styleFrom(foregroundColor: AppColors.destructive),
-            child: const Text('حذف'),
-          ),
-        ],
       ),
     );
   }
@@ -467,37 +631,37 @@ class _InlineSessionDetailsState extends State<_InlineSessionDetails>
   late TabController _tabController;
   int _chartType = 0; // 0 = Bars, 1 = Pie
 
-  // Mock Session Data for Visuals
-  late final SessionAnalysisData _sessionData;
+  // Fallback mock data — used only when API data is not yet loaded
+  final SessionAnalysisModel _fallbackData = SessionAnalysisModel(
+    id: 'session_1',
+    title: 'جلسة #1 - تقييم الروبوت التلقائي',
+    summary: 'خلال هذه الجلسة، أظهر الطفل تقدماً ملحوظاً في حل الألغاز التعاونية مع الروبوت.',
+    duration: '٢٥ دقيقة',
+    engagementLevel: 'ممتاز',
+    recommendations: ['التركيز على مهارات تبادل الأدوار'],
+    emotionDistribution: [
+      EmotionData('happy', '😊', 'سعيد', 0.35, const Color(0xFF22C55E)),
+      EmotionData('neutral', '😐', 'محايد', 0.20, const Color(0xFF94A3B8)),
+      EmotionData('sad', '😢', 'حزين', 0.15, const Color(0xFFEF4444)),
+    ],
+    focusedPercentage: 0.85,
+    notFocusedPercentage: 0.15,
+  );
+
+  /// Returns API data if available, otherwise fallback.
+  SessionAnalysisModel get _sessionData {
+    try {
+      final vm = context.read<SessionViewModel>();
+      return vm.sessionDetails ?? _fallbackData;
+    } catch (_) {
+      return _fallbackData;
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-
-    // Derived from Gamified Screen
-    _sessionData = SessionAnalysisData(
-      id: 'session_1',
-      title: 'جلسة #1 - تقييم الروبوت التلقائي',
-      summary:
-          'خلال هذه الجلسة، أظهر الطفل تقدماً ملحوظاً في حل الألغاز التعاونية مع الروبوت. وتواصل بصري بنسبة ٧٥٪.',
-      duration: '٢٥ دقيقة',
-      engagementLevel: 'ممتاز',
-      recommendations: [
-        'التركيز على مهارات تبادل الأدوار',
-        'استخدام الروبوت كمحفز للنطق الوجداني',
-      ],
-      emotionDistribution: [
-        EmotionData('happy', '😊', 'سعيد', 0.35, const Color(0xFF22C55E)),
-        EmotionData('calm', '😌', 'هادئ', 0.15, AppColors.primary),
-        EmotionData('sad', '😢', 'حزين', 0.15, AppColors.destructive),
-        EmotionData('angry', '😠', 'غاضب', 0.05, const Color(0xFFF97316)),
-        EmotionData('fear', '😨', 'خائف', 0.10, const Color(0xFF6366F1)),
-        EmotionData('surprise', '😲', 'متفاجئ', 0.20, const Color(0xFFA855F7)),
-      ],
-      focusedPercentage: 0.85,
-      notFocusedPercentage: 0.15,
-    );
   }
 
   @override

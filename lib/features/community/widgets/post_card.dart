@@ -9,10 +9,13 @@ import '../../../core/router/route_names.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/models/post_model.dart';
+import '../../../data/models/user_model.dart';
+import '../../../core/enums/user_role.dart';
 import '../../../shared/providers/notification_provider.dart';
 import '../view_model/community_view_model.dart';
 import '../../../shared/widgets/avatar_widget.dart';
 import '../../../shared/widgets/delete_confirmation_dialog.dart';
+
 
 class PostCard extends StatefulWidget {
   final PostModel post;
@@ -44,17 +47,8 @@ class _PostCardState extends State<PostCard> {
     final currentUserId = currentUser?.id ?? 0;
     final isOwner = currentUserId != 0 && post.userId == currentUserId;
 
-    // --- الفلتر الذكي الصارم ---
     String displayName = post.userName;
-    if (displayName.toLowerCase().contains('null') ||
-        displayName.trim().isEmpty ||
-        displayName == 'مستخدم') {
-      if (isOwner && currentUser != null && currentUser.name.isNotEmpty) {
-        displayName = currentUser.name;
-      } else {
-        displayName = 'مستخدم';
-      }
-    } else if (isOwner && currentUser != null && currentUser.name.isNotEmpty) {
+    if (isOwner && currentUser != null && currentUser.name.isNotEmpty) {
       displayName = currentUser.name;
     }
 
@@ -143,7 +137,10 @@ class _PostCardState extends State<PostCard> {
                               ],
                             ),
                             Text(
-                              DateFormatter.formatRelativeTime(post.createdAt),
+                              DateFormatter.formatRelativeTime(
+                                post.createdAt,
+                                isArabic: Localizations.localeOf(context).languageCode == 'ar',
+                              ),
                               style: AppTextStyles.caption.copyWith(
                                 color: theme.textTheme.bodySmall?.color,
                               ),
@@ -162,8 +159,8 @@ class _PostCardState extends State<PostCard> {
                           } else if (value == 'delete') {
                             final confirmed = await DeleteConfirmationDialog.show(
                               context,
-                              title: 'حذف المنشور',
-                              message: 'هل أنت متأكد من حذف هذا المنشور؟',
+                              title: l10n.deletePostTitle,
+                              message: l10n.deletePostConfirm,
                             );
                             if (!context.mounted) return;
                             if (confirmed == true) {
@@ -201,38 +198,30 @@ class _PostCardState extends State<PostCard> {
                             child: TextButton(
                               onPressed: () async {
                                 try {
-                                  final wasFollowing = isFollowing;
+                                  final wasFollowing = viewModel.isFollowing(post.userId);
                                   await viewModel.toggleFollow(
                                     post.userId,
                                     currentUserId: currentUserId,
-                                  );
-
-                                  // Update followingCount optimistically
-                                  if (context.mounted) {
-                                    context.read<AuthProvider>().updateFollowingCount(!wasFollowing);
-                                  }
-                                  if (!wasFollowing && post.userId != 0) {
-                                    Future.microtask(() {
+                                    onFollowingCountChanged: (isNowFollowing) {
                                       if (context.mounted) {
-                                        context
-                                            .read<NotificationProvider>()
-                                            .sendFollowNotification(
-                                              targetUserId: post.userId,
-                                              followerName:
-                                                  authProvider.currentUser?.name ??
-                                                      '',
-                                            );
+                                        final auth = context.read<AuthProvider>();
+                                        auth.updateFollowingCount(isNowFollowing);
+                                        auth.updateFollowersCount(isNowFollowing);
                                       }
-                                    });
+                                    },
+                                  );
+                                  // Refresh notifications on new follow
+                                  if (!wasFollowing && context.mounted) {
+                                    context.read<NotificationProvider>().fetchNotifications();
                                   }
                                 } catch (e) {
-                                  // Revert optimistic update on error
-                                  if (context.mounted) {
-                                    context.read<AuthProvider>().updateFollowingCount(isFollowing);
-                                  }
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text(e.toString())),
+                                      SnackBar(
+                                        content: Text(l10n.errorUpdateFollow),
+                                        backgroundColor: Colors.red,
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
                                     );
                                   }
                                 }
@@ -243,10 +232,10 @@ class _PostCardState extends State<PostCard> {
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
                               child: Text(
-                                isFollowing ? 'متابَع ✓' : l10n.follow,
+                                isFollowing ? l10n.followingStatus : l10n.follow,
                                 style: TextStyle(
-                                  color: isFollowing ? Colors.grey : AppColors.primary,
-                                  fontWeight: isFollowing ? FontWeight.normal : FontWeight.bold,
+                                  color: isFollowing ? Colors.grey : AppColors.primary, // ✅ اللون موحد
+                                  fontWeight: FontWeight.bold, // ✅ الخط دائماً bold
                                   fontSize: 13,
                                 ),
                               ),
@@ -345,15 +334,27 @@ class _PostCardState extends State<PostCard> {
   }
 
   void _navigateToProfile(BuildContext context, PostModel post) {
+    final l10n = AppLocalizations.of(context)!;
+    if (post.userId == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.errorUserNotFound)),
+      );
+      return;
+    }
+
     Navigator.pushNamed(
       context,
       RouteNames.profile,
       arguments: {
         'userId': post.userId,
-        // Pass extra data to avoid "مستخدم" name on Linux
-        'userName': post.userName,
-        'userAvatarUrl': post.userAvatarUrl,
-        'userRole': post.userRole?.name,
+        // Pass what we have so the profile can render immediately even on desktop.
+        'user': UserModel(
+          id: post.userId,
+          name: post.userName,
+          avatarUrl: post.userAvatarUrl,
+          email: '',
+          role: post.userRole ?? UserRole.parent,
+        ),
       },
     );
   }

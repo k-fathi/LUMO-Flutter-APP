@@ -33,12 +33,11 @@ class ProfileRepository {
 
     final isMyProfile = (userId == currentUserId) || userId <= 0;
 
+    UserModel? restProfile;
     // ── current user: REST API ──
     if (_remoteDataSource != null && isMyProfile) {
       try {
-        final profile = await _remoteDataSource!.getProfile();
-        await _localDataSource.saveCurrentUser(profile.toJson());
-        return profile;
+        restProfile = await _remoteDataSource!.getProfile();
       } catch (e) {
         final isUnauth = e.toString().toLowerCase().contains('unauthenticated') ||
             e.toString().contains('401');
@@ -47,17 +46,27 @@ class ProfileRepository {
       }
     }
 
-    if (userId <= 0) return null;
+    if (userId <= 0) return restProfile;
 
-    // ── Desktop: skip Firebase ──
+    // ── Desktop: skip Firebase for saving current user ──
     if (!kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
-      return null;
+      if (restProfile != null) {
+        await _localDataSource.saveCurrentUser(restProfile.toJson());
+        if (isMyProfile) return restProfile;
+      }
+      // Do not return null here, let it try Firebase or REST for target user!
     }
 
     // ── target user: Firebase + calculate counters ──
     try {
       final userData = await _firebaseDataSource.getUserById(userId.toString());
-      if (userData == null) return null;
+      if (userData == null) {
+        if (restProfile != null) {
+          await _localDataSource.saveCurrentUser(restProfile.toJson());
+          return restProfile;
+        }
+        return null;
+      }
 
       final enriched = Map<String, dynamic>.from(userData);
 
@@ -65,15 +74,36 @@ class ProfileRepository {
       final followerIds = (enriched['follower_ids'] as List?) ?? [];
       final followingIds = (enriched['following_ids'] as List?) ?? [];
       
-      // Use array length or count field — whichever is more accurate
-      enriched['followers_count'] = enriched['followers_count'] ?? followerIds.length;
-      enriched['following_count'] = enriched['following_count'] ?? followingIds.length;
+      // Always use array length if arrays are present, otherwise fallback to the number field
+      int fbFollowers = enriched['follower_ids'] != null ? followerIds.length : (enriched['followers_count'] ?? 0);
+      int fbFollowing = enriched['following_ids'] != null ? followingIds.length : (enriched['following_count'] ?? 0);
+
+      if (restProfile != null) {
+        final restJson = restProfile.toJson();
+        
+        // استخدام عدادات فايربيز الدقيقة، ودمجها مع بيانات السيرفر (كالاسم والصورة)
+        restJson['followers_count'] = enriched['follower_ids'] != null ? fbFollowers : (restJson['followers_count'] ?? fbFollowers);
+        restJson['following_count'] = enriched['following_ids'] != null ? fbFollowing : (restJson['following_count'] ?? fbFollowing);
+        
+        enriched.addAll(restJson);
+      } else {
+        enriched['followers_count'] = fbFollowers;
+        enriched['following_count'] = fbFollowing;
+      }
 
       final role = UserRole.fromString(enriched['role']?.toString() ?? 'parent');
-      if (role == UserRole.doctor) return DoctorModel.fromJson(enriched);
-      return ParentModel.fromJson(enriched);
+      final finalProfile = role == UserRole.doctor ? DoctorModel.fromJson(enriched) : ParentModel.fromJson(enriched);
+
+      if (isMyProfile) {
+        await _localDataSource.saveCurrentUser(finalProfile.toJson());
+      }
+      return finalProfile;
     } catch (e) {
       debugPrint('Firebase fetch failed: $e');
+      if (restProfile != null) {
+        await _localDataSource.saveCurrentUser(restProfile.toJson());
+        return restProfile;
+      }
       return null;
     }
   }
@@ -81,11 +111,20 @@ class ProfileRepository {
   Stream<UserModel?> streamUserProfile(int userId) {
     return _firebaseDataSource.streamUser(userId.toString()).map((userData) {
       if (userData == null) return null;
-      final role = UserRole.fromString(userData['role'] as String);
+      
+      final enriched = Map<String, dynamic>.from(userData);
+
+      final followerIds = (enriched['follower_ids'] as List?) ?? [];
+      final followingIds = (enriched['following_ids'] as List?) ?? [];
+      
+      enriched['followers_count'] = enriched['follower_ids'] != null ? followerIds.length : (enriched['followers_count'] ?? 0);
+      enriched['following_count'] = enriched['following_ids'] != null ? followingIds.length : (enriched['following_count'] ?? 0);
+
+      final role = UserRole.fromString(enriched['role']?.toString() ?? 'parent');
       if (role == UserRole.doctor) {
-        return DoctorModel.fromJson(userData);
+        return DoctorModel.fromJson(enriched);
       } else {
-        return ParentModel.fromJson(userData);
+        return ParentModel.fromJson(enriched);
       }
     });
   }

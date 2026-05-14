@@ -74,24 +74,41 @@ class AvatarWidget extends StatelessWidget {
     }
 
     if (imageUrl != null && imageUrl!.isNotEmpty) {
-      if (!imageUrl!.startsWith('http')) {
-        return Image.file(File(imageUrl!), fit: BoxFit.cover);
+      String resolvedUrl = imageUrl!;
+
+      // If the backend returns localhost URLs, rewrite them
+      if (resolvedUrl.contains('localhost') || resolvedUrl.contains('127.0.0.1')) {
+        resolvedUrl = resolvedUrl.replaceFirst(RegExp(r'http://(localhost|127\.0\.0\.1)(:\d+)?'), 'https://clickexpress.delivery');
       }
 
-      return CachedNetworkImage(
-        imageUrl: imageUrl!,
-        fit: BoxFit.cover,
-        placeholder: (context, url) => Shimmer.fromColors(
-          baseColor: Colors.grey[300]!,
-          highlightColor: Colors.grey[100]!,
-          child: Container(
-            color: Colors.white,
-            width: size,
-            height: size,
+      // If it's a relative API path
+      if (!resolvedUrl.startsWith('http')) {
+        if (!resolvedUrl.startsWith('/')) {
+          resolvedUrl = '/$resolvedUrl';
+        }
+        resolvedUrl = 'https://clickexpress.delivery$resolvedUrl';
+      }
+
+      // Network image
+      if (resolvedUrl.startsWith('http')) {
+        return CachedNetworkImage(
+          imageUrl: resolvedUrl,
+          fit: BoxFit.cover,
+          placeholder: (context, url) => Shimmer.fromColors(
+            baseColor: Colors.grey[300]!,
+            highlightColor: Colors.grey[100]!,
+            child: Container(
+              color: Colors.white,
+              width: size,
+              height: size,
+            ),
           ),
-        ),
-        errorWidget: (context, url, error) => _buildPlaceholder(context),
-      );
+          errorWidget: (context, url, error) => _buildPlaceholder(context),
+        );
+      }
+
+      // Local file path (e.g. from camera/gallery picker)
+      return Image.file(File(resolvedUrl), fit: BoxFit.cover);
     }
 
     return _buildPlaceholder(context);

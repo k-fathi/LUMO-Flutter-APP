@@ -20,9 +20,28 @@ import 'features/profile/view_model/profile_view_model.dart';
 import 'features/ai_helper/view_model/ai_view_model.dart';
 import 'features/chat/view_model/chat_view_model.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'core/utils/debug_logger.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // #region agent log
+  DebugLogger.log(
+    runId: 'baseline',
+    hypothesisId: 'Z',
+    location: 'main.dart:main',
+    message: 'App main() started',
+    data: const {},
+  );
+  // #endregion
+  // #region agent log
+  debugPrint('[ae3196][Z] main() started');
+  // #endregion
+  // #region agent log
+  // Using print() to ensure stdout on desktop.
+  // ignore: avoid_print
+  print('[ae3196][Z] main() started (print)');
+  // #endregion
 
   try {
     await Firebase.initializeApp(

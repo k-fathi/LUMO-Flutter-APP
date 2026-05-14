@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/gradient_app_bar.dart';
@@ -151,8 +152,12 @@ class _EditChildProfileScreenState extends State<EditChildProfileScreen> {
             _buildFormField(
               theme,
               label: 'اسم الطفل',
+              hint: 'أدخل اسم الطفل فقط',
               icon: Icons.person_outline,
               controller: _nameController,
+              inputFormatters: [
+                FilteringTextInputFormatter.deny(RegExp(r'\s')),
+              ],
             ),
             const SizedBox(height: 16),
             _buildFormField(
@@ -246,15 +251,22 @@ class _EditChildProfileScreenState extends State<EditChildProfileScreen> {
   Widget _buildFormField(
     ThemeData theme, {
     required String label,
+    String? hint,
     required IconData icon,
     required TextEditingController controller,
     TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       decoration: InputDecoration(
         labelText: label,
+        hintText: hint,
+        hintStyle: AppTextStyles.body.copyWith(
+          color: AppColors.mutedForeground,
+        ),
         prefixIcon: Icon(icon, color: AppColors.primary),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),

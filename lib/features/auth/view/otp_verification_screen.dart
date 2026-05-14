@@ -11,11 +11,13 @@ import '../../../shared/mixins/form_validation_mixin.dart';
 class OtpVerificationScreen extends StatefulWidget {
   final String phone;
   final bool isPasswordReset;
+  final String? password; // للـ auto-login بعد التحقق من OTP التسجيل
 
   const OtpVerificationScreen({
     super.key,
     required this.phone,
     this.isPasswordReset = false,
+    this.password,
   });
 
   @override
@@ -79,12 +81,45 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
           },
         );
       } else {
-        // Registration success or similar flow
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          RouteNames.mainLayout,
-          (route) => false,
-        );
+        // تسجيل دخول تلقائي بعد التحقق من OTP
+        final password = widget.password;
+        if (password != null && password.isNotEmpty) {
+          setState(() => _isLoading = true);
+          final loginSuccess = await authProvider.login(
+            phone: widget.phone,
+            password: password,
+          );
+          if (!mounted) return;
+          setState(() => _isLoading = false);
+
+          if (loginSuccess) {
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              RouteNames.mainLayout,
+              (route) => false,
+            );
+          } else {
+            // لو فشل الـ login، روح لـ login screen
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('تم التحقق، يرجى تسجيل الدخول'),
+                backgroundColor: AppColors.primary,
+              ),
+            );
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              RouteNames.login,
+              (route) => false,
+            );
+          }
+        } else {
+          // Fallback: روح login screen
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            RouteNames.login,
+            (route) => false,
+          );
+        }
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

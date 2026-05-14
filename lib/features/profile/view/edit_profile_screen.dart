@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -338,8 +339,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 16),
               _buildFormField(
                 label: 'اسم الطفل',
+                hint: 'أدخل اسم الطفل فقط',
                 icon: Icons.child_care,
                 controller: _childNameController,
+                inputFormatters: [
+                  FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                ],
               ),
               const SizedBox(height: 20),
               _buildFormField(
@@ -414,10 +419,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Widget _buildFormField({
     required String label,
+    String? hint,
     required IconData icon,
     required TextEditingController controller,
     TextInputType? keyboardType,
     bool readOnly = false,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -452,12 +459,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             keyboardType: keyboardType,
             readOnly: readOnly,
             textAlign: TextAlign.right,
+            inputFormatters: inputFormatters,
             style: AppTextStyles.body.copyWith(
               color: readOnly
                   ? AppColors.mutedForeground
                   : theme.textTheme.bodyLarge?.color,
             ),
             decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: AppTextStyles.body.copyWith(
+                color: AppColors.mutedForeground,
+              ),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
