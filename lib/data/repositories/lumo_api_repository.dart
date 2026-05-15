@@ -11,13 +11,6 @@ class LumoApiRepository {
 
   LumoApiRepository(this._apiService);
 
-  // ── Chatbot ───────────────────────────────────────────────────────────────
-
-  /// Asks Asmaa's medical chatbot [question] and returns the Arabic answer.
-  Future<String> askChatbot(String question) async {
-    return _apiService.askChatbot(question);
-  }
-
   // ── Image Analysis ────────────────────────────────────────────────────────
 
   /// Uploads [imageFile] to Carol's model and returns parsed analysis results.

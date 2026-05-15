@@ -13,11 +13,13 @@ class SessionRepository {
     required int patientId,
     String? notes,
     required List<Map<String, dynamic>> segments,
+    DateTime? scheduledDate,
   }) async {
     final json = await _sessionRemoteDataSource.createSession(
       patientId: patientId,
       notes: notes,
       segments: segments,
+      scheduledDate: scheduledDate,
     );
     return SessionAnalysisModel.fromApiJson(json);
   }

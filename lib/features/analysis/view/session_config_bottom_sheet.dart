@@ -89,6 +89,7 @@ class _SessionConfigBottomSheetState extends State<SessionConfigBottomSheet> {
     await viewModel.createSession(
       patientId: widget.receiverId,
       parts: _tempParts,
+      scheduledDate: _scheduledDate,
     );
 
     if (mounted) {
@@ -351,20 +352,17 @@ class _AddPartDialogState extends State<_AddPartDialog> {
                 labelText: 'النوع', labelStyle: TextStyle(fontFamily: 'Cairo')),
             items: const [
               DropdownMenuItem(
+                  value: 'education',
+                  child: Text('تعلم (Learn)', style: TextStyle(fontFamily: 'Cairo'))),
+              DropdownMenuItem(
                   value: 'games',
-                  child: Text('ألعاب', style: TextStyle(fontFamily: 'Cairo'))),
+                  child: Text('ألعاب (Game)', style: TextStyle(fontFamily: 'Cairo'))),
               DropdownMenuItem(
                   value: 'stories',
-                  child: Text('قصص', style: TextStyle(fontFamily: 'Cairo'))),
-              DropdownMenuItem(
-                  value: 'education',
-                  child: Text('تعليم', style: TextStyle(fontFamily: 'Cairo'))),
+                  child: Text('قصص (Story)', style: TextStyle(fontFamily: 'Cairo'))),
               DropdownMenuItem(
                   value: 'drawing',
-                  child: Text('رسم', style: TextStyle(fontFamily: 'Cairo'))),
-              DropdownMenuItem(
-                  value: 'animals',
-                  child: Text('أصوات حيوانات', style: TextStyle(fontFamily: 'Cairo'))),
+                  child: Text('رسم (Drawing)', style: TextStyle(fontFamily: 'Cairo'))),
             ],
             onChanged: (val) => setState(() => _selectedType = val!),
           ),

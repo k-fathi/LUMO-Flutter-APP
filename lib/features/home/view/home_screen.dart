@@ -431,7 +431,12 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             TextButton(
               onPressed: () {
-                // TODO: View all activity
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('سجل النشاطات الكامل سيتوفر قريباً'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
               },
               child: Text(
                 'عرض الكل',

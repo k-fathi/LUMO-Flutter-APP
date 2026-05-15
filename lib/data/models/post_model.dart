@@ -55,8 +55,8 @@ class PostModel {
         '';
 
     rawName = rawName.replaceAll('null', '').replaceAll('NULL', '').trim();
-    if (rawName.isEmpty || rawName == 'مستخدم') {
-      rawName = 'مستخدم';
+    if (rawName.isEmpty) {
+      rawName = '';
     }
     // ------------------------------------------------
 

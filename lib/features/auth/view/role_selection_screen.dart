@@ -1,9 +1,11 @@
-import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/router/route_names.dart';
 import '../../../core/enums/user_role.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text_styles.dart';
 
 class RoleSelectionScreen extends StatefulWidget {
   const RoleSelectionScreen({super.key});
@@ -42,65 +44,21 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
       arguments: {'role': role},
     );
   }
-
   @override
   Widget build(BuildContext context) {
-
+    final theme = Theme.of(context);
 
     return Scaffold(
-      body: Stack(
-        children: [
-          // 1. Background Gradient
-          Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF2F80ED), Color(0xFF56CCF2)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
-          ),
-
-          // 2. Ambient Orbs (Bottom Right)
-          Positioned(
-            bottom: -50,
-            right: -50,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF56CCF2).withValues(alpha: 0.2),
-              ),
-            ),
-          ),
-
-          // 2. Ambient Orbs (Top Left)
-          Positioned(
-            top: -50,
-            left: -50,
-            child: Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF2F80ED).withValues(alpha: 0.2),
-              ),
-            ),
-          ),
-
-          // Apply Backdrop Blur for Orbs
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
-              child: Container(color: Colors.transparent),
-            ),
-          ),
-
-          // 3. Main Content Content
-          SafeArea(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.primary),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SafeArea(
             child: Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
@@ -120,30 +78,23 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                         width: 160,
                         height: 160,
                         decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            width: 6,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF2F80ED).withValues(alpha: 0.5),
-                              blurRadius: 30,
-                              offset: const Offset(0, 15),
-                            ),
-                          ],
                         ),
                         child: ClipOval(
-                          child: Image.asset(
-                            'assets/images/bot-icon.png', // Assuming robot image
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Icon(Icons.smart_toy, size: 80, color: Colors.white),
+                          child: Padding(
+                            padding: const EdgeInsets.all(24.0),
+                            child: Image.asset(
+                              'assets/images/bot-icon.png', // Assuming robot image
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(Icons.smart_toy, size: 80, color: AppColors.primary),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
 
                     // LUMO Branding
                     Text(
@@ -152,17 +103,10 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                         fontSize: 32,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 4.0,
-                        color: Colors.white,
-                        shadows: const [
-                          Shadow(
-                            color: Colors.black26,
-                            blurRadius: 10,
-                            offset: Offset(0, 4),
-                          ),
-                        ],
+                        color: AppColors.primary,
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
 
                     // Main Title
                     Text(
@@ -170,7 +114,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                       style: GoogleFonts.cairo(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: theme.textTheme.titleLarge?.color ?? Colors.black87,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -182,21 +126,21 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                       style: GoogleFonts.cairo(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: theme.textTheme.bodyMedium?.color ?? Colors.grey.shade600,
                       ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 48),
 
                     // Role Cards
-                    _GlassRoleCard(
+                    _RoleCard(
                       title: 'أنا أحد الوالدين',
                       subtitle: 'متابعة نمو طفلك والحصول على استشارات',
                       icon: Icons.family_restroom,
                       onTap: () => _navigateToSignup(context, UserRole.parent),
                     ),
-                    const SizedBox(height: 20),
-                    _GlassRoleCard(
+                    const SizedBox(height: 16),
+                    _RoleCard(
                       title: 'أنا طبيب',
                       subtitle: 'راقب الحالات وتعاون مع الأهالي',
                       icon: Icons.medical_services,
@@ -210,7 +154,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                       style: GoogleFonts.cairo(
                         fontSize: 12, // slightly bigger than 11 for readability
                         fontWeight: FontWeight.normal,
-                        color: Colors.white.withValues(alpha: 0.5),
+                        color: theme.disabledColor,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -219,19 +163,17 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
               ),
             ),
           ),
-        ],
-      ),
     );
   }
 }
 
-class _GlassRoleCard extends StatefulWidget {
+class _RoleCard extends StatefulWidget {
   final String title;
   final String subtitle;
   final IconData icon;
   final VoidCallback onTap;
 
-  const _GlassRoleCard({
+  const _RoleCard({
     required this.title,
     required this.subtitle,
     required this.icon,
@@ -239,92 +181,84 @@ class _GlassRoleCard extends StatefulWidget {
   });
 
   @override
-  State<_GlassRoleCard> createState() => _GlassRoleCardState();
+  State<_RoleCard> createState() => _RoleCardState();
 }
 
-class _GlassRoleCardState extends State<_GlassRoleCard> {
+class _RoleCardState extends State<_RoleCard> {
   bool _isHovered = false;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
         onTap: widget.onTap,
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(28),
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: _isHovered ? AppColors.primary : theme.dividerColor,
+              width: _isHovered ? 2 : 1,
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+                color: Colors.black.withValues(alpha: _isHovered ? 0.08 : 0.04),
+                blurRadius: _isHovered ? 16 : 8,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(28),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Row(
+            children: [
+              // Icon Container
+              Container(
+                width: 56,
+                height: 56,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: _isHovered ? 0.2 : 0.1),
-                  borderRadius: BorderRadius.circular(28),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: _isHovered ? 0.5 : 0.2),
-                    width: 1.5,
-                  ),
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
                 ),
-                child: Row(
+                child: Icon(
+                  widget.icon,
+                  size: 28,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 20),
+              // Texts
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Icon Container
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        widget.icon,
-                        size: 28,
-                        color: Colors.white,
+                    Text(
+                      widget.title,
+                      style: AppTextStyles.h3.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(width: 20),
-                    // Texts
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            widget.title,
-                            style: GoogleFonts.cairo(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            widget.subtitle,
-                            style: GoogleFonts.cairo(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.white.withValues(alpha: 0.8),
-                            ),
-                          ),
-                        ],
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.subtitle,
+                      style: AppTextStyles.caption.copyWith(
+                        color: theme.textTheme.bodyMedium?.color ?? Colors.grey.shade600,
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16,
+                color: theme.dividerColor,
+              ),
+            ],
           ),
         ),
       ),

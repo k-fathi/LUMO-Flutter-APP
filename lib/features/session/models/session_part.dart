@@ -12,15 +12,13 @@ class SessionPart {
   String get typeLabel {
     switch (type) {
       case 'games':
-        return 'ألعاب';
+        return 'ألعاب (Games)';
       case 'stories':
-        return 'قصص';
+        return 'قصص (Story)';
       case 'education':
-        return 'تعليم';
+        return 'تعلم (Learn)';
       case 'drawing':
-        return 'رسم';
-      case 'animals':
-        return 'أصوات حيوانات';
+        return 'رسم (Drawing)';
       default:
         // Safe fallback for unknown types
         return type.isEmpty ? 'غير محدد' : type;

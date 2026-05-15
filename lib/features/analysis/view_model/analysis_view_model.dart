@@ -130,7 +130,7 @@ class AnalysisViewModel extends ChangeNotifier {
     _errorMessage = null;
 
     try {
-      // TODO: Implement in repository
+      await _analysisRepository.deleteAnalysis(analysisId);
       _analyses.removeWhere((a) => a.id == analysisId);
       notifyListeners();
       return true;

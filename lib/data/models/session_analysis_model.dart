@@ -161,12 +161,12 @@ class SessionAnalysisModel {
       for (final seg in segments) {
         if (seg is! Map<String, dynamic>) continue;
         
-        final segAnalytic = seg['analytic'] ?? seg['analytics'];
+        final segAnalytic = seg['analytic'] ?? seg['analytics'] ?? seg;
         if (segAnalytic is Map<String, dynamic>) {
           firstAnalytic ??= segAnalytic;
 
-          // Accumulate emotions (API field: 'emotions' or 'emotion_distribution')
-          dynamic rawEmo = segAnalytic['emotions'] ?? segAnalytic['emotion_distribution'];
+          // Accumulate emotions (Exact AI Key: 'emotion_distribution' or fallback 'emotions')
+          dynamic rawEmo = segAnalytic['emotion_distribution'] ?? segAnalytic['emotions'];
           if (rawEmo is String) {
             try { rawEmo = jsonDecode(rawEmo); } catch (_) {}
           }
@@ -177,8 +177,8 @@ class SessionAnalysisModel {
             }
           }
 
-          // Accumulate gaze (API field: 'gaze' or 'gaze_distribution')
-          dynamic rawGz = segAnalytic['gaze'] ?? segAnalytic['gaze_distribution'];
+          // Accumulate gaze (Exact AI Key: 'gaze_distribution' or fallback 'gaze')
+          dynamic rawGz = segAnalytic['gaze_distribution'] ?? segAnalytic['gaze'];
           if (rawGz is String) {
             try { rawGz = jsonDecode(rawGz); } catch (_) {}
           }
@@ -188,8 +188,8 @@ class SessionAnalysisModel {
             }
           }
 
-          // Accumulate focus (API field: 'focus_score' or 'focus_percentage')
-          final rawFocusScore = segAnalytic['focus_score'] ?? segAnalytic['focus_percentage'];
+          // Accumulate focus (Exact AI Key: 'focus_percentage' or fallback 'focus_score')
+          final rawFocusScore = segAnalytic['focus_percentage'] ?? segAnalytic['focus_score'];
           double? segFocus;
           if (rawFocusScore is num) {
             segFocus = rawFocusScore.toDouble();
@@ -259,7 +259,7 @@ class SessionAnalysisModel {
     }
 
     // ── Convert to EmotionData list ─────────────────────────────────────────
-    final List<EmotionData> emotions = avgEmotions.entries.map((e) {
+    List<EmotionData> emotions = avgEmotions.entries.map((e) {
       final key = e.key.toLowerCase();
       final pct = e.value;
       return EmotionData(
@@ -270,6 +270,18 @@ class SessionAnalysisModel {
         _colorFor(key),
       );
     }).toList();
+
+    // Fallback: if emotion_distribution was missing or null
+    if (emotions.isEmpty) {
+      emotions = [
+        EmotionData('happy', _emojiFor('happy'), _labelAr('happy'), 0.0, _colorFor('happy')),
+        EmotionData('sad', _emojiFor('sad'), _labelAr('sad'), 0.0, _colorFor('sad')),
+        EmotionData('neutral', _emojiFor('neutral'), _labelAr('neutral'), 0.0, _colorFor('neutral')),
+        EmotionData('angry', _emojiFor('angry'), _labelAr('angry'), 0.0, _colorFor('angry')),
+        EmotionData('surprise', _emojiFor('surprise'), _labelAr('surprise'), 0.0, _colorFor('surprise')),
+        EmotionData('fear', _emojiFor('fear'), _labelAr('fear'), 0.0, _colorFor('fear')),
+      ];
+    }
 
     // ── Convert gaze ────────────────────────────────────────────────────────
     final Map<String, double> gazeMap = {};

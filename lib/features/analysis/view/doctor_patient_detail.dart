@@ -742,21 +742,24 @@ class _InlineSessionDetailsState extends State<_InlineSessionDetails>
   late TabController _tabController;
   int _chartType = 0; // 0 = Bars, 1 = Pie
 
-  // Fallback mock data — used only when API data is not yet loaded
+  // Fallback data when API data is not yet loaded or empty
   final SessionAnalysisModel _fallbackData = SessionAnalysisModel(
-    id: 'session_1',
-    title: 'جلسة #1 - تقييم الروبوت التلقائي',
-    summary: 'خلال هذه الجلسة، أظهر الطفل تقدماً ملحوظاً في حل الألغاز التعاونية مع الروبوت.',
-    duration: '٢٥ دقيقة',
-    engagementLevel: 'ممتاز',
-    recommendations: ['التركيز على مهارات تبادل الأدوار'],
+    id: '',
+    title: 'جاري التحميل...',
+    summary: 'لا توجد بيانات متاحة حالياً.',
+    duration: '-- دقيقة',
+    engagementLevel: '--',
+    recommendations: [],
     emotionDistribution: [
-      EmotionData('happy', '😊', 'سعيد', 0.35, const Color(0xFF22C55E)),
-      EmotionData('neutral', '😐', 'محايد', 0.20, const Color(0xFF94A3B8)),
-      EmotionData('sad', '😢', 'حزين', 0.15, const Color(0xFFEF4444)),
+      EmotionData('happy', '😊', 'سعيد', 0.0, const Color(0xFF22C55E)),
+      EmotionData('neutral', '😐', 'محايد', 0.0, const Color(0xFF94A3B8)),
+      EmotionData('sad', '😢', 'حزين', 0.0, const Color(0xFFEF4444)),
+      EmotionData('angry', '😠', 'غاضب', 0.0, const Color(0xFFEAB308)),
+      EmotionData('surprise', '😲', 'متفاجئ', 0.0, const Color(0xFFA855F7)),
+      EmotionData('fear', '😨', 'خائف', 0.0, const Color(0xFFF97316)),
     ],
-    focusedPercentage: 0.85,
-    notFocusedPercentage: 0.15,
+    focusedPercentage: 0.0,
+    notFocusedPercentage: 1.0,
   );
 
   /// Returns API data if available, otherwise fallback.

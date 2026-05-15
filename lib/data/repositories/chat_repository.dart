@@ -245,7 +245,12 @@ class ChatRepository {
             .map((messageData) => MessageModel.fromJson(messageData))
             .toList();
       },
-    );
+    ).handleError((error) {
+      debugPrint('Firebase streamMessages error (falling back to cache): $error');
+      // On platforms where Firebase isn't supported (e.g. Linux),
+      // return cached messages so the UI isn't left empty.
+      return getCachedMessages(chatRoomId);
+    });
   }
 
   List<MessageModel> getCachedMessages(String chatRoomId) {

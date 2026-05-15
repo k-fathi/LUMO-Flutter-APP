@@ -73,6 +73,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final currentUser = context.watch<AuthProvider>().currentUser;
+    final userAvatarUrl = currentUser?.avatarUrl ?? currentUser?.profileImage;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -155,6 +157,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                   itemBuilder: (context, index) {
                     return AIMessageBubble(
                       message: viewModel.messages[index],
+                      userAvatarUrl: userAvatarUrl,
                     );
                   },
                 ),

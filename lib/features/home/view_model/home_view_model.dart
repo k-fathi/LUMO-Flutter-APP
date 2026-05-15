@@ -24,8 +24,7 @@ class HomeViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // TODO: Load real data from repositories
-      // Simulating data for now
+      // Simulating data loading from repositories for now
       await Future.delayed(const Duration(seconds: 1));
 
       _postsCount = 12;

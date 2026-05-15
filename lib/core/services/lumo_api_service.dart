@@ -14,7 +14,6 @@ class LumoApiService {
 
   // ─── Base URIs ────────────────────────────────────────────────────────────
 
-  static Uri get _chatbotBase => Uri(scheme: 'http', host: _host, port: 8000);
   static Uri get _analysisBase => Uri(scheme: 'http', host: _host, port: 8001);
   static Uri get _storyBase => Uri(scheme: 'http', host: _host, port: 8081);
 
@@ -22,53 +21,6 @@ class LumoApiService {
 
   static const Duration _defaultTimeout = Duration(seconds: 60);
   static const Duration _audioTimeout = Duration(seconds: 90);
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // 1. Chatbot API  (POST :8000/ask)
-  // ──────────────────────────────────────────────────────────────────────────
-
-  /// Sends a [question] to Asmaa's medical chatbot and returns the
-  /// Arabic response string.
-  ///
-  /// Uses [utf8.decode(response.bodyBytes)] to preserve Arabic characters.
-  Future<String> askChatbot(String question) async {
-    final uri = _chatbotBase.replace(path: '/ask');
-
-    final response = await http
-        .post(
-          uri,
-          headers: {
-            HttpHeaders.contentTypeHeader: 'application/json',
-            HttpHeaders.acceptHeader: 'application/json',
-          },
-          body: jsonEncode({'question': question}),
-        )
-        .timeout(_defaultTimeout);
-
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      // MANDATORY: decode bodyBytes to preserve Arabic characters.
-      final decoded = utf8.decode(response.bodyBytes);
-      final json = jsonDecode(decoded) as Map<String, dynamic>;
-      return _extractChatbotAnswer(json);
-    } else {
-      throw LumoApiException(
-        statusCode: response.statusCode,
-        message: 'Chatbot API error: ${utf8.decode(response.bodyBytes)}',
-      );
-    }
-  }
-
-  /// Extracts the answer string from the chatbot response envelope.
-  /// Checks several common keys so it works even if the schema shifts.
-  String _extractChatbotAnswer(Map<String, dynamic> json) {
-    for (final key in ['answer', 'response', 'result', 'text', 'message']) {
-      if (json.containsKey(key) && json[key] is String) {
-        return json[key] as String;
-      }
-    }
-    // Fallback: return the entire JSON as a string for debugging.
-    return jsonEncode(json);
-  }
 
   // ──────────────────────────────────────────────────────────────────────────
   // 2. Emotion & Gaze Analysis API  (POST :8001/analyze_image)

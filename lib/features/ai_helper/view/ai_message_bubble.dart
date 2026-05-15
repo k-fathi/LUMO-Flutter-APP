@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -8,10 +9,12 @@ import '../../chat/widgets/typing_indicator.dart';
 
 class AIMessageBubble extends StatelessWidget {
   final AIMessageModel message;
+  final String? userAvatarUrl;
 
   const AIMessageBubble({
     super.key,
     required this.message,
+    this.userAvatarUrl,
   });
 
   @override
@@ -26,7 +29,7 @@ class AIMessageBubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isUser) ...[
-            _buildAvatar(),
+            _buildBotAvatar(),
             const SizedBox(width: 12),
           ],
           Flexible(
@@ -101,35 +104,45 @@ class AIMessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatar() {
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.1),
-        shape: BoxShape.circle,
-      ),
-      child: const Icon(
-        Icons.smart_toy_rounded,
-        color: AppColors.primary,
-        size: 20,
-      ),
+  Widget _buildBotAvatar() {
+    return const CircleAvatar(
+      radius: 18,
+      backgroundColor: Colors.transparent,
+      backgroundImage: AssetImage('assets/images/bot-icon.png'),
     );
   }
 
   Widget _buildUserAvatar() {
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: const BoxDecoration(
-        color: AppColors.primary,
-        shape: BoxShape.circle,
+    final resolvedUrl = userAvatarUrl?.trim();
+    final hasImage = resolvedUrl != null && resolvedUrl.isNotEmpty;
+
+    return CircleAvatar(
+      radius: 18,
+      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+      child: ClipOval(
+        child: SizedBox(
+          width: 36,
+          height: 36,
+          child: hasImage
+              ? CachedNetworkImage(
+                  imageUrl: resolvedUrl,
+                  fit: BoxFit.cover,
+                  errorWidget: (context, url, error) =>
+                      _buildDefaultUserIcon(),
+                  placeholder: (context, url) =>
+                      const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                )
+              : _buildDefaultUserIcon(),
+        ),
       ),
-      child: const Icon(
-        Icons.person_rounded,
-        color: Colors.white,
-        size: 20,
-      ),
+    );
+  }
+
+  Widget _buildDefaultUserIcon() {
+    return const Icon(
+      Icons.person,
+      color: AppColors.primary,
+      size: 20,
     );
   }
 

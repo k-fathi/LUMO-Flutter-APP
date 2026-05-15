@@ -74,11 +74,27 @@ class AnalysisRepository {
     if (notes != null) updateData['notes'] = notes;
     if (currentState != null) {
       updateData['current_state'] = currentState.name;
-      // TODO: Update states array to mark new current state
+      
+      // Update states array to mark new current state
+      final defaultStates = [
+          const AnalysisStateModel(state: ChildState.critical, label: 'حرج'),
+          const AnalysisStateModel(state: ChildState.bad, label: 'سيء'),
+          const AnalysisStateModel(state: ChildState.moderate, label: 'متوسط'),
+          const AnalysisStateModel(state: ChildState.good, label: 'جيد'),
+          const AnalysisStateModel(state: ChildState.excellent, label: 'ممتاز'),
+      ];
+      final updatedStates = defaultStates.map((state) {
+        return state.copyWith(isCurrent: state.state == currentState);
+      }).toList();
+      updateData['states'] = updatedStates.map((s) => s.toJson()).toList();
     }
     if (attachmentUrl != null) updateData['attachment_url'] = attachmentUrl;
 
     await _firebaseDataSource.updateAnalysis(analysisId, updateData);
+  }
+
+  Future<void> deleteAnalysis(String analysisId) async {
+    await _firebaseDataSource.deleteAnalysis(analysisId);
   }
 
   Future<List<ChildAnalysisModel>> getParentAnalyses(int parentId) async {

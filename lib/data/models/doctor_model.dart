@@ -45,9 +45,8 @@ class DoctorModel extends UserModel {
           ? json['id']
           : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
       email: json['email']?.toString() ?? '',
-      name: json['name']?.toString() ?? '',
-      avatarUrl:
-          json['avatar_url']?.toString() ?? json['profile_image']?.toString(),
+      name: (json['data']?['name'] ?? json['name'])?.toString() ?? '',
+      avatarUrl: (json['data']?['profile_image'] ?? json['avatar_url'] ?? json['profile_image'])?.toString(),
       bio: json['bio']?.toString(),
       phone: json['phone']?.toString(),
       createdAt: json['created_at'] != null

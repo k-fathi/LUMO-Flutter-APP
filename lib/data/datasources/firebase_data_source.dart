@@ -101,7 +101,12 @@ class FirebaseDataSource {
   // ==================== POST OPERATIONS ====================
 
   Future<String> createPost(Map<String, dynamic> postData) async {
-    final postsRef = _firestoreService.instance.collection(FirebaseCollections.posts);
+    final instance = _firestoreService.instance;
+    if (instance == null) {
+      debugPrint('Firebase skipped: Instance is null (Linux fallback)');
+      return 'mock_post_${DateTime.now().millisecondsSinceEpoch}';
+    }
+    final postsRef = instance.collection(FirebaseCollections.posts);
     final docRef = await postsRef.add(postData);
     return docRef.id;
   }
@@ -169,7 +174,12 @@ class FirebaseDataSource {
   }
 
   Future<void> deleteComment(String postId, String commentId) async {
-    await _firestoreService.instance
+    final instance = _firestoreService.instance;
+    if (instance == null) {
+      debugPrint('Firebase skipped: Instance is null (Linux fallback)');
+      return;
+    }
+    await instance
         .collection(FirebaseCollections.posts)
         .doc(postId)
         .collection(FirebaseCollections.comments)
@@ -212,7 +222,12 @@ class FirebaseDataSource {
   // ==================== CHAT OPERATIONS ====================
 
   Future<String> createChatRoom(Map<String, dynamic> chatRoomData) async {
-    final chatsRef = _firestoreService.instance.collection(FirebaseCollections.chats);
+    final instance = _firestoreService.instance;
+    if (instance == null) {
+      debugPrint('Firebase skipped: Instance is null (Linux fallback)');
+      return 'mock_room_${DateTime.now().millisecondsSinceEpoch}';
+    }
+    final chatsRef = instance.collection(FirebaseCollections.chats);
     final docRef = await chatsRef.add(chatRoomData);
     return docRef.id;
   }
@@ -256,7 +271,12 @@ class FirebaseDataSource {
     );
 
     // Update chat room metadata + unread counts (receiver++).
-    final chatDoc = _firestoreService.instance
+    final instance = _firestoreService.instance;
+    if (instance == null) {
+      debugPrint('Firebase skipped: Instance is null (Linux fallback)');
+      return messageId;
+    }
+    final chatDoc = instance
         .collection(FirebaseCollections.chats)
         .doc(chatRoomId);
 
@@ -339,7 +359,12 @@ class FirebaseDataSource {
   }
 
   Future<void> markMessageAsRead(String chatRoomId, String messageId) async {
-    await _firestoreService.instance
+    final instance = _firestoreService.instance;
+    if (instance == null) {
+      debugPrint('Firebase skipped: Instance is null (Linux fallback)');
+      return;
+    }
+    await instance
         .collection(FirebaseCollections.chats)
         .doc(chatRoomId)
         .collection(FirebaseCollections.messages)
@@ -368,7 +393,12 @@ class FirebaseDataSource {
   }
 
   Future<void> markChatAsRead(String chatRoomId, String userId) async {
-    final chatDoc = _firestoreService.instance
+    final instance = _firestoreService.instance;
+    if (instance == null) {
+      debugPrint('Firebase skipped: Instance is null (Linux fallback)');
+      return;
+    }
+    final chatDoc = instance
         .collection(FirebaseCollections.chats)
         .doc(chatRoomId);
 
@@ -407,7 +437,12 @@ class FirebaseDataSource {
 
   Future<void> updateTypingStatus(
       String chatRoomId, String userId, bool isTyping) async {
-    await _firestoreService.instance
+    final instance = _firestoreService.instance;
+    if (instance == null) {
+      debugPrint('Firebase skipped: Instance is null (Linux fallback)');
+      return;
+    }
+    await instance
         .collection(FirebaseCollections.chats)
         .doc(chatRoomId)
         .set(
@@ -419,7 +454,12 @@ class FirebaseDataSource {
   // ==================== ANALYSIS OPERATIONS ====================
 
   Future<String> createAnalysis(Map<String, dynamic> analysisData) async {
-    final analysesRef = _firestoreService.instance.collection(FirebaseCollections.analyses);
+    final instance = _firestoreService.instance;
+    if (instance == null) {
+      debugPrint('Firebase skipped: Instance is null (Linux fallback)');
+      return 'mock_analysis_${DateTime.now().millisecondsSinceEpoch}';
+    }
+    final analysesRef = instance.collection(FirebaseCollections.analyses);
     final docRef = await analysesRef.add(analysisData);
     return docRef.id;
   }
@@ -430,6 +470,13 @@ class FirebaseDataSource {
       collection: FirebaseCollections.analyses,
       docId: analysisId,
       data: data,
+    );
+  }
+
+  Future<void> deleteAnalysis(String analysisId) async {
+    await _firestoreService.deleteDocument(
+      collection: FirebaseCollections.analyses,
+      docId: analysisId,
     );
   }
 
@@ -461,7 +508,12 @@ class FirebaseDataSource {
   // ==================== DOCTOR CODE OPERATIONS ====================
 
   Future<String> createDoctorCode(Map<String, dynamic> codeData) async {
-    final codesRef = _firestoreService.instance.collection(FirebaseCollections.doctorCodes);
+    final instance = _firestoreService.instance;
+    if (instance == null) {
+      debugPrint('Firebase skipped: Instance is null (Linux fallback)');
+      return 'mock_code_${DateTime.now().millisecondsSinceEpoch}';
+    }
+    final codesRef = instance.collection(FirebaseCollections.doctorCodes);
     final docRef = await codesRef.add(codeData);
     return docRef.id;
   }
@@ -487,7 +539,12 @@ class FirebaseDataSource {
   // ==================== CONNECTION REQUEST OPERATIONS ====================
 
   Future<String> createConnectionRequest(Map<String, dynamic> requestData) async {
-    final requestsRef = _firestoreService.instance.collection(FirebaseCollections.connectionRequests);
+    final instance = _firestoreService.instance;
+    if (instance == null) {
+      debugPrint('Firebase skipped: Instance is null (Linux fallback)');
+      return 'mock_request_${DateTime.now().millisecondsSinceEpoch}';
+    }
+    final requestsRef = instance.collection(FirebaseCollections.connectionRequests);
     final docRef = await requestsRef.add(requestData);
     return docRef.id;
   }

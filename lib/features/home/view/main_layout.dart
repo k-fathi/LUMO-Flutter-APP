@@ -119,7 +119,16 @@ class _MainLayoutState extends State<MainLayout> {
                 );
               },
             ),
-            selectedIcon: const Icon(IconlyBold.chat, color: AppColors.primary),
+            selectedIcon: Consumer<ChatViewModel>(
+              builder: (context, chatVM, _) {
+                final count = chatVM.totalUnreadCount;
+                return Badge.count(
+                  count: count,
+                  isLabelVisible: count > 0,
+                  child: const Icon(IconlyBold.chat, color: AppColors.primary),
+                );
+              },
+            ),
             label: l10n.chats,
           ),
           NavigationDestination(

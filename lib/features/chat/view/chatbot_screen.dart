@@ -446,6 +446,9 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   }
 
   Widget _buildActiveChat(AIViewModel viewModel) {
+    final currentUser = context.watch<AuthProvider>().currentUser;
+    final userAvatarUrl = currentUser?.avatarUrl ?? currentUser?.profileImage;
+
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -453,6 +456,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       itemBuilder: (context, index) {
         return AIMessageBubble(
           message: viewModel.messages[index],
+          userAvatarUrl: userAvatarUrl,
         );
       },
     );

@@ -2,17 +2,18 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../data/repositories/chat_repository.dart';
+import '../../../data/datasources/local_data_source.dart';
 import '../../../data/models/chat_room_model.dart';
 import '../../../data/models/message_model.dart';
 import '../../../core/enums/message_status.dart';
 import '../../../core/services/firebase_auth_service.dart';
-import '../../../core/utils/debug_logger.dart';
 
 class ChatViewModel extends ChangeNotifier {
   final ChatRepository _chatRepository;
   final FirebaseAuthService _firebaseAuthService;
+  final LocalDataSource _localDataSource;
 
-  ChatViewModel(this._chatRepository, this._firebaseAuthService);
+  ChatViewModel(this._chatRepository, this._firebaseAuthService, this._localDataSource);
 
   bool _isDisposed = false;
 
@@ -35,7 +36,9 @@ class ChatViewModel extends ChangeNotifier {
   int? _userId;
 
   int get totalUnreadCount {
-    final currentUserId = _userId?.toString();
+    // Fallback: if _userId wasn't set yet, try reading from local cache
+    final uid = _userId ?? int.tryParse(_localDataSource.getCurrentUserId() ?? '');
+    final currentUserId = uid?.toString();
     if (currentUserId == null) return 0;
     return _chatRooms.fold(0, (sum, room) => sum + room.getUnreadCount(currentUserId));
   }
@@ -49,6 +52,7 @@ class ChatViewModel extends ChangeNotifier {
   final List<ChatRoomModel> _chatRooms = [];
   final List<MessageModel> _messages = [];
   ChatRoomModel? _currentChatRoom;
+  String? _currentChatRoomId; // Tracks active room to guard stale stream events
   bool _isLoading = false;
   bool _isSending = false;
   String? _errorMessage;
@@ -68,22 +72,6 @@ class ChatViewModel extends ChangeNotifier {
     _safeNotifyListeners();
 
     try {
-      // #region agent log
-      DebugLogger.log(
-        runId: 'baseline',
-        hypothesisId: 'D',
-        location: 'chat_view_model.dart:authenticateFirebase',
-        message: 'Authenticate firebase start',
-        data: {'alreadyAuthed': isFirebaseAuthenticated},
-      );
-      // #endregion
-      // #region agent log
-      debugPrint('[ae3196][D] authenticateFirebase start alreadyAuthed=$isFirebaseAuthenticated');
-      // #endregion
-      // #region agent log
-      // ignore: avoid_print
-      print('[ae3196][D] authenticateFirebase start alreadyAuthed=$isFirebaseAuthenticated');
-      // #endregion
       final token = await _chatRepository.getFirebaseToken();
       await _firebaseAuthService.signInWithCustomToken(token);
       _isLoading = false;
@@ -99,39 +87,7 @@ class ChatViewModel extends ChangeNotifier {
 
   Future<String> startChat(int receiverId) async {
     try {
-      // #region agent log
-      DebugLogger.log(
-        runId: 'baseline',
-        hypothesisId: 'A',
-        location: 'chat_view_model.dart:startChat',
-        message: 'startChat called',
-        data: {'receiverId': receiverId},
-      );
-      // #endregion
-      // #region agent log
-      debugPrint('[ae3196][A] startChat receiverId=$receiverId');
-      // #endregion
-      // #region agent log
-      // ignore: avoid_print
-      print('[ae3196][A] startChat receiverId=$receiverId');
-      // #endregion
       final roomId = await _chatRepository.startChat(receiverId);
-      // #region agent log
-      DebugLogger.log(
-        runId: 'baseline',
-        hypothesisId: 'A',
-        location: 'chat_view_model.dart:startChat',
-        message: 'startChat returned roomId',
-        data: {'chatRoomId': roomId},
-      );
-      // #endregion
-      // #region agent log
-      debugPrint('[ae3196][A] startChat roomId=$roomId');
-      // #endregion
-      // #region agent log
-      // ignore: avoid_print
-      print('[ae3196][A] startChat roomId=$roomId');
-      // #endregion
       return roomId;
     } catch (e) {
       _errorMessage = 'فشل بدء المحادثة: $e';
@@ -160,26 +116,6 @@ class ChatViewModel extends ChangeNotifier {
 
     try {
       final rooms = await _chatRepository.getMyChats();
-      // #region agent log
-      DebugLogger.log(
-        runId: 'baseline',
-        hypothesisId: 'B',
-        location: 'chat_view_model.dart:loadChatRooms',
-        message: 'Loaded rooms from REST',
-        data: {
-          'userId': _userId,
-          'roomsCount': rooms.length,
-          'firstRoomId': rooms.isNotEmpty ? rooms.first.id : null,
-        },
-      );
-      // #endregion
-      // #region agent log
-      debugPrint('[ae3196][B] loadChatRooms userId=$_userId rooms=${rooms.length}');
-      // #endregion
-      // #region agent log
-      // ignore: avoid_print
-      print('[ae3196][B] loadChatRooms userId=$_userId rooms=${rooms.length}');
-      // #endregion
       // Patch rooms that have null lastMessage if we have cached messages
       final patchedRooms = rooms.map((room) {
         if (room.lastMessage == null || room.lastMessage!.isEmpty) {
@@ -258,6 +194,7 @@ class ChatViewModel extends ChangeNotifier {
   Future<void> loadMessages(String chatRoomId) async {
     _isLoading = true;
     _errorMessage = null;
+    _currentChatRoomId = chatRoomId;
 
     if (_messages.isNotEmpty && _messages.first.chatRoomId != chatRoomId) {
       _messages.clear();
@@ -269,22 +206,6 @@ class ChatViewModel extends ChangeNotifier {
     _safeNotifyListeners();
 
     try {
-      // #region agent log
-      DebugLogger.log(
-        runId: 'baseline',
-        hypothesisId: 'A',
-        location: 'chat_view_model.dart:loadMessages',
-        message: 'loadMessages start',
-        data: {'chatRoomId': chatRoomId, 'userId': _userId},
-      );
-      // #endregion
-      // #region agent log
-      debugPrint('[ae3196][A] loadMessages start chatRoomId=$chatRoomId userId=$_userId');
-      // #endregion
-      // #region agent log
-      // ignore: avoid_print
-      print('[ae3196][A] loadMessages start chatRoomId=$chatRoomId userId=$_userId');
-      // #endregion
       await _roomSubscription?.cancel();
       _roomSubscription = _chatRepository.streamChatRoom(chatRoomId).listen(
         (room) {
@@ -304,9 +225,14 @@ class ChatViewModel extends ChangeNotifier {
       await _messagesSubscription?.cancel();
       _messagesSubscription = _chatRepository.streamMessages(chatRoomId).listen(
         (messagesList) {
+          // Guard: ignore stream updates for a room we've already navigated away from
+          if (_currentChatRoomId != chatRoomId) return;
+
           // Prevent Firebase from wiping out cached messages when Firebase fails on desktop/Linux
           if (messagesList.isEmpty && _messages.isNotEmpty) {
              debugPrint('Firebase returned empty messages for $chatRoomId, ignoring to preserve local cache.');
+             _isLoading = false;
+             _safeNotifyListeners();
              return;
           }
 
@@ -315,35 +241,6 @@ class ChatViewModel extends ChangeNotifier {
           // Ascending: oldest -> newest (UI shows newest at bottom)
           _messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
           _isLoading = false;
-          // #region agent log
-          DebugLogger.log(
-            runId: 'baseline',
-            hypothesisId: 'E',
-            location: 'chat_view_model.dart:loadMessages',
-            message: 'Messages stream update',
-            data: {
-              'chatRoomId': chatRoomId,
-              'count': _messages.length,
-              'firstTs': _messages.isNotEmpty
-                  ? _messages.first.timestamp.toIso8601String()
-                  : null,
-              'lastTs': _messages.isNotEmpty
-                  ? _messages.last.timestamp.toIso8601String()
-                  : null,
-            },
-          );
-          // #endregion
-          // #region agent log
-          debugPrint('[ae3196][E] messages update chatRoomId=$chatRoomId count=${_messages.length}'
-              ' firstTs=${_messages.isNotEmpty ? _messages.first.timestamp.toIso8601String() : 'null'}'
-              ' lastTs=${_messages.isNotEmpty ? _messages.last.timestamp.toIso8601String() : 'null'}');
-          // #endregion
-          // #region agent log
-          // ignore: avoid_print
-          print('[ae3196][E] messages update chatRoomId=$chatRoomId count=${_messages.length}'
-              ' firstTs=${_messages.isNotEmpty ? _messages.first.timestamp.toIso8601String() : 'null'}'
-              ' lastTs=${_messages.isNotEmpty ? _messages.last.timestamp.toIso8601String() : 'null'}');
-          // #endregion
           _safeNotifyListeners();
 
           // Mark incoming messages from OTHER user as read (per-message receipts)
@@ -369,22 +266,7 @@ class ChatViewModel extends ChangeNotifier {
           debugPrint('Failed to mark chat as read: $e');
         });
       } else {
-        // #region agent log
-        DebugLogger.log(
-          runId: 'baseline',
-          hypothesisId: 'D',
-          location: 'chat_view_model.dart:loadMessages',
-          message: 'Skipped markChatAsRead because userId is null',
-          data: {'chatRoomId': chatRoomId},
-        );
-        // #endregion
-        // #region agent log
-        debugPrint('[ae3196][D] markChatAsRead skipped (userId null) chatRoomId=$chatRoomId');
-        // #endregion
-        // #region agent log
-        // ignore: avoid_print
-        print('[ae3196][D] markChatAsRead skipped (userId null) chatRoomId=$chatRoomId');
-        // #endregion
+        debugPrint('markChatAsRead skipped: userId is null for chatRoomId=$chatRoomId');
       }
     } catch (e) {
       _errorMessage = e.toString();
@@ -465,27 +347,6 @@ class ChatViewModel extends ChangeNotifier {
     _safeNotifyListeners();
 
     try {
-      // #region agent log
-      DebugLogger.log(
-        runId: 'baseline',
-        hypothesisId: 'C',
-        location: 'chat_view_model.dart:sendMessage',
-        message: 'sendMessage called',
-        data: {
-          'chatRoomId': chatRoomId,
-          'senderId': senderId,
-          'receiverId': receiverId,
-          'contentLen': content.length,
-        },
-      );
-      // #endregion
-      // #region agent log
-      debugPrint('[ae3196][C] sendMessage chatRoomId=$chatRoomId sender=$senderId receiver=$receiverId contentLen=${content.length}');
-      // #endregion
-      // #region agent log
-      // ignore: avoid_print
-      print('[ae3196][C] sendMessage chatRoomId=$chatRoomId sender=$senderId receiver=$receiverId contentLen=${content.length}');
-      // #endregion
       final message = await _chatRepository.sendMessage(
         chatRoomId: chatRoomId,
         senderId: senderId,
@@ -530,6 +391,18 @@ class ChatViewModel extends ChangeNotifier {
   void clearError() {
     _errorMessage = null;
     _safeNotifyListeners();
+  }
+
+  /// Cleanly leave the current chat room: cancel stream subscriptions
+  /// WITHOUT clearing the message cache. Call from ChatRoomScreen.dispose().
+  /// Also triggers a chat-list refresh so the last message preview is accurate.
+  void leaveRoom() {
+    _currentChatRoomId = null;
+    _messagesSubscription?.cancel();
+    _messagesSubscription = null;
+    _roomSubscription?.cancel();
+    _roomSubscription = null;
+    _currentChatRoom = null;
   }
 
   /// Call when the user types in the chat input. Debounces typing status:

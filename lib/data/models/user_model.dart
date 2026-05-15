@@ -44,19 +44,18 @@ class UserModel {
           ? json['id']
           : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
       email: json['email']?.toString() ?? '',
-      name: json['name']?.toString() ?? '',
+      name: (json['data']?['name'] ?? json['name'])?.toString() ?? '',
       role: UserRole.fromString(json['role']?.toString() ?? 'patient'),
       phone: json['phone']?.toString(),
       doctorNumber: json['doctor_number'] is int
           ? json['doctor_number']
           : int.tryParse(json['doctor_number']?.toString() ?? ''),
       clinicLocation: json['clinic_location']?.toString(),
-      profileImage: json['profile_image']?.toString(),
+      profileImage: (json['data']?['profile_image'] ?? json['profile_image'])?.toString(),
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
           : null,
-      avatarUrl:
-          json['avatar_url']?.toString() ?? json['profile_image']?.toString(),
+      avatarUrl: (json['data']?['profile_image'] ?? json['avatar_url'] ?? json['profile_image'])?.toString(),
       bio: json['bio']?.toString(),
       updatedAt: json['updated_at'] != null
           ? DateTime.tryParse(json['updated_at'].toString())

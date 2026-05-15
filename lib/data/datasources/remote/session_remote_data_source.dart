@@ -8,6 +8,7 @@ abstract class SessionRemoteDataSource {
     required int patientId,
     required String? notes,
     required List<Map<String, dynamic>> segments,
+    DateTime? scheduledDate,
   });
 
   /// GET /sessions/{id} — Show session details (with emotion/gaze analysis)
@@ -54,12 +55,13 @@ class SessionRemoteDataSourceImpl implements SessionRemoteDataSource {
     required int patientId,
     required String? notes,
     required List<Map<String, dynamic>> segments,
+    DateTime? scheduledDate,
   }) async {
     final response = await _dioClient.post(
       ApiConstants.createSession,
       data: {
         'patient_id': patientId,
-        'started_at': DateTime.now().toIso8601String().replaceFirst('T', ' ').split('.').first,
+        'started_at': (scheduledDate ?? DateTime.now()).toIso8601String().replaceFirst('T', ' ').split('.').first,
         if (notes != null) 'notes': notes,
         'segments': segments,
       },

@@ -75,7 +75,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       notificationProvider.sendCommentNotification(
         postId: widget.postId,
         postOwnerId: replyTo?.userId ?? postOwnerId,
-        commenterName: auth.currentUser?.name ?? 'مستخدم',
+        commenterName: auth.currentUser?.name ?? '',
       );
 
       // 2. Clear state

@@ -36,14 +36,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   late ChatViewModel _viewModel;
-  int? _currentUserId; // Saved in initState to avoid unsafe context.read in dispose()
 
   @override
   void initState() {
     super.initState();
     _viewModel = context.read<ChatViewModel>();
-    // Save early — context is safe here and unsafe in dispose()
-    _currentUserId = context.read<AuthProvider>().currentUser?.id;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _initChat();
@@ -63,10 +60,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
   @override
   void dispose() {
-    // Use the saved userId — context is deactivated here so context.read is unsafe
-    if (_currentUserId != null) {
-      _viewModel.stopTyping(widget.chatRoomId, _currentUserId!);
-    }
+    // leaveRoom() cancels subscriptions WITHOUT clearing the message cache.
+    // Chat list refresh is handled by Navigator.push(...).then() at the call site.
+    _viewModel.leaveRoom();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();

@@ -56,12 +56,23 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     final List<dynamic> items = [];
     final currentUserIdStr = currentUser.id.toString();
 
+    // Helper: sort rooms newest-first by lastMessageTimestamp
+    List<ChatRoomModel> sortedNewest(List<ChatRoomModel> list) {
+      final sorted = List<ChatRoomModel>.from(list);
+      sorted.sort((a, b) {
+        final aTime = a.lastMessageTimestamp ?? a.updatedAt;
+        final bTime = b.lastMessageTimestamp ?? b.updatedAt;
+        return bTime.compareTo(aTime);
+      });
+      return sorted;
+    }
+
     if (currentUser.role == UserRole.doctor) {
       final activePatientIds =
           rooms.map((r) => r.getOtherParticipantId(currentUserIdStr)).toList();
 
-      items.addAll(rooms);
-      items.add('AI_BOT');
+      items.add('AI_BOT'); // pinned at top
+      items.addAll(sortedNewest(rooms));
 
       for (final patient in patients) {
         if (!activePatientIds.contains(patient.id.toString())) {
@@ -84,9 +95,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         }
       }
 
-      items.addAll(doctorRooms);
-      items.insert(items.isNotEmpty ? 1 : 0, 'AI_BOT');
-      items.addAll(otherRooms);
+      items.add('AI_BOT'); // always pinned first
+      items.addAll(sortedNewest(doctorRooms));
+      items.addAll(sortedNewest(otherRooms));
     }
 
     return items;
@@ -152,34 +163,41 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             return _buildEmptyState(l10n, theme);
           }
 
-          return ListView.separated(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: items.length,
-            separatorBuilder: (_, __) => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 72),
-              child: Divider(
-                height: 1,
-                thickness: 1,
-                color: theme.dividerColor,
-              ),
-            ),
-            itemBuilder: (context, index) {
-              final item = items[index];
-
-              if (item is String && item == 'AI_BOT') {
-                return _buildAiChatTile(context, theme, l10n);
-              }
-
-              if (item is ChatRoomModel) {
-                return _buildChatRoomTile(context, item, currentUser, theme);
-              }
-
-              if (item is UserModel) {
-                return _buildUserContactTile(context, item, currentUser, theme);
-              }
-
-              return const SizedBox.shrink();
+          return RefreshIndicator(
+            onRefresh: () async {
+              final userId = authProvider.currentUser?.id;
+              await context.read<ChatViewModel>().loadChatRooms(userId);
             },
+            child: ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: items.length,
+              separatorBuilder: (_, __) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 72),
+                child: Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: theme.dividerColor,
+                ),
+              ),
+              itemBuilder: (context, index) {
+                final item = items[index];
+
+                if (item is String && item == 'AI_BOT') {
+                  return _buildAiChatTile(context, theme, l10n);
+                }
+
+                if (item is ChatRoomModel) {
+                  return _buildChatRoomTile(context, item, currentUser, theme);
+                }
+
+                if (item is UserModel) {
+                  return _buildUserContactTile(context, item, currentUser, theme);
+                }
+
+                return const SizedBox.shrink();
+              },
+            ),
           );
         },
       ),
@@ -332,6 +350,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       ),
       onTap: () {
         final chatViewModel = context.read<ChatViewModel>();
+        final userId = context.read<AuthProvider>().currentUser?.id;
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -345,7 +364,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
               ),
             ),
           ),
-        );
+        ).then((_) {
+          if (userId != null) {
+            chatViewModel.loadChatRooms(userId);
+          }
+        });
       },
     );
   }
@@ -391,6 +414,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           final chatRoomId = await chatViewModel.startChat(user.id);
 
           if (context.mounted) {
+            final userId = context.read<AuthProvider>().currentUser?.id;
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -405,7 +429,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                   ),
                 ),
               ),
-            );
+            ).then((_) {
+              if (userId != null) {
+                chatViewModel.loadChatRooms(userId);
+              }
+            });
           }
         } catch (e) {
           debugPrint('❌❌❌ FAIL CHAT START: $e');
@@ -452,6 +480,22 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     final currentUser = authProvider.currentUser;
     if (currentUser == null) return;
 
+    // Trigger data loading before showing the sheet so filters are populated
+    if (currentUser.role == UserRole.doctor) {
+      parentContext.read<PatientProvider>().fetchPatients();
+    } else if (currentUser is ParentModel) {
+      final parent = currentUser;
+      if (parent.connectedDoctorIds.isNotEmpty) {
+        parentContext.read<PatientProvider>().fetchDoctors(parent.connectedDoctorIds);
+      }
+    }
+    // Ensure following list is loaded for the "أتابعهم" filter
+    parentContext.read<CommunityViewModel>().loadFollowingIfNeeded();
+
+    // Variables declared OUTSIDE builder so they persist across setModalState rebuilds
+    String searchQuery = "";
+    int activeTab = 0; // 0: All, 1: Connected, 2: Following, 3: Recent
+
     showModalBottomSheet(
       context: parentContext,
       isScrollControlled: true,
@@ -462,8 +506,6 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         maxChildSize: 0.95,
         builder: (context, scrollController) => StatefulBuilder(
           builder: (context, setModalState) {
-            String searchQuery = "";
-            int activeTab = 0; // 0: All, 1: Connected, 2: Following, 3: Recent
 
             return Container(
               decoration: BoxDecoration(
@@ -654,7 +696,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                       .copyWith(fontWeight: FontWeight.w600)),
                               subtitle: Text(user.role == UserRole.doctor
                                   ? "طبيب"
-                                  : "مستخدم"),
+                                  : ""),
                               onTap: () async {
                                 Navigator.pop(context); // أقفل الـ bottom sheet
 
@@ -666,6 +708,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                       await chatViewModel.startChat(user.id);
 
                                   if (parentContext.mounted) {
+                                    final userId = parentContext.read<AuthProvider>().currentUser?.id;
                                     Navigator.push(
                                       parentContext,
                                       MaterialPageRoute(
@@ -681,7 +724,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                           ),
                                         ),
                                       ),
-                                    );
+                                    ).then((_) {
+                                      if (userId != null) {
+                                        chatViewModel.loadChatRooms(userId);
+                                      }
+                                    });
                                   }
                                 } catch (e) {
                                   debugPrint('FAIL CHAT START: $e');

@@ -160,6 +160,13 @@ class CommunityViewModel extends ChangeNotifier {
     }
   }
 
+  /// Fetches the following list only if it hasn't been loaded yet.
+  /// Safe to call from any screen without triggering redundant API calls.
+  Future<void> loadFollowingIfNeeded() async {
+    if (_followingUsers.isNotEmpty) return;
+    await _loadFollowingIdsInternal();
+  }
+
   Future<void> _loadHomeFeedInternal({int page = 1}) async {
     final feed = await _repository.getHomeFeed(page: page);
     if (page == 1) {

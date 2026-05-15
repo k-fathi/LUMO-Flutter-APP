@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/network/api_constants.dart';
 import '../../models/message_model.dart';
-import '../../../core/utils/debug_logger.dart';
 
 abstract class ChatRemoteDataSource {
   Future<List<MessageModel>> getChatHistory();
@@ -82,28 +81,7 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
       throw Exception('لم يرجع الباك إند ID المحادثة. محتوى الرد: $data');
     }
 
-    debugPrint('✅ startChat roomId: $roomId');
-    // #region agent log
-    DebugLogger.log(
-      runId: 'baseline',
-      hypothesisId: 'A',
-      location: 'chat_remote_data_source.dart:startChat',
-      message: 'startChat parsed roomId',
-      data: {
-        'receiverId': receiverId,
-        'hasChatKey': data.containsKey('chat'),
-        'hasChatRoomIdKey': data.containsKey('chat_room_id'),
-        'roomId': roomId,
-      },
-    );
-    // #endregion
-    // #region agent log
-    debugPrint('[ae3196][A] REST startChat parsed roomId=$roomId hasChatKey=${data.containsKey('chat')} hasChatRoomIdKey=${data.containsKey('chat_room_id')}');
-    // #endregion
-    // #region agent log
-    // ignore: avoid_print
-    print('[ae3196][A] REST startChat parsed roomId=$roomId hasChatKey=${data.containsKey('chat')} hasChatRoomIdKey=${data.containsKey('chat_room_id')}');
-    // #endregion
+    debugPrint('startChat roomId: $roomId');
     return roomId;
   }
 

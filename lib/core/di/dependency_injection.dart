@@ -183,7 +183,7 @@ class DependencyInjection {
     getIt.registerLazySingleton<AIRepository>(
       () => AIRepository(
         getIt<LocalDataSource>(),
-        getIt<LumoApiService>(),
+        getIt<DioClient>(),
       ),
     );
 
@@ -250,6 +250,7 @@ class DependencyInjection {
       () => ChatViewModel(
         getIt<ChatRepository>(),
         getIt<FirebaseAuthService>(),
+        getIt<LocalDataSource>(),
       ),
     );
 

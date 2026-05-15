@@ -80,9 +80,15 @@ class _ChatInputBarState extends State<ChatInputBar> {
               constraints: const BoxConstraints(),
               icon: const Icon(Icons.add_circle_outline_rounded),
               color: AppColors.mutedForeground,
-              onPressed: () {}, // TODO: Implement attachment
-            ),
-            
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('ميزة إرفاق الملفات ستتوفر قريباً'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+            ), // Feature coming soon
             // Text Field - Refined for better prominence
             Expanded(
               child: Container(
@@ -123,9 +129,15 @@ class _ChatInputBarState extends State<ChatInputBar> {
                 constraints: const BoxConstraints(),
                 icon: const Icon(Icons.mic_none_rounded),
                 color: AppColors.mutedForeground,
-                onPressed: () {}, // TODO: Implement voice recording
-              ),
-              
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('ميزة التسجيل الصوتي ستتوفر قريباً'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ), // Feature coming soon
             const SizedBox(width: 4),
 
             // Send Button - Gradient Circle

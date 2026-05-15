@@ -310,5 +310,5 @@ class FirebaseFirestoreService {
   FieldValue get serverTimestamp => FieldValue.serverTimestamp();
 
   // Get Firestore instance (for advanced queries)
-  FirebaseFirestore get instance => _firestore!;
+  FirebaseFirestore? get instance => _firestore;
 }

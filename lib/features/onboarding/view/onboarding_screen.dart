@@ -55,7 +55,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       if (!mounted) return;
 
-      Navigator.pushReplacementNamed(context, RouteNames.roleSelection);
+      Navigator.pushReplacementNamed(context, RouteNames.login);
     } catch (e) {
       if (!mounted) return;
 

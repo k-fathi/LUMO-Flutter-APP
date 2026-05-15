@@ -205,6 +205,7 @@ class SessionViewModel extends ChangeNotifier {
     required int patientId,
     required List<SessionPart> parts,
     String? notes,
+    DateTime? scheduledDate,
   }) async {
     if (parts.isEmpty) {
       _errorMessage = 'الرجاء إضافة جزء واحد على الأقل للجلسة';
@@ -226,6 +227,7 @@ class SessionViewModel extends ChangeNotifier {
         patientId: patientId,
         notes: notes,
         segments: segments,
+        scheduledDate: scheduledDate,
       );
 
       _patientSessions = [session, ..._patientSessions];

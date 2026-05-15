@@ -1,16 +1,17 @@
+import '../../core/network/dio_client.dart';
+import '../../core/network/api_constants.dart';
 import '../datasources/local_data_source.dart';
 import '../models/ai_message_model.dart';
-import '../../core/services/lumo_api_service.dart';
 
 /// Handles the AI chat flow.
 ///
-/// Sends questions to Asmaa's medical chatbot (:8000/ask) via [LumoApiService]
+/// Sends questions to the AI chatbot via Laravel proxy (/ai/consult)
 /// and persists the conversation locally for offline history access.
 class AIRepository {
   final LocalDataSource _localDataSource;
-  final LumoApiService _apiService;
+  final DioClient _dioClient;
 
-  AIRepository(this._localDataSource, this._apiService);
+  AIRepository(this._localDataSource, this._dioClient);
 
   // ==================== AI CHAT ====================
 
@@ -26,7 +27,35 @@ class AIRepository {
     );
 
     // ── Real API call ────────────────────────────────────────────────────────
-    final aiResponse = await _apiService.askChatbot(content);
+    String aiResponse = "عذراً، حدث خطأ في معالجة طلبك.";
+    try {
+      final response = await _dioClient.post(
+        ApiConstants.aiConsult,
+        data: {
+          'message': content,
+        },
+      );
+      
+      // Extract the response message depending on the backend format
+      final responseData = response.data;
+      if (responseData is Map<String, dynamic>) {
+        if (responseData.containsKey('data') && responseData['data'] is Map && responseData['data'].containsKey('message')) {
+            aiResponse = responseData['data']['message'];
+        } else if (responseData.containsKey('message')) {
+            aiResponse = responseData['message'];
+        } else if (responseData.containsKey('answer')) {
+            aiResponse = responseData['answer'];
+        } else if (responseData.containsKey('response')) {
+            aiResponse = responseData['response'];
+        } else {
+            aiResponse = responseData.toString();
+        }
+      } else {
+        aiResponse = responseData.toString();
+      }
+    } catch (e) {
+      aiResponse = "عذراً، لم نتمكن من الوصول إلى المساعد الذكي حالياً.";
+    }
     // ─────────────────────────────────────────────────────────────────────────
 
     final aiMessage = AIMessageModel(

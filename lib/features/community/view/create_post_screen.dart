@@ -52,7 +52,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     final success = await viewModel.createPost(
       content: content,
       imagePath: _selectedImage?.path,
-      currentUserName: user?.name,
+      currentUserName: user?.name ?? '',
       currentUserAvatar: user?.avatarUrl,
       currentUserId: user?.id,
     );
@@ -116,7 +116,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  user?.name ?? 'المستخدم',
+                  user?.name ?? '',
                   style:
                       AppTextStyles.label.copyWith(fontWeight: FontWeight.bold),
                 ),
