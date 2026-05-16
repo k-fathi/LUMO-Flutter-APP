@@ -96,6 +96,10 @@ class AuthRepository {
     }
   }
 
+  Future<void> updateFcmToken(String token) async {
+    await _remoteDataSource.updateFcmToken(token);
+  }
+
   // ─────────────────────────────────────────────
   //  Token Helpers
   // ─────────────────────────────────────────────

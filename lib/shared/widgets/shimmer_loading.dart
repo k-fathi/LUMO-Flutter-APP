@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
+
 
 class ShimmerLoading extends StatefulWidget {
   final double width;
@@ -56,9 +56,9 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
               colors: [
-                AppColors.muted,
-                AppColors.muted.withValues(alpha: 0.5),
-                AppColors.muted,
+                Theme.of(context).colorScheme.surfaceContainerHighest,
+                Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                Theme.of(context).colorScheme.surfaceContainerHighest,
               ],
               stops: [
                 _animation.value - 0.3,

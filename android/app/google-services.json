@@ -1,34 +1,41 @@
 {
   "project_info": {
-    "project_number": "230335947923",
-    "project_id": "devops-roadmap-x3",
-    "storage_bucket": "devops-roadmap-x3.firebasestorage.app"
+    "project_number": "783937682466",
+    "project_id": "lumo-flutter-app",
+    "storage_bucket": "lumo-flutter-app.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:230335947923:android:efad94b6139d5f48519966",
+        "mobilesdk_app_id": "1:783937682466:android:4fceee502e78ca916a5e7b",
         "android_client_info": {
           "package_name": "com.example.kareem_final"
         }
       },
       "oauth_client": [
         {
-          "client_id": "230335947923-soakqkortlq82g49g92grqon14lnf9qj.apps.googleusercontent.com",
+          "client_id": "783937682466-2cpu0e9akj2t4pqgjos6aod0us31ucik.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyBLEcPQOgPLsL7lzKSLwabet0FwCNyo00k"
+          "current_key": "AIzaSyC_FxWDNbaK6NLe-WYRAu7c7GKyGD4cO20"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "230335947923-soakqkortlq82g49g92grqon14lnf9qj.apps.googleusercontent.com",
+              "client_id": "783937682466-2cpu0e9akj2t4pqgjos6aod0us31ucik.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "783937682466-c5doq74m7528m7mr3q2vdcka9ca6f8q8.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.kareemFinal"
+              }
             }
           ]
         }

@@ -13,6 +13,8 @@ import '../../../data/models/user_model.dart';
 import '../../../shared/providers/notification_provider.dart';
 import '../view_model/profile_view_model.dart';
 import '../../chat/view_model/chat_view_model.dart';
+import '../../../core/services/connectivity_service.dart';
+import '../../../shared/widgets/no_internet_widget.dart';
 
 class ProfileScreen extends StatefulWidget {
   final UserModel? user;
@@ -99,7 +101,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     final followingShow = isMyProfile
         ? baseFollowing
-        : (baseFollowing + _followersDelta).clamp(0, 1 << 30);
+        : baseFollowing;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -107,6 +109,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         builder: (context) {
           if (profileViewModel.isLoading) {
             return const Center(child: CircularProgressIndicator());
+          }
+
+          final isConnected = context.watch<ConnectivityService>().isConnected;
+          if (!isConnected && user == null) {
+            return NoInternetWidget(
+              onRetry: () {
+                if (targetUserId != null) {
+                  context.read<ProfileViewModel>().loadProfile(targetUserId);
+                }
+              },
+            );
           }
 
           if (user == null && !isMyProfile) {
@@ -362,7 +375,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         const Spacer(),
                         Text(
                           '${displayPosts.length} منشور',
-                          style: AppTextStyles.caption,
+                          style: AppTextStyles.caption.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
                         ),
                       ],
                     ),
@@ -437,8 +452,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         title: Text(title,
             style: AppTextStyles.label.copyWith(fontWeight: FontWeight.bold)),
-        subtitle: Text(subtitle, style: AppTextStyles.caption),
-        trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+        subtitle: Text(subtitle, style: AppTextStyles.caption.copyWith(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+        )),
+        trailing: Icon(Icons.chevron_right_rounded, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
       ),
     );
   }
@@ -558,9 +575,9 @@ class _ProfileHeader extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildStatItem(l10n.followers, followers),
+              _buildStatItem(theme, l10n.following, following),
               Container(width: 1, height: 30, color: theme.dividerColor),
-              _buildStatItem(l10n.following, following),
+              _buildStatItem(theme, l10n.followers, followers),
             ],
           ),
           const SizedBox(height: 24),
@@ -616,7 +633,7 @@ class _ProfileHeader extends StatelessWidget {
     );
   }
 
-  Widget _buildStatItem(String label, int count) {
+  Widget _buildStatItem(ThemeData theme, String label, int count) {
     return Column(
       children: [
         Text(
@@ -625,7 +642,9 @@ class _ProfileHeader extends StatelessWidget {
         ),
         Text(
           label,
-          style: AppTextStyles.caption,
+          style: AppTextStyles.caption.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
         ),
       ],
     );

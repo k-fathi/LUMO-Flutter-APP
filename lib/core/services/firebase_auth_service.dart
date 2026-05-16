@@ -67,8 +67,11 @@ class FirebaseAuthService {
           code: 'app-not-initialized', message: 'Firebase not initialized');
     }
     try {
-      return await _auth!.signInWithCustomToken(token);
+      final credential = await _auth!.signInWithCustomToken(token);
+      debugPrint('✅ signInWithCustomToken succeeded. UID: ${credential.user?.uid}');
+      return credential;
     } on FirebaseAuthException catch (e) {
+      debugPrint('❌ signInWithCustomToken failed. Error: ${e.code} - ${e.message}');
       throw _handleAuthException(e);
     }
   }

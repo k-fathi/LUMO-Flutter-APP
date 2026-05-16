@@ -65,7 +65,7 @@ class _SessionDetailPlaceholderScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           widget.displayIndex != null ? 'جلسة #${widget.displayIndex}' : _sessionData.title,
@@ -145,7 +145,7 @@ class _SessionDetailPlaceholderScreenState
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
         boxShadow: [
@@ -254,7 +254,7 @@ class _SessionDetailPlaceholderScreenState
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: const Color(0xFFF0FDF4),
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.2)),
             ),
@@ -284,7 +284,7 @@ class _SessionDetailPlaceholderScreenState
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
         boxShadow: [
@@ -338,7 +338,7 @@ class _SessionDetailPlaceholderScreenState
               style: SegmentedButton.styleFrom(
                 selectedForegroundColor: Colors.white,
                 selectedBackgroundColor: AppColors.primary,
-                backgroundColor: const Color(0xFFF8FAFC),
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8)),
               ),
@@ -441,8 +441,8 @@ class _SessionDetailPlaceholderScreenState
                       badgeWidget: isTop
                           ? Container(
                               padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surface,
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
@@ -698,7 +698,7 @@ class _SessionDetailPlaceholderScreenState
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.grey.shade200),
       ),
@@ -731,16 +731,16 @@ class _SessionDetailPlaceholderScreenState
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 content,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Cairo',
                   fontSize: 13,
                   height: 1.7,
-                  color: Color(0xFF475569),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ),

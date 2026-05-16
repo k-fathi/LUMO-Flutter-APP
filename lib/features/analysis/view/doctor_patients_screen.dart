@@ -65,7 +65,7 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
         onPressed: () => _showSearchPatientDialog(context),
         child: const Icon(Icons.person_add_rounded, color: Colors.white),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: RefreshIndicator(
         onRefresh: () async {
           await patientProvider.fetchPatients();
@@ -317,40 +317,26 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
             fontWeight: FontWeight.w600,
           ),
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(
-                  patient is ParentModel ? Icons.person_outline : Icons.email_outlined,
-                  size: 14, color: theme.textTheme.bodySmall?.color,
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    displaySubtitle,
-                    style: AppTextStyles.caption.copyWith(
-                      color: theme.textTheme.bodySmall?.color,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Row(
+            children: [
+              Icon(
+                patient is ParentModel ? Icons.person_outline : Icons.email_outlined,
+                size: 14, color: theme.textTheme.bodySmall?.color,
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  displaySubtitle,
+                  style: AppTextStyles.caption.copyWith(
+                    color: theme.textTheme.bodySmall?.color,
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Icon(Icons.analytics_outlined, size: 12, color: Colors.grey.shade500),
-                const SizedBox(width: 4),
-                Text(
-                  'بيانات التحسن غير متوفرة',
-                  style: AppTextStyles.caption.copyWith(color: Colors.grey.shade500, fontSize: 11),
-                ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
         trailing: IconButton(
           onPressed: () {
@@ -656,7 +642,7 @@ class _SearchResultTile extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isConnected ? Colors.grey : AppColors.primary,
+                  color: isConnected ? theme.colorScheme.onSurface.withValues(alpha: 0.3) : AppColors.primary,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(

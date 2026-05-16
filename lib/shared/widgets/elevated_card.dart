@@ -39,7 +39,7 @@ class ElevatedCard extends StatelessWidget {
         border: Border.all(
           color: isDark
               ? Colors.white.withValues(alpha: 0.08)
-              : const Color(0xFFE3F2FD),
+              : theme.dividerColor,
           width: 1,
         ),
         // React: shadow-sm for post cards

@@ -2,13 +2,14 @@ import 'package:flutter/foundation.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/network/api_constants.dart';
 import '../../models/message_model.dart';
+import '../../models/chat_room_model.dart';
 
 abstract class ChatRemoteDataSource {
   Future<List<MessageModel>> getChatHistory();
   Future<String> askAiConsultation(String question);
   Future<String> getFirebaseToken();
   Future<List<dynamic>> getMyChats();
-  Future<String> startChat(int receiverId); // ✅ غيّر من void لـ String
+  Future<ChatRoomModel> startChat(int receiverId);
   Future<void> updateLastMessage({
     required int senderId,
     required int receiverId,
@@ -40,7 +41,10 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
   @override
   Future<String> getFirebaseToken() async {
     final response = await _dioClient.get(ApiConstants.firebaseToken);
-    return response.data['token'];
+    debugPrint('🔍 getFirebaseToken raw response: ${response.data}');
+    final token = response.data['firebase_token'] as String; // ✅ غيرت 'token' لـ 'firebase_token'
+    debugPrint('🔑 Extracted token: $token');
+    return token;
   }
 
   @override
@@ -58,31 +62,22 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
   }
 
   @override
-  Future<String> startChat(int receiverId) async {
+  Future<ChatRoomModel> startChat(int receiverId) async {
+    debugPrint('🚀 startChat called with receiverId: $receiverId');
     final response = await _dioClient.post(
       ApiConstants.startChat,
       data: {'receiver_id': receiverId},
     );
 
-    final raw = response.data;
-    final Map<String, dynamic> data =
-        raw is Map<String, dynamic> ? raw : <String, dynamic>{};
+    debugPrint('🔍 startChat raw response: ${response.data}');
 
-    String? roomId;
+    // API returns { "message": "...", "chat": { "id": 1, "user_one": 2, "user_two": 1, ... } }
+    final chatJson = Map<String, dynamic>.from(response.data['chat']);
 
-    if (data.containsKey('chat') && data['chat'] is Map) {
-      roomId = data['chat']['id']?.toString();
-    } else if (data.containsKey('chat_room_id')) {
-      roomId = data['chat_room_id']?.toString();
-    }
+    debugPrint('🔍 chatJson extracted: $chatJson');
+    debugPrint('✅ chatRoomId from API: ${chatJson['id']}');
 
-    if (roomId == null || roomId == 'null') {
-      debugPrint('❌ startChat no room id inside: $data');
-      throw Exception('لم يرجع الباك إند ID المحادثة. محتوى الرد: $data');
-    }
-
-    debugPrint('startChat roomId: $roomId');
-    return roomId;
+    return ChatRoomModel.fromJson(chatJson);
   }
 
   @override

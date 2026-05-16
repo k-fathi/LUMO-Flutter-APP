@@ -228,7 +228,7 @@ class _DoctorPatientDetailState extends State<DoctorPatientDetail> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
@@ -265,34 +265,140 @@ class _DoctorPatientDetailState extends State<DoctorPatientDetail> {
 
   Widget _buildFocusTrendChart(List<SessionAnalysisModel> completedSessions, List<SessionAnalysisModel> allSessions) {
     // Strictly filter only completed sessions for the chart data source
-    final validSessions = allSessions.reversed.where((s) => s.isComplete).toList();
+    // allSessions comes newest first, so we filter completed and then reverse to get oldest first.
+    final validSessions = allSessions.where((s) => s.isComplete).toList().reversed.toList();
 
+    // Take only the last 10 items (most recent 10 completed sessions)
     final chartSessions = validSessions.length > 10
-        ? validSessions.sublist(validSessions.length - 10)
+        ? validSessions.skip(validSessions.length - 10).toList()
         : validSessions;
 
-    if (chartSessions.isEmpty) return const SizedBox.shrink();
+    Widget content;
+    
+    if (chartSessions.isEmpty) {
+      content = const SizedBox(
+        height: 180,
+        child: Center(
+          child: Text(
+            "لا توجد بيانات كافية لعرض الرسم البياني",
+            style: TextStyle(color: Colors.grey, fontFamily: 'Cairo'),
+          ),
+        ),
+      );
+    } else {
+      final spots = chartSessions.asMap().entries.map((entry) {
+        final session = entry.value;
+        final focusPct = (session.averageFocus ?? session.focusedPercentage) * 100;
+        
+        // Plot sequentially without visual/numerical gaps (x = 1, 2, 3, 4)
+        return FlSpot((entry.key + 1).toDouble(), focusPct.clamp(0, 100));
+      }).toList();
 
-    final spots = chartSessions.asMap().entries.map((entry) {
-      final session = entry.value;
-      final focusPct = (session.averageFocus ?? session.focusedPercentage) * 100;
-      
-      // Plot sequentially without visual/numerical gaps (x = 1, 2, 3, 4)
-      return FlSpot((entry.key + 1).toDouble(), focusPct.clamp(0, 100));
-    }).toList();
+      double minX = 1;
+      double maxX = chartSessions.length.toDouble();
+      if (minX == maxX) {
+        minX = 0;
+        maxX += 1;
+      }
 
-    double minX = 1;
-    double maxX = chartSessions.length.toDouble();
-    if (minX == maxX) {
-      minX = 0;
-      maxX += 1;
+      content = SizedBox(
+        height: 180,
+        child: LineChart(
+          LineChartData(
+            minX: minX,
+            maxX: maxX,
+            minY: 0,
+            maxY: 100,
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: false,
+              horizontalInterval: 25,
+              getDrawingHorizontalLine: (value) => FlLine(
+                color: Colors.grey.shade200,
+                strokeWidth: 1,
+              ),
+            ),
+            titlesData: FlTitlesData(
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  interval: 1,
+                  getTitlesWidget: (value, meta) {
+                    final idx = value.toInt() - 1; // 0-based index for chartSessions
+                    if (idx < 0 || idx >= chartSessions.length) {
+                      return const SizedBox.shrink();
+                    }
+                    
+                    final session = chartSessions[idx];
+                    // Calculate the actual global session number (e.g., #5)
+                    final globalIndex = allSessions.indexOf(session);
+                    final displayIndex = allSessions.length - globalIndex;
+                    
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        '#$displayIndex',
+                        style: const TextStyle(fontSize: 10, color: Colors.grey),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  interval: 25,
+                  reservedSize: 36,
+                  getTitlesWidget: (value, meta) => Text(
+                    '${value.toInt()}%',
+                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+                  ),
+                ),
+              ),
+              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            ),
+            borderData: FlBorderData(show: false),
+            lineBarsData: [
+              LineChartBarData(
+                spots: spots,
+                isCurved: true,
+                curveSmoothness: 0.3,
+                color: AppColors.primary,
+                barWidth: 3,
+                dotData: FlDotData(
+                  show: true,
+                  getDotPainter: (spot, percent, bar, index) =>
+                      FlDotCirclePainter(
+                    radius: 4,
+                    color: Theme.of(context).colorScheme.surface,
+                    strokeWidth: 2,
+                    strokeColor: AppColors.primary,
+                  ),
+                ),
+                belowBarData: BarAreaData(
+                  show: true,
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      AppColors.primary.withValues(alpha: 0.2),
+                      AppColors.primary.withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey.shade200),
       ),
@@ -314,97 +420,7 @@ class _DoctorPatientDetailState extends State<DoctorPatientDetail> {
             ],
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            height: 180,
-            child: LineChart(
-              LineChartData(
-                minX: minX,
-                maxX: maxX,
-                minY: 0,
-                maxY: 100,
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: 25,
-                  getDrawingHorizontalLine: (value) => FlLine(
-                    color: Colors.grey.shade200,
-                    strokeWidth: 1,
-                  ),
-                ),
-                titlesData: FlTitlesData(
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      interval: 1,
-                      getTitlesWidget: (value, meta) {
-                        final idx = value.toInt() - 1; // 0-based index for chartSessions
-                        if (idx < 0 || idx >= chartSessions.length) {
-                          return const SizedBox.shrink();
-                        }
-                        
-                        final session = chartSessions[idx];
-                        // Calculate the actual global session number (e.g., #5)
-                        final globalIndex = allSessions.indexOf(session);
-                        final displayIndex = allSessions.length - globalIndex;
-                        
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Text(
-                            '#$displayIndex',
-                            style: const TextStyle(fontSize: 10, color: Colors.grey),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      interval: 25,
-                      reservedSize: 36,
-                      getTitlesWidget: (value, meta) => Text(
-                        '${value.toInt()}%',
-                        style: const TextStyle(fontSize: 10, color: Colors.grey),
-                      ),
-                    ),
-                  ),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                ),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: spots,
-                    isCurved: true,
-                    curveSmoothness: 0.3,
-                    color: AppColors.primary,
-                    barWidth: 3,
-                    dotData: FlDotData(
-                      show: true,
-                      getDotPainter: (spot, percent, bar, index) =>
-                          FlDotCirclePainter(
-                        radius: 4,
-                        color: Colors.white,
-                        strokeWidth: 2,
-                        strokeColor: AppColors.primary,
-                      ),
-                    ),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          AppColors.primary.withValues(alpha: 0.2),
-                          AppColors.primary.withValues(alpha: 0.0),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          content,
         ],
       ),
     );
@@ -624,8 +640,7 @@ class _DoctorPatientDetailState extends State<DoctorPatientDetail> {
                 const SizedBox(height: 12),
 
                 // Focus Trend Chart
-                if (completedSessions.length >= 2)
-                  _buildFocusTrendChart(completedSessions, allSessions),
+                _buildFocusTrendChart(completedSessions, allSessions),
 
                 // Filter Chips
                 Padding(
@@ -681,7 +696,7 @@ class _DoctorPatientDetailState extends State<DoctorPatientDetail> {
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Card(
                         elevation: 0,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.surface,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                           side: BorderSide(color: Colors.grey.shade200),
@@ -790,7 +805,7 @@ class _InlineSessionDetailsState extends State<_InlineSessionDetails>
       children: [
         // TabBar Strip
         Container(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           child: TabBar(
             controller: _tabController,
             labelColor: AppColors.primary,
@@ -846,7 +861,7 @@ class _InlineSessionDetailsState extends State<_InlineSessionDetails>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
         boxShadow: [
@@ -955,7 +970,7 @@ class _InlineSessionDetailsState extends State<_InlineSessionDetails>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
         boxShadow: [
@@ -1009,7 +1024,7 @@ class _InlineSessionDetailsState extends State<_InlineSessionDetails>
               style: SegmentedButton.styleFrom(
                 selectedForegroundColor: Colors.white,
                 selectedBackgroundColor: AppColors.primary,
-                backgroundColor: const Color(0xFFF8FAFC),
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8)),
               ),
@@ -1112,8 +1127,8 @@ class _InlineSessionDetailsState extends State<_InlineSessionDetails>
                       badgeWidget: isTop
                           ? Container(
                               padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surface,
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
@@ -1220,7 +1235,7 @@ class _InlineSessionDetailsState extends State<_InlineSessionDetails>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: themeColor.withValues(alpha: 0.3)),
         boxShadow: [
@@ -1253,14 +1268,14 @@ class _InlineSessionDetailsState extends State<_InlineSessionDetails>
                   partTitle,
                   style: AppTextStyles.h3.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: AppColors.foreground,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subTitle,
                   style: AppTextStyles.body.copyWith(
-                    color: AppColors.mutedForeground,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1271,14 +1286,14 @@ class _InlineSessionDetailsState extends State<_InlineSessionDetails>
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.check_circle_outline_rounded,
-                        size: 20, color: AppColors.mutedForeground),
+                    Icon(Icons.check_circle_outline_rounded,
+                        size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         "الأداء: $performanceText",
                         style: AppTextStyles.body.copyWith(
-                          color: const Color(0xFF334155),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -1340,8 +1355,8 @@ class _InlineSessionDetailsState extends State<_InlineSessionDetails>
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -1366,7 +1381,7 @@ class _InlineSessionDetailsState extends State<_InlineSessionDetails>
             style: AppTextStyles.body.copyWith(
               height: 1.8,
               fontSize: 15,
-              color: const Color(0xFF334155),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontWeight: FontWeight.w600,
             ),
           ),

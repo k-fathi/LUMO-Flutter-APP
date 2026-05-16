@@ -8,6 +8,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/providers/auth_provider.dart';
 import '../../ai_helper/view_model/ai_view_model.dart';
 import '../../ai_helper/view/ai_message_bubble.dart';
+import '../../home/view_model/main_layout_view_model.dart';
 import '../widgets/chat_input_bar.dart';
 
 class ChatbotScreen extends StatefulWidget {
@@ -118,11 +119,11 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       extendBodyBehindAppBar: false, // Since app bar is white and has shadow, no need to extend
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF1E293B),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 1,
         shadowColor: Colors.black.withValues(alpha: 0.05),
         scrolledUnderElevation: 1,
@@ -130,15 +131,15 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
           child: Container(
-            decoration: const BoxDecoration(
-              color: Color(0xFFF1F5F9), // Light gray
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               shape: BoxShape.circle,
             ),
             child: IconButton(
               padding: EdgeInsets.zero,
               alignment: Alignment.center,
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.chevron_left_rounded, color: Color(0xFF475569), size: 24),
+              onPressed: () => context.read<MainLayoutViewModel>().goToHome(),
+              icon: Icon(Icons.chevron_left_rounded, color: Theme.of(context).colorScheme.onSurface, size: 24),
             ),
           ),
         ),
@@ -148,24 +149,21 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: const Color(0xFF3B82F6), // Blue background
-                borderRadius: BorderRadius.circular(12),
+                color: Theme.of(context).colorScheme.surface,
+                shape: BoxShape.circle,
+                border: Border.all(color: Theme.of(context).dividerColor),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF30B0E8).withValues(alpha: 0.4),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              alignment: Alignment.center,
-              child: const Text(
-                'L',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 22,
-                ),
+              clipBehavior: Clip.antiAlias,
+              child: Image.asset(
+                'assets/images/ai_avatar.png',
+                fit: BoxFit.cover,
               ),
             ),
             const SizedBox(width: 12),
@@ -175,7 +173,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                 Text(
                   'LUMO Assistant',
                   style: AppTextStyles.label.copyWith(
-                    color: const Color(0xFF0F172A),
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -254,7 +252,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                     height: 250,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: const Color(0xFFE0E7FF).withValues(alpha: 0.8),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                     ),
                   ),
                 ),
@@ -269,7 +267,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                     height: 350,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: const Color(0xFFECFDF5).withValues(alpha: 0.8),
+                      color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
                     ),
                   ),
                 ),
@@ -363,8 +361,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                           ),
                         ),
                       ),
-                      Image.asset('assets/images_from_web/web_bot.png',
-                          width: 64, height: 64, fit: BoxFit.contain),
+                      Image.asset('assets/images/ai_avatar.png',
+                          width: 80, height: 80, fit: BoxFit.contain),
                     ],
                   ),
                 ),

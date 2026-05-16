@@ -247,12 +247,20 @@ class FirebaseDataSource {
   }
 
   Stream<List<Map<String, dynamic>>> streamUserChats(String userId) {
-    return _firestoreService.streamCollection(
-      collection: FirebaseCollections.chats,
-      queryBuilder: (ref) => ref
-          .where('participant_ids', arrayContains: userId)
-          .orderBy('updated_at', descending: true),
-    );
+    final instance = _firestoreService.instance;
+    if (instance == null) return Stream.value([]);
+    return instance
+        .collection(FirebaseCollections.chats)
+        .where('participant_ids', arrayContains: userId)
+        .orderBy('updated_at', descending: true)
+        .snapshots()
+        .handleError((error, stackTrace) {
+          // Firebase will print a direct URL here to create the missing composite index
+          debugPrint('🔥 [Firestore Index Missing] streamUserChats error: $error');
+        })
+        .map((snapshot) => snapshot.docs
+            .map((doc) => {'id': doc.id, ...doc.data()})
+            .toList());
   }
 
   Future<String> sendMessage({
@@ -280,71 +288,85 @@ class FirebaseDataSource {
         .collection(FirebaseCollections.chats)
         .doc(chatRoomId);
 
-    await _firestoreService.runTransaction((tx) async {
-      final snap = await tx.get(chatDoc);
-      final data = snap.data() ?? <String, dynamic>{};
+    try {
+      await _firestoreService.runTransaction((tx) async {
+        final snap = await tx.get(chatDoc);
+        final data = snap.data() ?? <String, dynamic>{};
 
-      final Map<String, dynamic> existingUnread =
-          (data['unread_counts'] as Map?)?.cast<String, dynamic>() ??
-              <String, dynamic>{};
-      final Map<String, int> unreadCounts = {
-        for (final e in existingUnread.entries)
-          e.key: int.tryParse(e.value.toString()) ?? 0,
-      };
+        final Map<String, dynamic> existingUnread =
+            (data['unread_counts'] as Map?)?.cast<String, dynamic>() ??
+                <String, dynamic>{};
+        final Map<String, int> unreadCounts = {
+          for (final e in existingUnread.entries)
+            e.key: int.tryParse(e.value.toString()) ?? 0,
+        };
 
-      final senderId = messageData['sender_id']?.toString();
-      if (senderId != null) {
-        unreadCounts[senderId] = 0; // sender has no unread in this room
-      }
-      unreadCounts[receiverId] = (unreadCounts[receiverId] ?? 0) + 1;
-      // #region agent log
-      DebugLogger.log(
-        runId: 'baseline',
-        hypothesisId: 'C',
-        location: 'firebase_data_source.dart:sendMessage',
-        message: 'Computed unread_counts in transaction',
-        data: {
-          'chatRoomId': chatRoomId,
-          'senderId': senderId,
-          'receiverId': receiverId,
-          'receiverUnread': unreadCounts[receiverId],
-        },
-      );
-      // #endregion
-      // #region agent log
-      debugPrint('[ae3196][C] tx unread_counts chatRoomId=$chatRoomId sender=$senderId receiver=$receiverId receiverUnread=${unreadCounts[receiverId]}');
-      // #endregion
-      // #region agent log
-      // ignore: avoid_print
-      print('[ae3196][C] tx unread_counts chatRoomId=$chatRoomId sender=$senderId receiver=$receiverId receiverUnread=${unreadCounts[receiverId]}');
-      // #endregion
+        final senderId = messageData['sender_id']?.toString();
+        if (senderId != null) {
+          unreadCounts[senderId] = 0; // sender has no unread in this room
+        }
+        unreadCounts[receiverId] = (unreadCounts[receiverId] ?? 0) + 1;
+        // #region agent log
+        DebugLogger.log(
+          runId: 'baseline',
+          hypothesisId: 'C',
+          location: 'firebase_data_source.dart:sendMessage',
+          message: 'Computed unread_counts in transaction',
+          data: {
+            'chatRoomId': chatRoomId,
+            'senderId': senderId,
+            'receiverId': receiverId,
+            'receiverUnread': unreadCounts[receiverId],
+          },
+        );
+        // #endregion
+        // #region agent log
+        debugPrint('[ae3196][C] tx unread_counts chatRoomId=$chatRoomId sender=$senderId receiver=$receiverId receiverUnread=${unreadCounts[receiverId]}');
+        // #endregion
+        // #region agent log
+        // ignore: avoid_print
+        print('[ae3196][C] tx unread_counts chatRoomId=$chatRoomId sender=$senderId receiver=$receiverId receiverUnread=${unreadCounts[receiverId]}');
+        // #endregion
 
-      final Map<String, dynamic> existingTyping =
-          (data['typing_status'] as Map?)?.cast<String, dynamic>() ??
-              <String, dynamic>{};
-      final Map<String, bool> typingStatus = {
-        for (final e in existingTyping.entries) e.key: e.value == true,
-      };
-      for (final pid in participantIds) {
-        typingStatus[pid] = false;
-      }
+        final Map<String, dynamic> existingTyping =
+            (data['typing_status'] as Map?)?.cast<String, dynamic>() ??
+                <String, dynamic>{};
+        final Map<String, bool> typingStatus = {
+          for (final e in existingTyping.entries) e.key: e.value == true,
+        };
+        for (final pid in participantIds) {
+          typingStatus[pid] = false;
+        }
 
-      tx.set(
-        chatDoc,
-        {
-          'participant_ids': participantIds,
-          'participant_names': participantNames,
-          'participant_avatars': participantAvatars,
-          'last_message': messageData['content'],
-          'last_message_sender_id': messageData['sender_id'],
-          'last_message_timestamp': messageData['timestamp'],
-          'updated_at': DateTime.now().toIso8601String(),
-          'unread_counts': unreadCounts,
-          'typing_status': typingStatus,
-        },
-        SetOptions(merge: true),
-      );
-    });
+        final bool docExists = snap.exists;
+
+        tx.set(
+          chatDoc,
+          {
+            // Only set these on creation (first message)
+            if (!docExists) 'created_at': FieldValue.serverTimestamp(),
+            if (!docExists) 'is_active': true,
+
+            // Always update these
+            'participant_ids': participantIds,
+            'participant_names': participantNames,
+            'participant_avatars': participantAvatars,
+            'last_message': messageData['content'],
+            'last_message_sender_id': messageData['sender_id'],
+            'last_message_timestamp': FieldValue.serverTimestamp(),
+            'updated_at': FieldValue.serverTimestamp(),
+            'unread_counts': unreadCounts,
+            'typing_status': typingStatus,
+          },
+          SetOptions(merge: true),
+        );
+      });
+    } catch (e, stackTrace) {
+      debugPrint('❌❌❌ Firestore Transaction Failed in sendMessage ❌❌❌');
+      debugPrint('Error: $e');
+      debugPrint('StackTrace: $stackTrace');
+      rethrow;
+    }
 
     return messageId;
   }

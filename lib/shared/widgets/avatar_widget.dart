@@ -98,7 +98,7 @@ class AvatarWidget extends StatelessWidget {
             baseColor: Colors.grey[300]!,
             highlightColor: Colors.grey[100]!,
             child: Container(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               width: size,
               height: size,
             ),

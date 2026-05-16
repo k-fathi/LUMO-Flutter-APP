@@ -134,7 +134,7 @@ class _SessionConfigBottomSheetState extends State<SessionConfigBottomSheet> {
         bottom: 24 + bottomInset,
       ),
       decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
+        color: theme.colorScheme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
       child: Column(

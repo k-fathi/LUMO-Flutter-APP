@@ -65,7 +65,9 @@ class _PostCardState extends State<PostCard> {
         border: Border.all(color: theme.dividerColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: theme.brightness == Brightness.light
+                ? Colors.black.withValues(alpha: 0.04)
+                : Colors.black.withValues(alpha: 0.2),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -152,7 +154,7 @@ class _PostCardState extends State<PostCard> {
 
                     if (isOwner)
                       PopupMenuButton<String>(
-                        icon: const Icon(Icons.more_horiz_rounded, color: Colors.grey),
+                        icon: Icon(Icons.more_horiz_rounded, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                         onSelected: (value) async {
                           if (value == 'edit') {
                             Navigator.pushNamed(context, RouteNames.editPost, arguments: post);
@@ -234,8 +236,8 @@ class _PostCardState extends State<PostCard> {
                               child: Text(
                                 isFollowing ? l10n.followingStatus : l10n.follow,
                                 style: TextStyle(
-                                  color: isFollowing ? Colors.grey : AppColors.primary, // ✅ اللون موحد
-                                  fontWeight: FontWeight.bold, // ✅ الخط دائماً bold
+                                  color: isFollowing ? theme.colorScheme.onSurface.withValues(alpha: 0.6) : AppColors.primary,
+                                  fontWeight: FontWeight.bold,
                                   fontSize: 13,
                                 ),
                               ),
@@ -265,11 +267,11 @@ class _PostCardState extends State<PostCard> {
                           placeholder: (context, url) => Shimmer.fromColors(
                             baseColor: Colors.grey[300]!,
                             highlightColor: Colors.grey[100]!,
-                            child: Container(height: 200, color: Colors.white),
+                            child: Container(height: 200, color: theme.colorScheme.surface),
                           ),
                           errorWidget: (context, url, error) => Container(
                             height: 200,
-                            color: Colors.grey[200],
+                            color: theme.colorScheme.surfaceContainerHighest,
                             child: const Icon(Icons.broken_image),
                           ),
                         ),
@@ -285,13 +287,13 @@ class _PostCardState extends State<PostCard> {
                   children: [
                     _ActionButton(
                       icon: post.isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                      color: post.isLiked ? Colors.red : Colors.grey,
+                      color: post.isLiked ? Colors.red : theme.colorScheme.onSurface.withValues(alpha: 0.6),
                       label: post.likesCount.toString(),
                       onTap: () => context.read<CommunityViewModel>().toggleLike(post.id),
                     ),
                     _ActionButton(
                       icon: Icons.chat_bubble_outline_rounded,
-                      color: Colors.grey,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                       label: post.commentsCount.toString(),
                       onTap: () {
                         Navigator.pushNamed(context, RouteNames.postDetail, arguments: post);

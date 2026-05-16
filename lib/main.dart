@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 
@@ -19,8 +21,10 @@ import 'features/session/view_model/session_view_model.dart';
 import 'features/profile/view_model/profile_view_model.dart';
 import 'features/ai_helper/view_model/ai_view_model.dart';
 import 'features/chat/view_model/chat_view_model.dart';
+import 'features/home/view_model/main_layout_view_model.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'core/utils/debug_logger.dart';
+import 'core/services/connectivity_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,12 +47,21 @@ Future<void> main() async {
   print('[ae3196][Z] main() started (print)');
   // #endregion
 
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-  } catch (e) {
-    debugPrint('Firebase initialization failed: $e');
+  bool isFirebaseSupported = true;
+  if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.windows)) {
+    isFirebaseSupported = false;
+  }
+
+  if (isFirebaseSupported) {
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } catch (e) {
+      debugPrint('Firebase initialization failed: $e');
+    }
+  } else {
+    debugPrint('Firebase is not supported or configured for this platform. Skipping initialization.');
   }
 
   // Setup dependency injection
@@ -67,15 +80,33 @@ Future<void> main() async {
     DeviceOrientation.portraitDown,
   ]);
 
+  final themeProvider = getIt<ThemeProvider>();
+
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
+    SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: Colors.white,
+      systemNavigationBarColor: themeProvider.isDarkMode
+          ? const Color(0xFF0F172A)
+          : Colors.white,
       systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
+
+  // ── Handle notification tap when app was terminated ──
+  if (Firebase.apps.isNotEmpty) {
+    FirebaseMessaging.instance.getInitialMessage().then((message) {
+      if (message != null) {
+        debugPrint('App opened from terminated via notification: ${message.data}');
+      }
+    });
+
+    // ── Handle notification tap when app was in background ──
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      debugPrint('App opened from background via notification: ${message.data}');
+    });
+  }
 
   runApp(
     MultiProvider(
@@ -85,6 +116,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => getIt<UserProvider>()),
         ChangeNotifierProvider(create: (_) => getIt<NotificationProvider>()),
         ChangeNotifierProvider(create: (_) => getIt<ThemeProvider>()),
+        ChangeNotifierProvider(create: (_) => getIt<ConnectivityService>()),
         ChangeNotifierProvider(create: (_) => getIt<LocaleProvider>()),
         ChangeNotifierProvider(create: (_) => getIt<PatientProvider>()),
         ChangeNotifierProvider(create: (_) => getIt<CommunityProvider>()),
@@ -93,6 +125,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => getIt<ProfileViewModel>()),
         ChangeNotifierProvider(create: (_) => getIt<AIViewModel>()),
         ChangeNotifierProvider(create: (_) => getIt<ChatViewModel>()),
+        ChangeNotifierProvider(create: (_) => getIt<MainLayoutViewModel>()),
 
       ],
       // ✅ شلنا Consumer<UserProvider> الزيادة — مكانش بيستخدم userProvider

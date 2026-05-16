@@ -85,7 +85,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                           child: Padding(
                             padding: const EdgeInsets.all(24.0),
                             child: Image.asset(
-                              'assets/images/bot-icon.png', // Assuming robot image
+                              'assets/images/ai_avatar.png', // Robot image
                               fit: BoxFit.contain,
                               errorBuilder: (context, error, stackTrace) =>
                                   const Icon(Icons.smart_toy, size: 80, color: AppColors.primary),

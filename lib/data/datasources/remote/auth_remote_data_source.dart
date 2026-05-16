@@ -22,6 +22,7 @@ abstract class AuthRemoteDataSource {
     required String confirmPassword,
   });
   Future<MessageResponse> logout();
+  Future<void> updateFcmToken(String token);
 }
 
 // ─────────────────────────────────────────────
@@ -149,6 +150,14 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'new_password': newPassword,
         'new_password_confirmation': confirmPassword,
       },
+    );
+  }
+
+  @override
+  Future<void> updateFcmToken(String token) async {
+    await _dioClient.post(
+      ApiConstants.firebaseToken,
+      data: {'fcm_token': token},
     );
   }
 }

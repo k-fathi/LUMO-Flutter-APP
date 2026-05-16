@@ -105,7 +105,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final int currentUserId = currentUser?.id ?? 0;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: const GradientAppBar(title: 'التعليقات'),
       body: Consumer<CommunityViewModel>(
         builder: (context, viewModel, child) {
@@ -173,11 +173,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       // Original Post
                       Container(
                         padding: const EdgeInsets.all(16),
-                        color: const Color(0xFFE3F2FD),
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.surface,
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Column(
@@ -232,7 +232,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                           Text(
                                             displayName,
                                             style: AppTextStyles.body.copyWith(
-                                              color: const Color(0xFF1A1A2E),
+                                              color: Theme.of(context).colorScheme.onSurface,
                                               fontWeight: FontWeight.w600,
                                             ),
                                           ),
@@ -241,7 +241,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                             DateFormatter.formatRelativeTime(
                                                 post.createdAt),
                                             style: AppTextStyles.caption.copyWith(
-                                              color: const Color(0xFF64748B),
+                                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                                             ),
                                           ),
                                         ],
@@ -250,7 +250,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                   ),
                                   // PopupMenu: edit/delete for owner, report for others
                                   PopupMenuButton<String>(
-                                    icon: const Icon(Icons.more_horiz_rounded, color: Color(0xFF64748B)),
+                                    icon: Icon(Icons.more_horiz_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
                                     onSelected: (value) async {
                                       if (value == 'edit') {
                                         Navigator.pushNamed(
@@ -295,7 +295,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               Text(
                                 post.content,
                                 style: AppTextStyles.body.copyWith(
-                                  color: const Color(0xFF1A1A2E),
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                               if (post.hasImage && post.imageUrl != null) ...[
@@ -312,7 +312,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                       child: Container(
                                         width: double.infinity,
                                         height: 200,
-                                        color: Colors.white,
+                                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
                                       ),
                                     ),
                                     errorWidget: (context, url, error) => Container(
@@ -374,7 +374,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             Text(
                               'التعليقات',
                               style: AppTextStyles.h3.copyWith(
-                                color: const Color(0xFF1A1A2E),
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                             const SizedBox(height: 16),
@@ -436,7 +436,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                               Container(
                                                 padding: const EdgeInsets.all(12),
                                                 decoration: BoxDecoration(
-                                                  color: const Color(0xFFF1F5F9),
+                                                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                                                   borderRadius: BorderRadius.circular(12),
                                                 ),
                                                 child: GestureDetector(
@@ -472,7 +472,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                       style: TextStyle(
                                                         fontSize: 12,
                                                         fontWeight: isLiked ? FontWeight.bold : FontWeight.normal,
-                                                        color: isLiked ? Colors.blue : const Color(0xFF64748B),
+                                                        color: isLiked ? Colors.blue : Theme.of(context).colorScheme.onSurfaceVariant,
                                                       ),
                                                     ),
                                                   ),
@@ -482,20 +482,20 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                       viewModel.setReplyingTo(comment);
                                                       _commentFocusNode.requestFocus();
                                                     },
-                                                    child: const Text(
+                                                    child: Text(
                                                       'رد',
                                                       style: TextStyle(
                                                         fontSize: 12,
-                                                        color: Color(0xFF64748B),
+                                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                                                       ),
                                                     ),
                                                   ),
                                                   const SizedBox(width: 16),
                                                   Text(
                                                     DateFormatter.formatRelativeTime(comment.createdAt),
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       fontSize: 11,
-                                                      color: Color(0xFF94A3B8),
+                                                      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                                                     ),
                                                   ),
                                                   if (comment.likesCount > 0) ...[
@@ -504,9 +504,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                     const SizedBox(width: 4),
                                                     Text(
                                                       '${comment.likesCount}',
-                                                      style: const TextStyle(
+                                                      style: TextStyle(
                                                         fontSize: 11,
-                                                        color: Color(0xFF64748B),
+                                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                                                       ),
                                                     ),
                                                   ],
@@ -531,7 +531,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               if (viewModel.replyingToComment != null)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  color: Colors.grey[100],
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   child: Row(
                     children: [
                       Text(
@@ -555,7 +555,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   focusNode: _commentFocusNode,
                   onSend: _handleAddComment,
                   isLoading: viewModel.isLoading,
-                  userAvatar: currentUser.profileImage,
+                  userAvatar: currentUser.avatarUrl,
                   userName: currentUser.name,
                 ),
             ],

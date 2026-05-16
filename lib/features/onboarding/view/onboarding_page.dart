@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 
 /// Onboarding Page Component
@@ -74,7 +73,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                   errorBuilder: (context, error, stackTrace) => Container(
                     width: double.infinity,
                     height: 350,
-                    color: AppColors.muted,
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
                     child: const Icon(Icons.image, size: 100),
                   ),
                 ),

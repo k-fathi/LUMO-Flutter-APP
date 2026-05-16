@@ -68,8 +68,10 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     }
 
     if (currentUser.role == UserRole.doctor) {
-      final activePatientIds =
-          rooms.map((r) => r.getOtherParticipantId(currentUserIdStr)).toList();
+      final activePatientIds = rooms
+          .map((r) => r.getOtherParticipantId(currentUserIdStr))
+          .where((id) => id.isNotEmpty)
+          .toList();
 
       items.add('AI_BOT'); // pinned at top
       items.addAll(sortedNewest(rooms));
@@ -88,6 +90,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 
       for (final room in rooms) {
         final otherId = room.getOtherParticipantId(currentUserIdStr);
+        if (otherId.isEmpty) continue;
         if (connectedDoctorIds.contains(otherId)) {
           doctorRooms.add(room);
         } else {
@@ -232,15 +235,24 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: Container(
-        padding: const EdgeInsets.all(8),
+        width: 44,
+        height: 44,
         decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient,
+          color: Theme.of(context).colorScheme.surface,
           shape: BoxShape.circle,
+          border: Border.all(color: Theme.of(context).dividerColor),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
+        clipBehavior: Clip.antiAlias,
         child: Image.asset(
-          'assets/images_from_web/web_bot.png',
-          width: 24,
-          height: 24,
+          'assets/images/ai_avatar.png',
+          fit: BoxFit.cover,
         ),
       ),
       title: Text(l10n.aiHelper, style: AppTextStyles.label),

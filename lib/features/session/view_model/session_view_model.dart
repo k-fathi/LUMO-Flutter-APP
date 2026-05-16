@@ -192,7 +192,9 @@ class SessionViewModel extends ChangeNotifier {
 
       _isLoading = false;
       notifyListeners();
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('❌ createSession ERROR: $e');
+      debugPrint('❌ createSession STACK: $stack');
       _errorMessage = e.toString();
       _isLoading = false;
       notifyListeners();
@@ -234,7 +236,9 @@ class SessionViewModel extends ChangeNotifier {
 
       _isLoading = false;
       notifyListeners();
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('❌ createSession ERROR: $e');
+      debugPrint('❌ createSession STACK: $stack');
       _errorMessage = e.toString();
       _isLoading = false;
       notifyListeners();

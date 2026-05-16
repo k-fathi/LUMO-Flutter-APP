@@ -52,7 +52,17 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     // ✅ تجنب إعادة auth لو Firebase بالفعل authenticated
     if (!_viewModel.isFirebaseAuthenticated) {
       final authenticated = await _viewModel.authenticateFirebase();
-      if (!authenticated || !mounted) return;
+      if (!authenticated || !mounted) {
+        if (mounted && _viewModel.errorMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('خطأ في الاتصال بخادم المحادثة: ${_viewModel.errorMessage}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
     }
     await _viewModel.loadMessages(widget.chatRoomId);
     _scrollToBottom();
@@ -143,7 +153,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     final currentUserId = authProvider.currentUser?.id.toString() ?? '';
 
     final messagesBackground = theme.brightness == Brightness.light
-        ? const Color(0xFFE3F2FD)
+        ? const Color(0xFFF1F5F9)
         : theme.colorScheme.surfaceContainerLow;
 
     return Scaffold(

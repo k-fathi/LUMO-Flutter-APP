@@ -1,4 +1,5 @@
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../datasources/firebase_data_source.dart';
 import '../datasources/local_data_source.dart';
@@ -47,7 +48,7 @@ class ChatRepository {
     return ChatRoomModel.fromJson(chatRoomData);
   }
 
-  Future<String> startChat(int receiverId) async {
+  Future<ChatRoomModel> startChat(int receiverId) async {
     return await _chatRemoteDataSource.startChat(receiverId);
   }
 
@@ -119,7 +120,7 @@ class ChatRepository {
       'sender_avatar_url': senderAvatarUrl,
       'content': content,
       'status': 'sent',
-      'timestamp': now.toIso8601String(),
+      'timestamp': FieldValue.serverTimestamp(),
       'image_url': imageUrl,
       'file_url': fileUrl,
       'file_name': fileName,

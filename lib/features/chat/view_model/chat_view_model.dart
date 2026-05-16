@@ -73,11 +73,14 @@ class ChatViewModel extends ChangeNotifier {
 
     try {
       final token = await _chatRepository.getFirebaseToken();
+      debugPrint('🔑 Firebase Custom Token Received: $token');
       await _firebaseAuthService.signInWithCustomToken(token);
+      debugPrint('✅ Firebase Auth Success. UID: ${_firebaseAuthService.currentUserId}');
       _isLoading = false;
       _safeNotifyListeners();
       return true;
     } catch (e) {
+      debugPrint('❌ Firebase Auth Failed in ViewModel: $e');
       _errorMessage = "Firebase Auth Failed: ${e.toString()}";
       _isLoading = false;
       _safeNotifyListeners();
@@ -87,8 +90,23 @@ class ChatViewModel extends ChangeNotifier {
 
   Future<String> startChat(int receiverId) async {
     try {
-      final roomId = await _chatRepository.startChat(receiverId);
-      return roomId;
+      final chatRoom = await _chatRepository.startChat(receiverId);
+      final chatRoomId = chatRoom.id;
+      debugPrint('✅ chatRoomId from API: $chatRoomId');
+
+      // Pre-populate the room in _chatRooms so Inbox shows it immediately
+      final existingIndex = _chatRooms.indexWhere((r) => r.id == chatRoomId);
+      if (existingIndex == -1) {
+        _chatRooms.add(chatRoom);
+        _chatRooms.sort((a, b) {
+          final aTime = a.lastMessageTimestamp ?? a.updatedAt;
+          final bTime = b.lastMessageTimestamp ?? b.updatedAt;
+          return bTime.compareTo(aTime);
+        });
+      }
+
+      await loadMessages(chatRoomId);
+      return chatRoomId;
     } catch (e) {
       _errorMessage = 'فشل بدء المحادثة: $e';
       _safeNotifyListeners();
@@ -347,6 +365,7 @@ class ChatViewModel extends ChangeNotifier {
     _safeNotifyListeners();
 
     try {
+      debugPrint("Current Room ID is: $chatRoomId");
       final message = await _chatRepository.sendMessage(
         chatRoomId: chatRoomId,
         senderId: senderId,

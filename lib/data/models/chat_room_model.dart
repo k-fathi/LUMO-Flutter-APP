@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class ChatRoomModel {
   final String id;
   final List<String> participantIds;
@@ -27,23 +29,61 @@ class ChatRoomModel {
     this.typingStatus = const {},
   });
 
+  /// Safely parse a dynamic value that could be a Firestore [Timestamp],
+  /// an ISO-8601 [String], or null.
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value);
+    return null;
+  }
+
   // Factory constructor from JSON
   factory ChatRoomModel.fromJson(Map<String, dynamic> json) {
+    // Handle API format: user_one/user_two vs standard participant_ids
+    List<String> participantIds;
+    if (json['participant_ids'] != null) {
+      participantIds = (json['participant_ids'] as List<dynamic>)
+          .map((e) => e.toString())
+          .toList();
+    } else if (json['user_one'] != null && json['user_two'] != null) {
+      participantIds = [
+        json['user_one'].toString(),
+        json['user_two'].toString(),
+      ];
+    } else {
+      participantIds = [];
+    }
+
+    // Handle last_message_timestamp: API uses 'last_message_time' key
+    DateTime? lastMessageTimestamp;
+    final rawTime = json['last_message_time'] ?? json['last_message_timestamp'];
+    if (rawTime != null) {
+      lastMessageTimestamp = _parseDateTime(rawTime);
+    }
+
     return ChatRoomModel(
-      id: json['id'] as String,
-      participantIds: (json['participant_ids'] as List<dynamic>)
-          .map((e) => e as String)
-          .toList(),
-      participantNames: Map<String, String>.from(json['participant_names'] as Map),
-      participantAvatars: Map<String, String?>.from(json['participant_avatars'] as Map),
+      id: json['id']?.toString() ?? '',
+      participantIds: participantIds,
+      participantNames: Map<String, String>.from(
+        (json['participant_names'] as Map?)?.map(
+          (k, v) => MapEntry(k.toString(), v?.toString() ?? ''),
+        ) ?? {},
+      ),
+      participantAvatars: Map<String, String?>.from(
+        (json['participant_avatars'] as Map?)?.map(
+          (k, v) => MapEntry(k.toString(), v?.toString()),
+        ) ?? {},
+      ),
       lastMessage: json['last_message'] as String?,
-      lastMessageSenderId: json['last_message_sender_id'] as String?,
-      lastMessageTimestamp: json['last_message_timestamp'] != null
-          ? DateTime.parse(json['last_message_timestamp'] as String)
-          : null,
-      unreadCounts: Map<String, int>.from(json['unread_counts'] as Map? ?? {}),
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      lastMessageSenderId: json['last_message_sender_id']?.toString(),
+      lastMessageTimestamp: lastMessageTimestamp,
+      unreadCounts: (json['unread_counts'] as Map?)?.map(
+        (k, v) => MapEntry(k.toString(), int.tryParse(v.toString()) ?? 0),
+      ) ?? {},
+      createdAt: _parseDateTime(json['created_at']) ?? DateTime.now(),
+      updatedAt: _parseDateTime(json['updated_at']) ?? DateTime.now(),
       isActive: json['is_active'] as bool? ?? true,
       typingStatus: Map<String, bool>.from(json['typing_status'] as Map? ?? {}),
     );
@@ -100,7 +140,11 @@ class ChatRoomModel {
 
   // Helper methods
   String getOtherParticipantId(String currentUserId) {
-    return participantIds.firstWhere((id) => id != currentUserId);
+    // Return first ID that isn't current user, or fallback to any ID
+    return participantIds.firstWhere(
+      (id) => id != currentUserId,
+      orElse: () => participantIds.isNotEmpty ? participantIds.first : '',
+    );
   }
 
   String getOtherParticipantName(String currentUserId) {

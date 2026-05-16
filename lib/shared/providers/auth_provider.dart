@@ -1,6 +1,7 @@
-import 'dart:io' show Platform;
+import 'dart:io' show Platform, SocketException;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 import '../../data/models/auth/auth_models.dart';
@@ -11,6 +12,7 @@ import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/profile_repository.dart';
 import '../../data/datasources/local_data_source.dart';
 import '../../core/di/dependency_injection.dart';
+import '../../core/services/notification_service.dart';
 import 'notification_provider.dart';
 import '../../core/network/api_exception.dart';
 
@@ -128,6 +130,9 @@ class AuthProvider extends ChangeNotifier {
           await _localDataSource.saveCurrentUser(updatedRefreshed.toJson());
           notifyListeners(); // Force UI update with fresh counts
         }
+      } on SocketException {
+        debugPrint('Auth init: offline, using cached data');
+        // Do nothing else, keep using _currentUser from cache if available
       } catch (e) {
         // ✅ بدل string matching — بنتحقق من نوع الـ exception
         final isUnauthenticated = _isUnauthenticatedError(e);
@@ -141,6 +146,10 @@ class AuthProvider extends ChangeNotifier {
         }
         debugPrint('Profile refresh failed (keeping cache): $e');
       }
+    }
+
+    if (_currentUser != null) {
+      _setupFcmListeners();
     }
 
     // ── Priority 3: Last resort ──
@@ -187,6 +196,35 @@ class AuthProvider extends ChangeNotifier {
     return 'حدث خطأ غير متوقع، يرجى المحاولة لاحقاً';
   }
 
+  void _setupFcmListeners() {
+    if (Firebase.apps.isEmpty) {
+      debugPrint('FCM listeners skipped: Firebase not initialized.');
+      return;
+    }
+    // ── Listen for token refresh ──
+    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+      try {
+        await _authRepository.updateFcmToken(newToken);
+      } catch (e) {
+        debugPrint('FCM token refresh failed: $e');
+      }
+    });
+
+    // ── Handle foreground messages ──
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      final notification = message.notification;
+      if (notification != null) {
+        getIt<NotificationService>().showNotification(
+          id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          title: notification.title ?? 'إشعار جديد',
+          body: notification.body ?? '',
+        );
+        // Refresh notification list silently
+        getIt<NotificationProvider>().fetchNotifications();
+      }
+    });
+  }
+
   // ─────────────────────────────────────────────
   //  Login
   // ─────────────────────────────────────────────
@@ -218,6 +256,7 @@ class AuthProvider extends ChangeNotifier {
       if (response.user != null) {
         _currentUser = response.user;
         await _localDataSource.saveCurrentUser(_currentUser!.toJson());
+        _setupFcmListeners();
         notifyListeners();
         if (onSuccess != null) onSuccess();
       }
@@ -668,6 +707,11 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<String?> _getFcmToken() async {
+    if (Firebase.apps.isEmpty) {
+      debugPrint('FCM token retrieval skipped: Firebase not initialized.');
+      return null;
+    }
+
     if (kIsWeb) {
       try {
         return await FirebaseMessaging.instance

@@ -108,7 +108,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back_rounded,
-            color: theme.iconTheme.color ?? AppColors.foreground,
+            color: theme.colorScheme.onSurface,
           ),
           onPressed: () => Navigator.pop(context),
         ),
@@ -125,7 +125,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         child: isLoading && requests.isEmpty && generalNotifications.isEmpty
             ? const Center(child: CircularProgressIndicator())
             : requests.isEmpty && generalNotifications.isEmpty
-                ? _buildEmptyState(l10n)
+                ? _buildEmptyState(l10n, theme)
                 : ListView.builder(
                     padding: const EdgeInsets.all(16),
                     itemCount: requests.length + generalNotifications.length,
@@ -158,18 +158,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
-  Widget _buildEmptyState(AppLocalizations l10n) {
+  Widget _buildEmptyState(AppLocalizations l10n, ThemeData theme) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Icon(Icons.notifications_none_rounded,
-              size: 64, color: AppColors.mutedForeground),
+              size: 64, color: Colors.grey),
           const SizedBox(height: 16),
           Text(
             'لا توجد إشعارات جديدة',
             style: AppTextStyles.body.copyWith(
-              color: AppColors.mutedForeground,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -243,7 +243,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               Text(
                 timeago.format(request.createdAt, locale: Localizations.localeOf(context).languageCode),
                 style: AppTextStyles.caption
-                    .copyWith(color: AppColors.mutedForeground),
+                    .copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
               )
             ],
           ),
@@ -358,14 +358,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   Text(
                     content,
                     style: AppTextStyles.caption.copyWith(
-                        color: AppColors.mutedForeground),
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                   ),
                 ],
                 const SizedBox(height: 8),
                 Text(
                   timeago.format(createdAt, locale: Localizations.localeOf(context).languageCode),
                   style: AppTextStyles.caption.copyWith(
-                      color: AppColors.mutedForeground, fontSize: 10),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 10),
                 ),
               ],
             ),

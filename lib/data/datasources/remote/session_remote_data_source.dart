@@ -57,20 +57,27 @@ class SessionRemoteDataSourceImpl implements SessionRemoteDataSource {
     required List<Map<String, dynamic>> segments,
     DateTime? scheduledDate,
   }) async {
-    final response = await _dioClient.post(
-      ApiConstants.createSession,
-      data: {
-        'patient_id': patientId,
-        'started_at': (scheduledDate ?? DateTime.now()).toIso8601String().replaceFirst('T', ' ').split('.').first,
-        if (notes != null) 'notes': notes,
-        'segments': segments,
-      },
-    );
-    final responseData = response.data;
-    if (responseData is Map<String, dynamic>) {
-      return responseData['data'] ?? responseData['session'] ?? responseData;
+    debugPrint('🚀 createSession REQUEST - patientId: $patientId, segments: $segments, scheduledDate: $scheduledDate');
+    try {
+      final response = await _dioClient.post(
+        ApiConstants.createSession,
+        data: {
+          'patient_id': patientId,
+          'started_at': (scheduledDate ?? DateTime.now()).toIso8601String().replaceFirst('T', ' ').split('.').first,
+          if (notes != null) 'notes': notes,
+          'segments': segments,
+        },
+      );
+      final responseData = response.data;
+      if (responseData is Map<String, dynamic>) {
+        return responseData['data'] ?? responseData['session'] ?? responseData;
+      }
+      return {};
+    } catch (e, stack) {
+      debugPrint('❌ createSession REMOTE ERROR: $e');
+      debugPrint('❌ createSession REMOTE STACK: $stack');
+      rethrow;
     }
-    return {};
   }
 
   @override

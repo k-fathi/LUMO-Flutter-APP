@@ -108,7 +108,7 @@ class AIMessageBubble extends StatelessWidget {
     return const CircleAvatar(
       radius: 18,
       backgroundColor: Colors.transparent,
-      backgroundImage: AssetImage('assets/images/bot-icon.png'),
+      backgroundImage: AssetImage('assets/images/ai_avatar.png'),
     );
   }
 

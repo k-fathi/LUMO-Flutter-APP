@@ -95,10 +95,10 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Card(
                     elevation: 0,
-                    color: Colors.white,
+                    color: Theme.of(context).cardColor,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(color: Colors.grey.shade200),
+                      side: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     child: ListTile(
                       contentPadding: const EdgeInsets.symmetric(
@@ -119,15 +119,15 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
                           const SizedBox(height: 8),
                           Row(
                             children: [
-                              Icon(Icons.calendar_today_outlined,
-                                  size: 14, color: Colors.grey.shade600),
+                                Icon(Icons.calendar_today_outlined,
+                                    size: 14, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                               const SizedBox(width: 4),
                               Text(
                                 session.date ?? 'غير محدد',
-                                style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontSize: 13,
-                                ),
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                    fontSize: 13,
+                                  ),
                               ),
                             ],
                           ),

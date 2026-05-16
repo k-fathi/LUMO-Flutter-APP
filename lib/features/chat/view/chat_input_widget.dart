@@ -49,10 +49,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     // React: bg-white border-t border-[#E3F2FD] px-6 py-4
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
         border: Border(
-          top: BorderSide(color: Color(0xFFE3F2FD)),
+          top: BorderSide(color: Theme.of(context).dividerColor),
         ),
       ),
       child: SafeArea(
@@ -63,9 +63,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
               child: Container(
                 height: 48,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE3F2FD),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0xFFE3F2FD)),
+                  border: Border.all(color: Theme.of(context).dividerColor),
                 ),
                 child: TextField(
                   controller: widget.controller,
@@ -75,7 +75,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   decoration: InputDecoration(
                     hintText: 'اكتب رسالة...',
                     hintStyle: AppTextStyles.body.copyWith(
-                      color: const Color(0xFF64748B),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                     ),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(

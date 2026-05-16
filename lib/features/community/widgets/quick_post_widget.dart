@@ -84,7 +84,7 @@ class QuickPostWidget extends StatelessWidget {
                       Text(
                         'بم تفكر؟',
                         style: AppTextStyles.body.copyWith(
-                          color: AppColors.mutedForeground,
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                     ],

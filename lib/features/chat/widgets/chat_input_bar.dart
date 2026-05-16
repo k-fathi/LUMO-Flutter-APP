@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../l10n/app_localizations.dart';
 
@@ -74,21 +73,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
         ),
         child: Row(
           children: [
-            // Attach Photo Button
-            IconButton(
-              padding: const EdgeInsets.all(8),
-              constraints: const BoxConstraints(),
-              icon: const Icon(Icons.add_circle_outline_rounded),
-              color: AppColors.mutedForeground,
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('ميزة إرفاق الملفات ستتوفر قريباً'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-            ), // Feature coming soon
+            const SizedBox(width: 8),
             // Text Field - Refined for better prominence
             Expanded(
               child: Container(
@@ -108,7 +93,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                     hintText:
                         AppLocalizations.of(context)!.chatInputPlaceholder,
                     hintStyle: AppTextStyles.body.copyWith(
-                      color: const Color(0xFFC7C7CC),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                     ),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -122,23 +107,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
               ),
             ),
             
-            // Microphone Button (shown when no text)
-            if (!_hasText)
-              IconButton(
-                padding: const EdgeInsets.all(8),
-                constraints: const BoxConstraints(),
-                icon: const Icon(Icons.mic_none_rounded),
-                color: AppColors.mutedForeground,
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('ميزة التسجيل الصوتي ستتوفر قريباً'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
-              ), // Feature coming soon
-            const SizedBox(width: 4),
+            const SizedBox(width: 8),
 
             // Send Button - Gradient Circle
             GestureDetector(
@@ -152,7 +121,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                       ? (widget.accentGradient ?? const LinearGradient(colors: [Color(0xFF5E5CE6), Color(0xFF30B0E8)]))
                       : null,
                   color:
-                      (_hasText && !widget.disabled) ? null : AppColors.muted,
+                      (_hasText && !widget.disabled) ? null : Theme.of(context).colorScheme.surfaceContainerHighest,
                   shape: BoxShape.circle,
                   boxShadow: (_hasText && !widget.disabled)
                       ? [
@@ -168,7 +137,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                   Icons.send_rounded,
                   color: (_hasText && !widget.disabled)
                       ? Colors.white
-                      : AppColors.mutedForeground,
+                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                   size: 20,
                 ),
               ),

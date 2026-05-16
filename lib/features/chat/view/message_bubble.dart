@@ -80,13 +80,13 @@ class MessageBubble extends StatelessWidget {
                               child: Container(
                                 width: 200,
                                 height: 150,
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.surface,
                               ),
                             ),
                             errorWidget: (context, url, error) => Container(
                               width: 200,
                               height: 150,
-                              color: Colors.grey[200],
+                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
                               child: const Icon(Icons.broken_image),
                             ),
                           ),

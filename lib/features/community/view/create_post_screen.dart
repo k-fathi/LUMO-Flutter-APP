@@ -130,7 +130,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 hintText: 'ماذا يدور في ذهنك؟',
                 border: InputBorder.none,
                 hintStyle: AppTextStyles.body
-                    .copyWith(color: AppColors.mutedForeground),
+                    .copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
               ),
               style: AppTextStyles.body,
             ),
@@ -168,7 +168,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               onTap: _pickImage,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: Colors.grey.shade300),
+                side: BorderSide(color: Theme.of(context).colorScheme.outline),
               ),
             ),
           ],

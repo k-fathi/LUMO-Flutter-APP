@@ -93,24 +93,24 @@ class _AppTextFieldState extends State<AppTextField> {
           decoration: InputDecoration(
             hintText: widget.hint,
             hintStyle: AppTextStyles.body.copyWith(
-              color: AppColors.mutedForeground,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
             errorText: widget.errorText,
             filled: true,
             fillColor: widget.enabled
                 ? Theme.of(context).colorScheme.surfaceContainerHighest
-                : AppColors.muted,
+                : Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 20,
               vertical: 18,
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(24),
-              borderSide: const BorderSide(color: AppColors.secondary),
+              borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(24),
-              borderSide: const BorderSide(color: AppColors.secondary),
+              borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(24),
@@ -135,13 +135,13 @@ class _AppTextFieldState extends State<AppTextField> {
             ),
             disabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(24),
-              borderSide: const BorderSide(color: AppColors.secondary),
+              borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
             ),
             prefixIcon: widget.prefix ??
                 (widget.prefixIcon != null
                     ? Icon(
                         widget.prefixIcon,
-                        color: AppColors.mutedForeground,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       )
                     : null),
             suffixIcon: widget.suffix ?? _buildSuffixIcon(),
@@ -159,7 +159,7 @@ class _AppTextFieldState extends State<AppTextField> {
           _obscureText
               ? Icons.visibility_outlined
               : Icons.visibility_off_outlined,
-          color: AppColors.mutedForeground,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         ),
         onPressed: () {
           setState(() {
@@ -173,7 +173,7 @@ class _AppTextFieldState extends State<AppTextField> {
       return IconButton(
         icon: Icon(
           widget.suffixIcon,
-          color: AppColors.mutedForeground,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         ),
         onPressed: widget.onSuffixTap,
       );

@@ -9,6 +9,8 @@ import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/shimmer_loading.dart';
 import '../../../shared/providers/auth_provider.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../core/services/connectivity_service.dart';
+import '../../../shared/widgets/no_internet_widget.dart';
 
 
 class CommunityScreen extends StatefulWidget {
@@ -121,6 +123,17 @@ class _CommunityFeedWrapper extends StatelessWidget {
             builder: (context, viewModel, child) {
               final posts = isExplore ? viewModel.explorePosts : viewModel.followingPosts;
               
+              final isConnected = context.watch<ConnectivityService>().isConnected;
+              
+              if (!isConnected && posts.isEmpty) {
+                return SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: NoInternetWidget(
+                    onRetry: () => isExplore ? viewModel.loadExploreFeed() : viewModel.loadFollowingFeed(),
+                  ),
+                );
+              }
+
               // Show shimmer if loading OR if not yet initialized (first load)
               if ((viewModel.isLoading || !viewModel.isInitialized) && posts.isEmpty) {
                 return SliverList(

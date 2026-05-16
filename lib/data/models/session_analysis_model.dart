@@ -161,9 +161,18 @@ class SessionAnalysisModel {
       for (final seg in segments) {
         if (seg is! Map<String, dynamic>) continue;
         
-        final segAnalytic = seg['analytic'] ?? seg['analytics'] ?? seg;
+        final segAnalytic = seg['analytic'] ?? seg['analytics'];
         if (segAnalytic is Map<String, dynamic>) {
-          firstAnalytic ??= segAnalytic;
+          if (firstAnalytic == null) {
+            firstAnalytic = Map<String, dynamic>.from(segAnalytic);
+            // Defensively clean literal "null" strings
+            for (final key in ['speech_text', 'story_trait']) {
+              final val = firstAnalytic[key];
+              if (val is String && val.trim().toLowerCase() == 'null') {
+                firstAnalytic[key] = null;
+              }
+            }
+          }
 
           // Accumulate emotions (Exact AI Key: 'emotion_distribution' or fallback 'emotions')
           dynamic rawEmo = segAnalytic['emotion_distribution'] ?? segAnalytic['emotions'];
@@ -207,7 +216,14 @@ class SessionAnalysisModel {
     // Fallback: check top-level analytic (non-segmented responses)
     final topAnalytic = json['analytic'] ?? json['analytics'];
     if (topAnalytic is Map<String, dynamic> && firstAnalytic == null) {
-      firstAnalytic = topAnalytic;
+      firstAnalytic = Map<String, dynamic>.from(topAnalytic);
+      // Defensively clean literal "null" strings
+      for (final key in ['speech_text', 'story_trait']) {
+        final val = firstAnalytic[key];
+        if (val is String && val.trim().toLowerCase() == 'null') {
+          firstAnalytic[key] = null;
+        }
+      }
       
       dynamic rawEmo = topAnalytic['emotions'] ?? topAnalytic['emotion_distribution'];
       if (rawEmo is String) { try { rawEmo = jsonDecode(rawEmo); } catch (_) {} }

@@ -243,17 +243,17 @@ class ProfileHeaderWidget extends StatelessWidget {
                         Expanded(
                           child: _buildStatItem(
                             context: context,
-                            value: user.followersCount.toString(),
-                            label: 'المتابعون',
-                            onTap: onFollowersTap,
+                            value: user.followingCount.toString(),
+                            label: 'المتابَعون',
+                            onTap: onFollowingTap,
                           ),
                         ),
                         Expanded(
                           child: _buildStatItem(
                             context: context,
-                            value: user.followingCount.toString(),
-                            label: 'المتابَعون',
-                            onTap: onFollowingTap,
+                            value: user.followersCount.toString(),
+                            label: 'المتابعون',
+                            onTap: onFollowersTap,
                           ),
                         ),
                       ],

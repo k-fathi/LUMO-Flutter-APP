@@ -12,6 +12,8 @@ import '../../../shared/widgets/elevated_card.dart';
 import '../view_model/home_view_model.dart';
 import '../../community/view/notifications_screen.dart';
 import '../../../shared/providers/notification_provider.dart';
+import '../../../core/services/connectivity_service.dart';
+import '../../../shared/widgets/no_internet_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -43,6 +45,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final currentUser = authProvider.currentUser;
 
     if (currentUser == null) {
+      final isConnected = context.watch<ConnectivityService>().isConnected;
+      if (!isConnected) {
+        return Scaffold(
+          body: NoInternetWidget(
+            onRetry: () => authProvider.init(),
+          ),
+        );
+      }
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
@@ -388,6 +398,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required String value,
     required Color color,
   }) {
+    final theme = Theme.of(context);
     return ElevatedCard(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -410,7 +421,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             title,
             style: AppTextStyles.caption.copyWith(
-              color: AppColors.mutedForeground,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -485,6 +496,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required String time,
     required Color color,
   }) {
+    final theme = Theme.of(context);
     return Row(
       children: [
         Container(
@@ -510,16 +522,16 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(
                 time,
                 style: AppTextStyles.caption.copyWith(
-                  color: AppColors.mutedForeground,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
             ],
           ),
         ),
-        const Icon(
+        Icon(
           Icons.arrow_forward_ios_rounded,
           size: 16,
-          color: AppColors.mutedForeground,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
         ),
       ],
     );
@@ -529,12 +541,12 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showSearchDoctorDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (BuildContext dContext) {
+      builder: (context) {
+        String searchQuery = '';
+        bool isSearching = false;
+        bool requestSent = false;
         return StatefulBuilder(
           builder: (dContext, setState) {
-            String searchQuery = '';
-            bool isSearching = false;
-            bool requestSent = false;
             final theme = Theme.of(context);
 
             return Dialog(
@@ -557,8 +569,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     TextField(
                       decoration: InputDecoration(
                         hintText: 'ابحث بالاسم أو الإيميل',
-                        hintStyle: AppTextStyles.body
-                            .copyWith(color: AppColors.mutedForeground),
+                        hintStyle: AppTextStyles.body.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                         prefixIcon: const Icon(Icons.search_rounded),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -604,9 +616,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                   Text("د. أحمد محمود",
                                       style: AppTextStyles.body.copyWith(
                                           fontWeight: FontWeight.bold)),
-                                  Text("ahmed@example.com",
+                                  Text("طبيب أطفال متخصص",
                                       style: AppTextStyles.caption.copyWith(
-                                          color: AppColors.mutedForeground)),
+                                          color: theme.colorScheme.onSurface
+                                              .withValues(alpha: 0.6))),
                                 ],
                               ),
                             ),

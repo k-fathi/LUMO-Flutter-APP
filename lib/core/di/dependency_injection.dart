@@ -29,6 +29,7 @@ import '../services/lumo_api_service.dart';
 import '../services/mock_api_service.dart';
 import '../services/notification_service.dart';
 import '../services/shared_preferences_service.dart';
+import '../services/connectivity_service.dart';
 import '../../features/home/view_model/home_view_model.dart';
 import '../../features/ai_helper/view_model/ai_view_model.dart';
 import '../../features/chat/view_model/chat_view_model.dart';
@@ -37,6 +38,7 @@ import '../../features/analysis/view_model/image_analysis_view_model.dart';
 import '../../features/community/view_model/community_view_model.dart';
 import '../../features/profile/view_model/profile_view_model.dart';
 import '../../features/session/view_model/session_view_model.dart';
+import '../../features/home/view_model/main_layout_view_model.dart';
 
 import 'package:dio/dio.dart';
 import '../network/dio_client.dart';
@@ -88,6 +90,10 @@ class DependencyInjection {
     // LUMO Microservices
     getIt.registerLazySingleton<LumoApiService>(
       () => LumoApiService(),
+    );
+
+    getIt.registerLazySingleton<ConnectivityService>(
+      () => ConnectivityService(),
     );
 
     getIt.registerLazySingleton<LumoApiRepository>(
@@ -238,6 +244,10 @@ class DependencyInjection {
     );
 
     // ViewModels
+    getIt.registerLazySingleton<MainLayoutViewModel>(
+      () => MainLayoutViewModel(),
+    );
+
     getIt.registerFactory<HomeViewModel>(
       () => HomeViewModel(),
     );

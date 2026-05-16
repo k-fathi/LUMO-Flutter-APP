@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/enums/message_status.dart';
 
 class MessageModel {
@@ -54,9 +55,11 @@ class MessageModel {
           userMap?['profile_image']?.toString(),
       content: (json['content'] ?? json['body'] ?? json['text'])?.toString() ?? '',
       status: MessageStatus.fromString(json['status'] as String? ?? 'sent'),
-      timestamp: json['timestamp'] != null
-          ? DateTime.tryParse(json['timestamp'].toString()) ?? DateTime.now()
-          : DateTime.now(),
+      timestamp: json['timestamp'] is Timestamp
+          ? (json['timestamp'] as Timestamp).toDate()
+          : json['timestamp'] is String
+              ? DateTime.tryParse(json['timestamp']) ?? DateTime.now()
+              : DateTime.now(),
       imageUrl: json['image_url']?.toString() ?? json['image']?.toString(),
       fileUrl: json['file_url']?.toString(),
       fileName: json['file_name']?.toString(),

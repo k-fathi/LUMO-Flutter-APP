@@ -11,6 +11,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../community/view/community_screen.dart';
 import '../../chat/view/chats_list_screen.dart';
 import '../../chat/view/chatbot_screen.dart';
+import '../view_model/main_layout_view_model.dart';
 import '../../analysis/view/parent_analysis_screen.dart';
 import '../../analysis/view/doctor_patients_screen.dart';
 import '../../chat/view_model/chat_view_model.dart';
@@ -24,8 +25,6 @@ class MainLayout extends StatefulWidget {
 }
 
 class _MainLayoutState extends State<MainLayout> {
-  int _currentIndex = 0;
-
   @override
   void initState() {
     super.initState();
@@ -41,6 +40,7 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
+    final navigationProvider = context.watch<MainLayoutViewModel>();
     final currentUser = authProvider.currentUser;
 
     if (currentUser == null) {
@@ -58,7 +58,7 @@ class _MainLayoutState extends State<MainLayout> {
 
     return Scaffold(
       body: IndexedStack(
-        index: _currentIndex,
+        index: navigationProvider.currentIndex,
         children: [
           const CommunityScreen(), // 0: Home
           ChangeNotifierProvider(  // 1: Analysis
@@ -76,9 +76,9 @@ class _MainLayoutState extends State<MainLayout> {
         ],
       ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
+        selectedIndex: navigationProvider.currentIndex,
         onDestinationSelected: (index) {
-          setState(() => _currentIndex = index);
+          navigationProvider.setIndex(index);
           // Reload chat rooms when Chat tab is selected
           if (index == 3) {
             final userId = context.read<AuthProvider>().currentUser?.id;

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_constants.dart';
@@ -38,6 +39,10 @@ class DioClient {
         },
         onError: (DioException e, handler) {
           ApiException? apiException;
+
+          debugPrint('❌ [DioClient] ERROR PATH: ${e.requestOptions.path}');
+          debugPrint('❌ [DioClient] ERROR STATUS: ${e.response?.statusCode}');
+          debugPrint('❌ [DioClient] ERROR DATA: ${e.response?.data}');
 
           if (e.response != null) {
             final data = e.response!.data;

@@ -100,7 +100,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                     child: Text(
                       'لا توجد تعليقات بعد',
                       style: AppTextStyles.body.copyWith(
-                        color: AppColors.mutedForeground,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   );
@@ -186,7 +186,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                       decoration: InputDecoration(
                         hintText: 'اكتب تعليقاً...',
                         hintStyle: AppTextStyles.body.copyWith(
-                          color: AppColors.mutedForeground,
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                         filled: true,
                         fillColor: theme.colorScheme.surfaceContainerHighest,
@@ -309,14 +309,14 @@ class _CommentTile extends StatelessWidget {
               _CommentActionButton(
                 icon: isLiked ? Icons.favorite_rounded : Icons.favorite_outline_rounded,
                 label: comment.likesCount > 0 ? '${comment.likesCount}' : 'إعجاب',
-                color: isLiked ? Colors.red : AppColors.mutedForeground,
+                color: isLiked ? Colors.red : theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 onTap: () => viewModel.toggleCommentLike(comment.id, currentUserId: currentUserId),
               ),
               const SizedBox(width: 16),
               _CommentActionButton(
                 icon: Icons.reply_rounded,
                 label: 'رد',
-                color: AppColors.mutedForeground,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 onTap: onReply,
               ),
             ],

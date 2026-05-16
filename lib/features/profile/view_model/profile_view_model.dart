@@ -99,7 +99,15 @@ class ProfileViewModel extends ChangeNotifier {
         // keep existing _user (typically set from navigation args).
       }
     } catch (e) {
-      _errorMessage = 'فشل تحميل الملف الشخصي: $e';
+      final errorStr = e.toString().toLowerCase();
+      if (errorStr.contains('socketexception') ||
+          errorStr.contains('connection') ||
+          errorStr.contains('network') ||
+          errorStr.contains('timeout')) {
+        _errorMessage = 'لا يوجد اتصال بالإنترنت، يرجى التحقق من اتصالك';
+      } else {
+        _errorMessage = 'فشل تحميل الملف الشخصي: $e';
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -121,7 +129,15 @@ class ProfileViewModel extends ChangeNotifier {
         _user = _user!.copyWith(followersCount: _followers.length);
       }
     } catch (e) {
-      _errorMessage = 'فشل تحميل المتابعين: $e';
+      final errorStr = e.toString().toLowerCase();
+      if (errorStr.contains('socketexception') ||
+          errorStr.contains('connection') ||
+          errorStr.contains('network') ||
+          errorStr.contains('timeout')) {
+        _errorMessage = 'لا يوجد اتصال بالإنترنت';
+      } else {
+        _errorMessage = 'فشل تحميل المتابعين: $e';
+      }
     } finally {
       _isListLoading = false;
       notifyListeners();
@@ -143,7 +159,15 @@ class ProfileViewModel extends ChangeNotifier {
         _user = _user!.copyWith(followingCount: _following.length);
       }
     } catch (e) {
-      _errorMessage = 'فشل تحميل قائمة المتابعة: $e';
+      final errorStr = e.toString().toLowerCase();
+      if (errorStr.contains('socketexception') ||
+          errorStr.contains('connection') ||
+          errorStr.contains('network') ||
+          errorStr.contains('timeout')) {
+        _errorMessage = 'لا يوجد اتصال بالإنترنت';
+      } else {
+        _errorMessage = 'فشل تحميل قائمة المتابعة: $e';
+      }
     } finally {
       _isListLoading = false;
       notifyListeners();

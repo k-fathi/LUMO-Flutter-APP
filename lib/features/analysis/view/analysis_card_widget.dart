@@ -37,7 +37,7 @@ class AnalysisCardWidget extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(24), // rounded-3xl
           border: Border.all(color: const Color(0xFFE3F2FD)),
           boxShadow: [

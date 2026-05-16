@@ -103,7 +103,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   TextButton(
                     onPressed: _skipOnboarding,
                     style: TextButton.styleFrom(
-                      foregroundColor: AppColors.mutedForeground,
+                      foregroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 8,
@@ -115,7 +115,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     child: Text(
                       'تخطي',
                       style: AppTextStyles.body.copyWith(
-                        color: AppColors.mutedForeground,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   ),
@@ -222,7 +222,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       decoration: BoxDecoration(
         color: isActive
             ? AppColors.primary
-            : AppColors.secondary,
+            : Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(4),
       ),
     );

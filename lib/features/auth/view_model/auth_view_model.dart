@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 import '../../../data/models/auth/auth_models.dart';
@@ -132,6 +133,10 @@ class AuthViewModel extends ChangeNotifier {
   }
 
   Future<String?> _getFcmToken() async {
+    if (Firebase.apps.isEmpty) {
+      debugPrint('FCM token retrieval skipped: Firebase not initialized.');
+      return null;
+    }
     try {
       return await FirebaseMessaging.instance
           .getToken()

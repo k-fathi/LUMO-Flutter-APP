@@ -36,10 +36,10 @@ class BottomNavBar extends StatelessWidget {
 
     // React: bg-white border-t border-[#E3F2FD] shadow-lg
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
         border: Border(
-          top: BorderSide(color: Color(0xFFE3F2FD)),
+          top: BorderSide(color: Theme.of(context).dividerColor),
         ),
         boxShadow: [
           BoxShadow(
@@ -90,7 +90,7 @@ class BottomNavBar extends StatelessWidget {
                         size: 20,
                         // React: active=text-white, inactive=text-[#64748b]
                         color:
-                            isActive ? Colors.white : const Color(0xFF64748B),
+                            isActive ? Colors.white : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -102,7 +102,7 @@ class BottomNavBar extends StatelessWidget {
                         fontSize: 11,
                         color: isActive
                             ? const Color(0xFF2196F3)
-                            : const Color(0xFF64748B),
+                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         fontWeight:
                             isActive ? FontWeight.w600 : FontWeight.normal,
                       ),

@@ -128,7 +128,15 @@ class CommunityViewModel extends ChangeNotifier {
       await _loadAllFeeds(rethrowError: true);
       _isInitialized = true;
     } catch (e) {
-      _errorMessage = 'فشل تحميل المنشورات: ${e.toString()}';
+      final errorStr = e.toString().toLowerCase();
+      if (errorStr.contains('socketexception') ||
+          errorStr.contains('connection') ||
+          errorStr.contains('network') ||
+          errorStr.contains('timeout')) {
+        _errorMessage = 'لا يوجد اتصال بالإنترنت، يرجى التحقق من اتصالك';
+      } else {
+        _errorMessage = 'فشل تحميل المنشورات: ${e.toString()}';
+      }
     } finally {
       _isLoading = false;
       _safeNotify();
@@ -387,10 +395,22 @@ class CommunityViewModel extends ChangeNotifier {
     final post = findPostById(postId);
     if (post == null) return;
 
-    final isLiked = post.isLiked;
+    final currentUserId = _currentUserId;
+    if (currentUserId == null) return;
+
+    final isLiked = post.isLikedBy(currentUserId);
+    
+    final updatedLikedByIds = List<int>.from(post.likedByUserIds);
+    if (isLiked) {
+      updatedLikedByIds.remove(currentUserId);
+    } else {
+      updatedLikedByIds.add(currentUserId);
+    }
+
     final updatedPost = post.copyWith(
       isLiked: !isLiked,
       likesCount: !isLiked ? post.likesCount + 1 : post.likesCount - 1,
+      likedByUserIds: updatedLikedByIds,
     );
 
     _updatePostEverywhere(updatedPost);

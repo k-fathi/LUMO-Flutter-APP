@@ -42,21 +42,21 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCaLP4Ng0pe8AlX_0KUxgkfg7Kv9YA3nhY',
-    appId: '1:230335947923:web:d677f108b0cc9914519966',
-    messagingSenderId: '230335947923',
-    projectId: 'devops-roadmap-x3',
-    authDomain: 'devops-roadmap-x3.firebaseapp.com',
-    storageBucket: 'devops-roadmap-x3.firebasestorage.app',
-    measurementId: 'G-YPE10L62ZC',
+    apiKey: 'AIzaSyCCLRowonwKlSx1_zY43MYH8Hu-qcDz2FQ',
+    appId: '1:783937682466:web:6cf1cb9341f4020f6a5e7b',
+    messagingSenderId: '783937682466',
+    projectId: 'lumo-flutter-app',
+    authDomain: 'lumo-flutter-app.firebaseapp.com',
+    storageBucket: 'lumo-flutter-app.firebasestorage.app',
+    measurementId: 'G-DZT3D782TS',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBLEcPQOgPLsL7lzKSLwabet0FwCNyo00k',
-    appId: '1:230335947923:android:efad94b6139d5f48519966',
-    messagingSenderId: '230335947923',
-    projectId: 'devops-roadmap-x3',
-    storageBucket: 'devops-roadmap-x3.firebasestorage.app',
+    apiKey: 'AIzaSyC_FxWDNbaK6NLe-WYRAu7c7GKyGD4cO20',
+    appId: '1:783937682466:android:4fceee502e78ca916a5e7b',
+    messagingSenderId: '783937682466',
+    projectId: 'lumo-flutter-app',
+    storageBucket: 'lumo-flutter-app.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
@@ -70,11 +70,13 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'YOUR_MACOS_API_KEY',
-    appId: '1:YOUR_APP_ID:macos:YOUR_MACOS_APP_ID',
-    messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-    projectId: 'lumo-ai-medical',
-    storageBucket: 'lumo-ai-medical.appspot.com',
-    iosBundleId: 'com.lumoai.medical',
+    apiKey: 'AIzaSyBthbaJafp5W3dSJbOTfAWsvpvOxQJ8vYE',
+    appId: '1:783937682466:ios:04df6e07c0a896116a5e7b',
+    messagingSenderId: '783937682466',
+    projectId: 'lumo-flutter-app',
+    storageBucket: 'lumo-flutter-app.firebasestorage.app',
+    iosClientId: '783937682466-c5doq74m7528m7mr3q2vdcka9ca6f8q8.apps.googleusercontent.com',
+    iosBundleId: 'com.example.kareemFinal',
   );
+
 }
