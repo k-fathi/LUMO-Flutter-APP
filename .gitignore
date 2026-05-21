@@ -49,6 +49,7 @@ lumo*.json
 venv/
 
 *.py
+main.py
 
 *.md
 !README.md
