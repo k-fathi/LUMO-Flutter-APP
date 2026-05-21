@@ -426,7 +426,12 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         // ✅ FIX C-1 + C-2: استدعي POST /chat/start لتجيب chatRoomId ثابت من الـ backend
         try {
           final chatViewModel = context.read<ChatViewModel>();
-          final chatRoomId = await chatViewModel.startChat(user.id);
+          // ✅ مرر اسم وصورة المستقبِل لإثراء ChatRoom Model
+          final chatRoomId = await chatViewModel.startChat(
+            user.id,
+            receiverName: user.name,
+            receiverAvatar: user.profileImage ?? user.avatarUrl,
+          );
 
           if (context.mounted) {
             final userId = context.read<AuthProvider>().currentUser?.id;
@@ -451,7 +456,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             });
           }
         } catch (e) {
-          debugPrint('❌❌❌ FAIL CHAT START: $e');
+          debugPrint('FAIL CHAT START: $e');
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -721,8 +726,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                 try {
                                   final chatViewModel =
                                       parentContext.read<ChatViewModel>();
-                                  final chatRoomId =
-                                      await chatViewModel.startChat(user.id);
+                                  final chatRoomId = await chatViewModel.startChat(
+                                    user.id,
+                                    receiverName: user.name,
+                                    receiverAvatar: user.avatarUrl,
+                                  );
 
                                   if (parentContext.mounted) {
                                     final userId = parentContext.read<AuthProvider>().currentUser?.id;

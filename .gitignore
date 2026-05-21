@@ -50,4 +50,6 @@ venv/
 
 *.py
 
-chatbot*.md
+*.md
+!README.md
+

@@ -18,9 +18,15 @@ class AIRepository {
   /// Base URL for the chatbot API.
   static const String _chatbotBaseUrl = 'http://172.189.165.242:8080';
 
-  /// Whether a /session/start has already been called in this app session.
-  bool _sessionStarted = false;
-  bool get isSessionStarted => _sessionStarted;
+  /// Tracks per-user/per-patient started sessions instead of a single global flag.
+  final Set<String> _startedSessions = {};
+  bool get isSessionStarted {
+    final currentUserId = _localDataSource.getCurrentUserId();
+    if (currentUserId == null || currentUserId.isEmpty) {
+      return _startedSessions.isNotEmpty;
+    }
+    return _startedSessions.any((key) => key == currentUserId || key.startsWith('${currentUserId}_'));
+  }
 
   AIRepository(this._localDataSource) {
     _chatbotDio = Dio(BaseOptions(
@@ -79,16 +85,66 @@ class AIRepository {
 
   // ==================== SESSION START ====================
 
+  String _sessionKey({
+    required String userId,
+    required String userRole,
+    String? patientId,
+    String? childName,
+  }) {
+    if (userRole == 'doctor' && patientId != null && patientId.trim().isNotEmpty) {
+      return '${userId}_${patientId.trim()}';
+    }
+    final suffix = (childName ?? '').trim();
+    return suffix.isNotEmpty ? '${userId}_$suffix' : userId.toString();
+  }
+
+  Map<String, dynamic> _resolveSessionContext({
+    required String userId,
+    String? childName,
+    String? userRole,
+    String? patientId,
+  }) {
+    final currentUser = _localDataSource.getCurrentUser();
+    final resolvedRole = (userRole ?? currentUser?['role']?.toString() ?? 'parent').toString();
+    final resolvedChildName = (childName ?? currentUser?['child_name']?.toString() ?? '').toString();
+    final resolvedPatientId = (patientId ?? currentUser?['patient_id']?.toString()).toString();
+
+    return {
+      'user_id': userId.toString(),
+      'user_role': resolvedRole.isNotEmpty ? resolvedRole : 'parent',
+      'child_name': resolvedChildName,
+      'patient_id': resolvedPatientId == 'null' || resolvedPatientId.trim().isEmpty ? null : resolvedPatientId,
+    };
+  }
+
   /// Initialises the chatbot session with the child's name.
   /// Must be called once before the first /chat request.
-  Future<void> startSession(String childName) async {
-    if (_sessionStarted) return; // idempotent guard
+  Future<void> startSession(
+    String childName, {
+    int? userId,
+    String userRole = 'parent',
+    String? patientId,
+  }) async {
+    final currentUser = _localDataSource.getCurrentUser();
+    final resolvedUserId = (userId ?? int.tryParse(_localDataSource.getCurrentUserId() ?? '') ?? currentUser?['id'] ?? 0).toString();
+    final key = _sessionKey(
+      userId: resolvedUserId,
+      userRole: userRole,
+      patientId: patientId,
+      childName: childName,
+    );
+    if (_startedSessions.contains(key)) return;
+
+    final payload = _resolveSessionContext(
+      userId: resolvedUserId,
+      childName: childName,
+      userRole: userRole,
+      patientId: patientId,
+    );
 
     try {
-      await _chatbotDio.post('/session/start', data: {
-        'child_name': childName,
-      });
-      _sessionStarted = true;
+      await _chatbotDio.post('/session/start', data: payload);
+      _startedSessions.add(key);
       debugPrint('✅ Chatbot session started for child: $childName');
     } catch (e) {
       debugPrint('⚠️ Chatbot /session/start failed: $e');
@@ -105,6 +161,8 @@ class AIRepository {
     int userId,
     String content, {
     String? childName,
+    String? userRole,
+    String? patientId,
   }) async {
     final userMessage = AIMessageModel(
       id: 'user_${DateTime.now().millisecondsSinceEpoch}',
@@ -114,9 +172,21 @@ class AIRepository {
       timestamp: DateTime.now(),
     );
 
+    final currentUser = _localDataSource.getCurrentUser();
+    final resolvedRole = (userRole ?? currentUser?['role']?.toString() ?? 'parent').toString();
+    final resolvedChildName = childName?.trim().isNotEmpty == true
+        ? childName!.trim()
+        : (currentUser?['child_name']?.toString() ?? currentUser?['data']?['child_name']?.toString() ?? '').toString();
+    final resolvedPatientId = patientId ?? currentUser?['patient_id']?.toString();
+
     // ── Try /session/start if not yet done ──
-    if (childName != null && childName.isNotEmpty) {
-      await startSession(childName);
+    if (resolvedRole != 'doctor' || (resolvedPatientId != null && resolvedPatientId.trim().isNotEmpty)) {
+      await startSession(
+        resolvedChildName.isNotEmpty ? resolvedChildName : 'الطفل',
+        userId: userId,
+        userRole: resolvedRole,
+        patientId: resolvedPatientId,
+      );
     }
 
     // ── Real API call ────────────────────────────────────────────────────
@@ -127,27 +197,40 @@ class AIRepository {
     String? clarificationQuestion;
 
     try {
-      String savedChildName = '';
-
-      // Priority 1: use the childName passed directly to this method
-      if (childName != null && childName.isNotEmpty) {
-        savedChildName = childName;
-      }
-
-      // Priority 2: fallback to local storage
+      String savedChildName = resolvedChildName;
       if (savedChildName.isEmpty) {
-        final userData = _localDataSource.getCurrentUser();
-        savedChildName = userData?['child_name']?.toString() ?? '';
-        // also check nested under 'data' key (some API responses wrap fields)
+        savedChildName = currentUser?['child_name']?.toString() ?? '';
         if (savedChildName.isEmpty) {
-          savedChildName = userData?['data']?['child_name']?.toString() ?? '';
+          savedChildName = currentUser?['data']?['child_name']?.toString() ?? '';
         }
       }
 
-      final response = await _chatbotDio.post('/chat', data: {
-        "question": content,
-        if (savedChildName.trim().isNotEmpty) "child_name": savedChildName.trim(),
-      });
+      Future<Response<dynamic>> postChat() {
+        return _chatbotDio.post('/chat', data: {
+          "question": content,
+          "user_id": userId.toString(),
+          "user_role": resolvedRole,
+          if (savedChildName.trim().isNotEmpty) "child_name": savedChildName.trim(),
+          if (resolvedRole == 'doctor' && (resolvedPatientId != null && resolvedPatientId.trim().isNotEmpty))
+            "patient_id": resolvedPatientId.trim(),
+        });
+      }
+
+      Response<dynamic> response = await postChat();
+      if (response.statusCode == 404) {
+        final detail = response.data is Map ? response.data['detail']?.toString().toLowerCase() ?? '' : response.data?.toString().toLowerCase() ?? '';
+        final looksLikeMissingSession = detail.contains('session') || detail.contains('لم تبدأ') || detail.contains('no session');
+        if (looksLikeMissingSession) {
+          await startSession(
+            savedChildName.isNotEmpty ? savedChildName : 'الطفل',
+            userId: userId,
+            userRole: resolvedRole,
+            patientId: resolvedRole == 'doctor' ? resolvedPatientId : null,
+          );
+          response = await postChat();
+        }
+      }
+
       _validateResponse(response);
 
       final data = response.data;
@@ -229,9 +312,17 @@ class AIRepository {
   // ==================== PROFILE (SESSION SUMMARY) ====================
 
   /// Fetches the session summary / child profile from the chatbot API.
-  Future<Map<String, dynamic>?> getProfile() async {
+  Future<Map<String, dynamic>?> getProfile({
+    required int userId,
+    String userRole = 'parent',
+    String? patientId,
+  }) async {
     try {
-      final response = await _chatbotDio.get('/profile');
+      final response = await _chatbotDio.get('/profile', queryParameters: {
+        'user_id': userId.toString(),
+        'user_role': userRole,
+        if (patientId != null && patientId.trim().isNotEmpty) 'patient_id': patientId.trim(),
+      });
       if (response.data is Map<String, dynamic>) {
         return response.data as Map<String, dynamic>;
       }
@@ -255,6 +346,18 @@ class AIRepository {
   /// Clears all chat history for [userId] from local cache.
   Future<void> clearChatHistory(int userId) async {
     await _localDataSource.remove('ai_history_$userId');
-    _sessionStarted = false; // allow a fresh session on next open
+    _startedSessions.removeWhere((key) => key.startsWith('${userId}_') || key == userId.toString());
+  }
+
+  Future<List<Map<String, dynamic>>> fetchPatients(int doctorId) async {
+    final response = await _chatbotDio.get('/patients', queryParameters: {
+      'user_id': doctorId.toString(),
+    });
+    _validateResponse(response);
+    final data = response.data;
+    if (data is Map && data['patients'] is List) {
+      return List<Map<String, dynamic>>.from(data['patients']);
+    }
+    return [];
   }
 }

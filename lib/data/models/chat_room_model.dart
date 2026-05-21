@@ -62,20 +62,38 @@ class ChatRoomModel {
     if (rawTime != null) {
       lastMessageTimestamp = _parseDateTime(rawTime);
     }
+    
+    // ✅ Ensure participantNames والـ participantAvatars بتحتوي على entries للـ participant_ids
+    // حتى لو الـ API ما أرجعها null, عشان نتجنب "مستخدم" في الـ UI
+    Map<String, String> participantNames = {};
+    if (json['participant_names'] is Map) {
+      participantNames = Map<String, String>.from(
+        (json['participant_names'] as Map).map(
+          (k, v) => MapEntry(k.toString(), (v?.toString() ?? '').isEmpty ? 'مستخدم' : v.toString()),
+        ),
+      );
+    }
+    // تأكد إن كل participant_id عنده entry بـ participantNames
+    for (final id in participantIds) {
+      if (!participantNames.containsKey(id) || (participantNames[id]?.isEmpty ?? true)) {
+        participantNames[id] = 'مستخدم';
+      }
+    }
+
+    Map<String, String?> participantAvatars = {};
+    if (json['participant_avatars'] is Map) {
+      participantAvatars = Map<String, String?>.from(
+        (json['participant_avatars'] as Map).map(
+          (k, v) => MapEntry(k.toString(), v?.toString()),
+        ),
+      );
+    }
 
     return ChatRoomModel(
       id: json['id']?.toString() ?? '',
       participantIds: participantIds,
-      participantNames: Map<String, String>.from(
-        (json['participant_names'] as Map?)?.map(
-          (k, v) => MapEntry(k.toString(), v?.toString() ?? ''),
-        ) ?? {},
-      ),
-      participantAvatars: Map<String, String?>.from(
-        (json['participant_avatars'] as Map?)?.map(
-          (k, v) => MapEntry(k.toString(), v?.toString()),
-        ) ?? {},
-      ),
+      participantNames: participantNames,
+      participantAvatars: participantAvatars,
       lastMessage: json['last_message'] as String?,
       lastMessageSenderId: json['last_message_sender_id']?.toString(),
       lastMessageTimestamp: lastMessageTimestamp,
@@ -88,7 +106,6 @@ class ChatRoomModel {
       typingStatus: Map<String, bool>.from(json['typing_status'] as Map? ?? {}),
     );
   }
-
   // Convert to JSON
   Map<String, dynamic> toJson() {
     return {
@@ -139,22 +156,44 @@ class ChatRoomModel {
   }
 
   // Helper methods
+  bool _matchesUserId(String candidateId, String currentUserId) {
+    final normalizedCurrentUserId = int.tryParse(currentUserId)?.toString() ?? currentUserId;
+    final normalizedCandidateId = int.tryParse(candidateId)?.toString() ?? candidateId;
+    return normalizedCandidateId == currentUserId ||
+        normalizedCandidateId == normalizedCurrentUserId;
+  }
+
   String getOtherParticipantId(String currentUserId) {
     // Return first ID that isn't current user, or fallback to any ID
     return participantIds.firstWhere(
-      (id) => id != currentUserId,
+      (id) => !_matchesUserId(id, currentUserId),
       orElse: () => participantIds.isNotEmpty ? participantIds.first : '',
     );
   }
 
+  /// استخرج اسم المستخدم التاني مع fallbacks متعددة
   String getOtherParticipantName(String currentUserId) {
-    final otherId = getOtherParticipantId(currentUserId);
-    return participantNames[otherId] ?? 'مستخدم';
+    final otherId = participantIds.firstWhere(
+      (id) => !_matchesUserId(id, currentUserId),
+      orElse: () => participantIds.isNotEmpty ? participantIds.first : '',
+    );
+    
+    // Fallback chain for name
+    final fallbackId = participantIds.isNotEmpty ? participantIds.first : '';
+    return participantNames[otherId] ??
+        participantNames[fallbackId] ??
+        'مستخدم غير معروف';
   }
 
+  /// استخرج صورة المستخدم التاني مع fallbacks متعددة
   String? getOtherParticipantAvatar(String currentUserId) {
-    final otherId = getOtherParticipantId(currentUserId);
-    return participantAvatars[otherId];
+    final otherId = participantIds.firstWhere(
+      (id) => !_matchesUserId(id, currentUserId),
+      orElse: () => participantIds.isNotEmpty ? participantIds.first : '',
+    );
+    
+    final fallbackId = participantIds.isNotEmpty ? participantIds.first : '';
+    return participantAvatars[otherId] ?? participantAvatars[fallbackId];
   }
 
   int getUnreadCount(String userId) {
@@ -168,6 +207,14 @@ class ChatRoomModel {
   bool isOtherParticipantTyping(String currentUserId) {
     final otherId = getOtherParticipantId(currentUserId);
     return typingStatus[otherId] ?? false;
+  }
+  
+  /// احصل على (اسم، صورة) المستخدم التاني مع جميع الـ fallbacks
+  /// النتيجة: (name, avatar)
+  (String, String?) getOtherParticipantData(String currentUserId) {
+    final name = getOtherParticipantName(currentUserId);
+    final avatar = getOtherParticipantAvatar(currentUserId);
+    return (name, avatar);
   }
 
   bool get hasLastMessage => lastMessage != null && lastMessage!.isNotEmpty;

@@ -124,8 +124,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
                       children: [
                         Image.asset(
                           'assets/images/ai_avatar.png',
-                          width: 200,
-                          height: 200,
+                          width: 240,
+                          height: 240,
                           fit: BoxFit.contain,
                         ),
                         SizedBox(height: 24),

@@ -88,24 +88,52 @@ class ChatViewModel extends ChangeNotifier {
     }
   }
 
-  Future<String> startChat(int receiverId) async {
+  Future<String> startChat(int receiverId, {String? receiverName, String? receiverAvatar}) async {
     try {
       final chatRoom = await _chatRepository.startChat(receiverId);
       final chatRoomId = chatRoom.id;
       debugPrint('✅ chatRoomId from API: $chatRoomId');
 
+      // ✅ إثراء ChatRoom ببيانات Receiver لو أنت عندك
+      ChatRoomModel enrichedRoom = chatRoom;
+      if ((receiverName != null && receiverName.isNotEmpty) || 
+          (receiverAvatar != null && receiverAvatar.isNotEmpty)) {
+        final currentUserId = _userId?.toString() ?? '';
+        final receiverIdStr = receiverId.toString();
+        
+        // بناء Maps للمشاركين المحدثة
+        Map<String, String> updatedNames = Map.from(chatRoom.participantNames);
+        Map<String, String?> updatedAvatars = Map.from(chatRoom.participantAvatars);
+        
+        if (receiverName != null && receiverName.isNotEmpty) {
+          updatedNames[receiverIdStr] = receiverName;
+        }
+        if (receiverAvatar != null && receiverAvatar.isNotEmpty) {
+          updatedAvatars[receiverIdStr] = receiverAvatar;
+        }
+        
+        enrichedRoom = chatRoom.copyWith(
+          participantNames: updatedNames,
+          participantAvatars: updatedAvatars,
+        );
+      }
+
       // Pre-populate the room in _chatRooms so Inbox shows it immediately
       final existingIndex = _chatRooms.indexWhere((r) => r.id == chatRoomId);
       if (existingIndex == -1) {
-        _chatRooms.add(chatRoom);
+        _chatRooms.add(enrichedRoom);
         _chatRooms.sort((a, b) {
           final aTime = a.lastMessageTimestamp ?? a.updatedAt;
           final bTime = b.lastMessageTimestamp ?? b.updatedAt;
           return bTime.compareTo(aTime);
         });
+      } else {
+        // تحديث الـ room الموجود بالبيانات المثرية
+        _chatRooms[existingIndex] = enrichedRoom;
       }
 
       await loadMessages(chatRoomId);
+      _safeNotifyListeners();
       return chatRoomId;
     } catch (e) {
       _errorMessage = 'فشل بدء المحادثة: $e';
@@ -136,18 +164,50 @@ class ChatViewModel extends ChangeNotifier {
       final rooms = await _chatRepository.getMyChats();
       // Patch rooms that have null lastMessage if we have cached messages
       final patchedRooms = rooms.map((room) {
+        // ✅ إصلاح: ملء بيانات المشاركين الناقصة
+        Map<String, String> updatedNames = Map.from(room.participantNames);
+        Map<String, String?> updatedAvatars = Map.from(room.participantAvatars);
+        
+        // لو أسماء المشاركين فاضية، جرب الـ cache أو participants list
+        for (final id in room.participantIds) {
+          if ((updatedNames[id]?.isEmpty ?? true)) {
+            final cachedMsgs = _chatRepository.getCachedMessages(room.id);
+            for (final msg in cachedMsgs) {
+              if (msg.senderId.toString() == id && msg.senderName.isNotEmpty) {
+                updatedNames[id] = msg.senderName;
+                if (msg.senderAvatarUrl != null && msg.senderAvatarUrl!.isNotEmpty) {
+                  updatedAvatars[id] = msg.senderAvatarUrl;
+                }
+                break;
+              }
+            }
+          }
+        }
+        
+        var patchedRoom = room;
+        
+        // ملء آخر رسالة لو فاضية
         if (room.lastMessage == null || room.lastMessage!.isEmpty) {
           final cachedMsgs = _chatRepository.getCachedMessages(room.id);
           if (cachedMsgs.isNotEmpty) {
-            cachedMsgs.sort((a, b) => b.timestamp.compareTo(a.timestamp)); // Newest first
-            return room.copyWith(
+            cachedMsgs.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+            patchedRoom = room.copyWith(
               lastMessage: cachedMsgs.first.content,
               lastMessageSenderId: cachedMsgs.first.senderId.toString(),
               lastMessageTimestamp: cachedMsgs.first.timestamp,
             );
           }
         }
-        return room;
+        
+        // تطبيق البيانات المحدثة
+        if (updatedNames.values.any((n) => n.isNotEmpty)) {
+          patchedRoom = patchedRoom.copyWith(
+            participantNames: updatedNames,
+            participantAvatars: updatedAvatars,
+          );
+        }
+        
+        return patchedRoom;
       }).toList();
 
       _chatRooms.clear();

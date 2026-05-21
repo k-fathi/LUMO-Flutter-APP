@@ -79,11 +79,36 @@ class _SessionDetailPlaceholderScreenState
           indicatorWeight: 3,
           labelStyle: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
           unselectedLabelStyle: AppTextStyles.body,
-          tabs: const [
-            Tab(text: "التحليل السلوكي والانفعالي", icon: Icon(Icons.analytics_outlined)),
+          isScrollable: true,
+          tabs: [
             Tab(
-                text: "التقرير الطبي",
-                icon: Icon(Icons.medical_information_outlined)),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Wrap(
+                  direction: Axis.vertical,
+                  alignment: WrapAlignment.center,
+                  children: const [
+                    Icon(Icons.analytics_outlined),
+                    SizedBox(height: 4),
+                    Text("التحليل السلوكي\nوالانفعالي", textAlign: TextAlign.center),
+                  ],
+                ),
+              ),
+            ),
+            Tab(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Wrap(
+                  direction: Axis.vertical,
+                  alignment: WrapAlignment.center,
+                  children: const [
+                    Icon(Icons.medical_information_outlined),
+                    SizedBox(height: 4),
+                    Text("التقرير الطبي", textAlign: TextAlign.center),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -591,23 +616,42 @@ class _SessionDetailPlaceholderScreenState
             title: 'الحالة المزاجية الغالبة',
             subtitle: 'Emotional Intelligence Model',
             trailing: _buildStatusChip(emotionLabel, topEmotion?.color ?? const Color(0xFF22C55E)),
-            content: 'الحالة المزاجية الغالبة: $emotionLabel بنسبة $emotionPct%.',
+            content: Text(
+              'الحالة المزاجية الغالبة: $emotionLabel بنسبة $emotionPct%.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                height: 1.7,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontFamily: 'Cairo',
+              ),
+            ),
           ),
           _buildReportItem(
             icon: Icons.record_voice_over_rounded,
             title: 'التدفق الصوتي والقصص',
             subtitle: 'Educational Voice Flow Model',
             trailing: _buildStatusChip(voiceStatus, voiceStatusColor),
-            content: hasVoiceData
-                ? _buildVoiceContent(hasValidSpeech, speechText, hasValidTrait, storyTrait, isCorrect)
-                : 'لم يتم التقاط أي تفاعل صوتي خلال هذه الجلسة.',
+            content: _buildVoiceFlowContent(
+              hasVoiceData: hasVoiceData,
+              hasValidSpeech: hasValidSpeech,
+              speechText: speechText,
+              hasValidTrait: hasValidTrait,
+              storyTrait: storyTrait,
+              isCorrect: isCorrect,
+            ),
           ),
           _buildReportItem(
             icon: Icons.visibility_rounded,
             title: 'التواصل البصري',
             subtitle: 'Eye Tracking Model',
             trailing: _buildStatusChip(focusStatus, focusStatusColor),
-            content: 'تمركزت نقاط النظر نحو الروبوت بنسبة $focusPct%.',
+            content: Text(
+              'تمركزت نقاط النظر نحو الروبوت بنسبة $focusPct%.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                height: 1.7,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontFamily: 'Cairo',
+              ),
+            ),
           ),
 
           // ── Recommendations ──────────────────────────────────
@@ -618,7 +662,14 @@ class _SessionDetailPlaceholderScreenState
               title: 'التوصيات',
               subtitle: 'AI-Generated Recommendations',
               trailing: _buildStatusChip('${_sessionData.recommendations.length}', const Color(0xFF8B5CF6)),
-              content: _sessionData.recommendations.map((r) => '• $r').join('\n'),
+              content: Text(
+                _sessionData.recommendations.map((r) => '• $r').join('\n'),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  height: 1.7,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontFamily: 'Cairo',
+                ),
+              ),
             ),
           ],
 
@@ -654,18 +705,120 @@ class _SessionDetailPlaceholderScreenState
     );
   }
 
-  String _buildVoiceContent(bool hasValidSpeech, String speechText, bool hasValidTrait, String storyTrait, bool? isCorrect) {
-    String content = 'أظهر المريض تفاعلاً صوتياً.';
-    if (hasValidSpeech) {
-      content += ' حيث ذكر: "$speechText".';
+  Widget _buildVoiceFlowContent({
+    required bool hasVoiceData,
+    required bool hasValidSpeech,
+    required String speechText,
+    required bool hasValidTrait,
+    required String storyTrait,
+    required bool? isCorrect,
+  }) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    final voiceChipLabel = hasVoiceData ? 'تفاعل صوتي' : 'بصري فقط';
+    final voiceChipColor = hasVoiceData ? scheme.primary : scheme.outline;
+
+    if (!hasVoiceData) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildStatusChip(voiceChipLabel, voiceChipColor),
+          const SizedBox(height: 12),
+          Text(
+            'لم يتم التقاط أي تفاعل صوتي خلال هذه الجلسة.',
+            style: textTheme.bodyMedium?.copyWith(
+              height: 1.7,
+              color: scheme.onSurfaceVariant,
+              fontFamily: 'Cairo',
+            ),
+          ),
+        ],
+      );
     }
-    if (hasValidTrait) {
-      content += ' السمة القصصية: $storyTrait.';
-    }
-    if (isCorrect != null) {
-      content += ' وكانت استجابته للأسئلة التفاعلية ${(isCorrect ? "صحيحة" : "خاطئة")}.';
-    }
-    return content;
+
+    final Color correctnessColor = isCorrect == true
+        ? scheme.tertiary
+        : scheme.error;
+    final IconData correctnessIcon = isCorrect == true
+        ? Icons.check_circle_rounded
+        : Icons.cancel_rounded;
+    final String correctnessText = isCorrect == true
+        ? 'إجابة صحيحة'
+        : 'إجابة خاطئة';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildStatusChip(voiceChipLabel, voiceChipColor),
+        const SizedBox(height: 14),
+        if (hasValidTrait) ...[
+          Text(
+            'السيناريو:',
+            style: textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: scheme.onSurface,
+              fontFamily: 'Cairo',
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            storyTrait,
+            style: textTheme.bodyMedium?.copyWith(
+              height: 1.7,
+              color: scheme.onSurfaceVariant,
+              fontFamily: 'Cairo',
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
+        if (hasValidSpeech) ...[
+          Text(
+            'إجابة الطفل:',
+            style: textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: scheme.onSurface,
+              fontFamily: 'Cairo',
+            ),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: scheme.outlineVariant),
+            ),
+            child: Text(
+              '"$speechText"',
+              style: textTheme.bodyMedium?.copyWith(
+                height: 1.7,
+                color: scheme.onSurface,
+                fontFamily: 'Cairo',
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
+        if (isCorrect != null)
+          Row(
+            children: [
+              Icon(correctnessIcon, color: correctnessColor, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                correctnessText,
+                style: textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: correctnessColor,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+            ],
+          ),
+      ],
+    );
   }
 
   Widget _buildStatusChip(String label, Color color) {
@@ -693,34 +846,34 @@ class _SessionDetailPlaceholderScreenState
     required String title,
     required String subtitle,
     required Widget trailing,
-    required String content,
+    required Widget content,
   }) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: scheme.outlineVariant),
       ),
       child: Column(
         children: [
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            leading: Icon(icon, color: AppColors.primary, size: 26),
+            leading: Icon(icon, color: scheme.primary, size: 26),
             title: Text(
               title,
-              style: const TextStyle(
+              style: theme.textTheme.titleMedium?.copyWith(
                 fontFamily: 'Cairo',
                 fontWeight: FontWeight.bold,
-                fontSize: 14,
               ),
             ),
             subtitle: Text(
               subtitle,
-              style: TextStyle(
+              style: theme.textTheme.bodySmall?.copyWith(
                 fontFamily: 'Cairo',
-                fontSize: 11,
-                color: Colors.grey.shade500,
+                color: scheme.onSurfaceVariant,
               ),
             ),
             trailing: trailing,
@@ -731,18 +884,10 @@ class _SessionDetailPlaceholderScreenState
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                color: scheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Text(
-                content,
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 13,
-                  height: 1.7,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
+              child: content,
             ),
           ),
         ],

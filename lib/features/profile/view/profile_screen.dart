@@ -10,6 +10,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../core/router/route_names.dart';
 import '../../../shared/widgets/avatar_widget.dart';
 import '../../../data/models/user_model.dart';
+import '../../../data/models/doctor_model.dart';
 import '../../../shared/providers/notification_provider.dart';
 import '../view_model/profile_view_model.dart';
 import '../../chat/view_model/chat_view_model.dart';
@@ -76,6 +77,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user =
         isMyProfile ? currentUser : (profileViewModel.user ?? widget.user);
     final isDoctor = user?.role.name == 'doctor';
+    final doctorUser = isMyProfile && currentUser is DoctorModel ? currentUser : null;
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
@@ -322,6 +324,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         context, RouteNames.doctorPatients);
                                   },
                                 ),
+                                if (doctorUser != null)
+                                  ..._buildDoctorClinicLocation(theme, l10n, doctorUser)
 
                               ]
                             : [
@@ -417,6 +421,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
         },
       ),
     );
+  }
+
+  List<Widget> _buildDoctorClinicLocation(ThemeData theme, AppLocalizations l10n, DoctorModel doctor) {
+    if (doctor.clinicLocation == null || doctor.clinicLocation!.isEmpty) {
+      return [];
+    }
+    return [
+      Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: Container(
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: theme.dividerColor),
+          ),
+          child: ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.location_on_rounded, color: Colors.orange, size: 24),
+            ),
+            title: Text(l10n.clinicLocation,
+                style: AppTextStyles.label.copyWith(fontWeight: FontWeight.bold)),
+            subtitle: Text(
+              doctor.clinicLocation ?? '',
+              style: AppTextStyles.caption.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ];
   }
 
   Widget _buildQuickAction({

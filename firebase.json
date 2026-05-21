@@ -1,1 +1,31 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"lumo-flutter-app","appId":"1:783937682466:android:4fceee502e78ca916a5e7b","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"lumo-flutter-app","configurations":{"android":"1:783937682466:android:4fceee502e78ca916a5e7b","macos":"1:783937682466:ios:04df6e07c0a896116a5e7b","web":"1:783937682466:web:6cf1cb9341f4020f6a5e7b"}}}}}}
+{
+    "flutter":
+    {
+        "platforms":
+        {
+            "android":
+            {
+                "default":
+                {
+                    "projectId":"lumo-flutter-app",
+                    "appId":"1:783937682466:android:4fceee502e78ca916a5e7b",
+                    "fileOutput":"android/app/google-services.json"
+                }
+            },
+            
+            "dart":
+            {
+                "lib/firebase_options.dart":
+                {
+                    "projectId":"lumo-flutter-app",
+                    "configurations":
+                    {
+                        "android":"1:783937682466:android:4fceee502e78ca916a5e7b",
+                        "macos":"1:783937682466:ios:04df6e07c0a896116a5e7b",
+                        "web":"1:783937682466:web:6cf1cb9341f4020f6a5e7b"
+                    }
+                }
+            }
+        }
+    }
+}
