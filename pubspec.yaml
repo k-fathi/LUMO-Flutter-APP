@@ -61,7 +61,7 @@ dependencies:
   easy_refresh: ^3.4.0        # متوافق مع Dart 3
   flutter_local_notifications: ^20.1.0
   timeago: ^3.7.1
-  fl_chart: ^1.1.1
+  fl_chart: ^0.69.0
   iconly: ^1.0.1
   # flutter_app_badger: ^1.5.0  ← احذفه أو استبدله بـ
   app_badge_plus: ^1.1.0
