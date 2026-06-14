@@ -76,10 +76,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
             const SizedBox(width: 8),
             // Text Field - Refined for better prominence
             Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.transparent,
-                ),
+              child: SizedBox(
                 child: TextField(
                   controller: _controller,
                   enabled: !widget.disabled,
@@ -95,13 +92,24 @@ class _ChatInputBarState extends State<ChatInputBar> {
                     hintStyle: AppTextStyles.body.copyWith(
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                     ),
+                    filled: true,
+                    fillColor: Colors.transparent, // Uses the outer container's color
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 8,
                       vertical: 12,
                     ),
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
                 ),
               ),

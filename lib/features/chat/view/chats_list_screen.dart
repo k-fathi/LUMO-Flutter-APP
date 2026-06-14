@@ -51,12 +51,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   List<dynamic> _buildDisplayItems(
     List<ChatRoomModel> rooms,
     UserModel currentUser,
-    List<UserModel> patients,
+    List<UserModel> connectedUsers,
   ) {
     final List<dynamic> items = [];
     final currentUserIdStr = currentUser.id.toString();
 
-    // Helper: sort rooms newest-first by lastMessageTimestamp
     List<ChatRoomModel> sortedNewest(List<ChatRoomModel> list) {
       final sorted = List<ChatRoomModel>.from(list);
       sorted.sort((a, b) {
@@ -67,17 +66,18 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       return sorted;
     }
 
-    if (currentUser.role == UserRole.doctor) {
-      final activePatientIds = rooms
-          .map((r) => r.getOtherParticipantId(currentUserIdStr))
-          .where((id) => id.isNotEmpty)
-          .toList();
+    final activeIds = rooms
+        .map((r) => r.getOtherParticipantId(currentUserIdStr))
+        .where((id) => id.isNotEmpty)
+        .toList();
 
-      items.add('AI_BOT'); // pinned at top
+    items.add('AI_BOT');
+
+    if (currentUser.role == UserRole.doctor) {
       items.addAll(sortedNewest(rooms));
 
-      for (final patient in patients) {
-        if (!activePatientIds.contains(patient.id.toString())) {
+      for (final patient in connectedUsers) {
+        if (!activeIds.contains(patient.id.toString())) {
           items.add(patient);
         }
       }
@@ -98,8 +98,14 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         }
       }
 
-      items.add('AI_BOT'); // always pinned first
       items.addAll(sortedNewest(doctorRooms));
+
+      for (final doctor in connectedUsers) {
+        if (!activeIds.contains(doctor.id.toString())) {
+          items.add(doctor);
+        }
+      }
+
       items.addAll(sortedNewest(otherRooms));
     }
 
@@ -144,10 +150,14 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             return Center(child: CircularProgressIndicator());
           }
 
+          final connectedUsers = currentUser.role == UserRole.doctor
+              ? patientProvider.patients
+              : patientProvider.doctors;
+
           final items = _buildDisplayItems(
             chatViewModel.chatRooms,
             currentUser,
-            patientProvider.patients,
+            connectedUsers,
           );
 
           if (items.isEmpty ||
@@ -511,8 +521,6 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         parentContext.read<PatientProvider>().fetchDoctors(parent.connectedDoctorIds);
       }
     }
-    // Ensure following list is loaded for the (isAr ? "أتابعهم" : "Following") filter
-    parentContext.read<CommunityViewModel>().loadFollowingIfNeeded();
 
     // Variables declared OUTSIDE builder so they persist across setModalState rebuilds
     String searchQuery = "";
@@ -600,24 +608,20 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                             () => setModalState(() => activeTab = 0)),
                         _buildCategoryChip(context, (isAr ? "مرتبط" : "related, linked, attached, united"), activeTab == 1,
                             () => setModalState(() => activeTab = 1)),
-                        _buildCategoryChip(context, (isAr ? "أتابعهم" : "Following"), activeTab == 2,
+                        _buildCategoryChip(context, (isAr ? "الأخيرة" : "Crucial phase/critical stage)"), activeTab == 2,
                             () => setModalState(() => activeTab = 2)),
-                        _buildCategoryChip(context, (isAr ? "الأخيرة" : "Crucial phase/critical stage)"), activeTab == 3,
-                            () => setModalState(() => activeTab = 3)),
                       ],
                     ),
                   ),
                   SizedBox(height: 8),
                   Expanded(
-                    child: Consumer3<PatientProvider, CommunityViewModel,
-                        ChatViewModel>(
+                    child: Consumer2<PatientProvider, ChatViewModel>(
                       builder:
-                          (context, patientProv, commProv, chatProv, child) {
+                          (context, patientProv, chatProv, child) {
                         // Aggregate Contacts
                         final connected = currentUser.role == UserRole.doctor
                             ? patientProv.patients
                             : patientProv.doctors;
-                        final following = commProv.followingUsers;
 
                         // Extract recent participants from chat rooms
                         final Map<String, UserModel> recentMap = {};
@@ -648,9 +652,6 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                           for (final u in connected) {
                             allMap[u.id] = u;
                           }
-                          for (final u in following) {
-                            allMap[u.id] = u;
-                          }
                           for (final u in recent) {
                             allMap[u.id] = u;
                           }
@@ -658,8 +659,6 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                         } else if (activeTab == 1) {
                           pool = connected;
                         } else if (activeTab == 2) {
-                          pool = following;
-                        } else if (activeTab == 3) {
                           pool = recent;
                         }
 

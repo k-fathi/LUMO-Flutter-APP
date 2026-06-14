@@ -48,10 +48,8 @@ class MessageBubble extends StatelessWidget {
                   borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(20),
                     topRight: Radius.circular(20),
-                    // React user (RTL): rounded-tr-sm → bottomRight small
-                    // React doctor (RTL): rounded-tl-sm → bottomLeft small
-                    bottomLeft: Radius.circular(isMe ? 20 : 4),
-                    bottomRight: Radius.circular(isMe ? 4 : 20),
+                    bottomLeft: Radius.circular(isMe ? 4 : 20),
+                    bottomRight: Radius.circular(isMe ? 20 : 4),
                   ),
                   boxShadow: !isMe
                       ? [

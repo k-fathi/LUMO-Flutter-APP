@@ -55,8 +55,8 @@ class AIMessageBubble extends StatelessWidget {
                       borderRadius: BorderRadius.only(
                         topLeft: const Radius.circular(24),
                         topRight: const Radius.circular(24),
-                        bottomLeft: Radius.circular(isUser ? 24 : 0),
-                        bottomRight: Radius.circular(isUser ? 4 : 24),
+                        bottomLeft: Radius.circular(isUser ? 4 : 24),
+                        bottomRight: Radius.circular(isUser ? 24 : 4),
                       ),
                       border: isUser
                           ? Border.all(color: const Color(0xFFE5E7EB), width: 1)

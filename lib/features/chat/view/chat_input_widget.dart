@@ -61,13 +61,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           children: [
             // React: flex-1 h-12 rounded-full border-[#E3F2FD] bg-[#E3F2FD] px-5
             Expanded(
-              child: Container(
+              child: SizedBox(
                 height: 48,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Theme.of(context).dividerColor),
-                ),
                 child: TextField(
                   controller: widget.controller,
                   textAlign: TextAlign.right,
@@ -78,7 +73,20 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                     hintStyle: AppTextStyles.body.copyWith(
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                     ),
-                    border: InputBorder.none,
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
+                    ),
                     contentPadding: EdgeInsets.symmetric(
                       horizontal: 20,
                       vertical: 12,

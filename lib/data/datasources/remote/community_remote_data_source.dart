@@ -227,7 +227,20 @@ class CommunityRemoteDataSourceImpl implements CommunityRemoteDataSource {
     final response = await _dioClient.get(ApiConstants.getMyFollowings);
     final List<dynamic> data =
         response.data['followings'] ?? response.data['data'] ?? [];
-    return data.map((json) => _parseUser(json)).toList();
+    return data.map((json) {
+      if (json is Map<String, dynamic>) {
+        if (json.containsKey('followed_user') && json['followed_user'] is Map) {
+          return _parseUser(json['followed_user'] as Map<String, dynamic>);
+        }
+        if (json.containsKey('followed') && json['followed'] is Map) {
+          return _parseUser(json['followed'] as Map<String, dynamic>);
+        }
+        if (json.containsKey('following') && json['following'] is Map) {
+          return _parseUser(json['following'] as Map<String, dynamic>);
+        }
+      }
+      return _parseUser(json as Map<String, dynamic>);
+    }).toList();
   }
 
   @override
