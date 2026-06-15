@@ -37,6 +37,7 @@ class ApiConstants {
   static const String toggleFollow = '/user/{id}/follow';
   static const String getMyFollowers = '/user/followers';
   static const String getMyFollowings = '/user/followings';
+  static const String getUserNetwork = '/user/network';
   static const String searchUsers = '/search/users';
 
   // Notifications
@@ -73,5 +74,5 @@ class ApiConstants {
   static const String getPendingRequests = '/doctor/patient/requests';
   static const String acceptRequest = '/doctor/patient/request/{id}/accept';
   static const String rejectRequest = '/doctor/patient/request/{id}/reject';
-  static const String disconnectPatient = '/doctor/patients/{id}/disconnect';
+  static const String disconnectPatient = '/doctor/patient/{id}/delete';
 }

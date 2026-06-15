@@ -67,6 +67,13 @@ class ChatViewModel extends ChangeNotifier {
       _firebaseAuthService.currentUser != null;
 
   Future<bool> authenticateFirebase() async {
+    // On platforms where Firebase is not initialized (Linux, Windows),
+    // skip Firebase auth entirely and let chat work via REST + cache.
+    if (!_firebaseAuthService.isAvailable) {
+      debugPrint('ℹ️ Firebase Auth skipped: not available on this platform. Chat will use REST fallback.');
+      return true;
+    }
+
     _isLoading = true;
     _errorMessage = null;
     _safeNotifyListeners();
@@ -81,10 +88,11 @@ class ChatViewModel extends ChangeNotifier {
       return true;
     } catch (e) {
       debugPrint('❌ Firebase Auth Failed in ViewModel: $e');
-      _errorMessage = "Firebase Auth Failed: ${e.toString()}";
+      // Don't block chat on Firebase auth failure — fall through to REST
+      _errorMessage = null;
       _isLoading = false;
       _safeNotifyListeners();
-      return false;
+      return true;
     }
   }
 
@@ -98,7 +106,6 @@ class ChatViewModel extends ChangeNotifier {
       ChatRoomModel enrichedRoom = chatRoom;
       if ((receiverName != null && receiverName.isNotEmpty) || 
           (receiverAvatar != null && receiverAvatar.isNotEmpty)) {
-        final currentUserId = _userId?.toString() ?? '';
         final receiverIdStr = receiverId.toString();
         
         // بناء Maps للمشاركين المحدثة

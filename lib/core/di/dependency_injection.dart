@@ -1,4 +1,5 @@
 import 'package:get_it/get_it.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../data/datasources/firebase_data_source.dart';
@@ -41,6 +42,8 @@ import '../../features/session/view_model/session_view_model.dart';
 import '../../features/home/view_model/main_layout_view_model.dart';
 
 import 'package:dio/dio.dart';
+import '../../app.dart';
+import '../router/route_names.dart';
 import '../network/dio_client.dart';
 import '../../data/datasources/remote/auth_remote_data_source.dart';
 import '../../data/datasources/remote/community_remote_data_source.dart';
@@ -103,7 +106,49 @@ class DependencyInjection {
     // Network & API
     getIt.registerLazySingleton<Dio>(() => Dio());
     getIt.registerLazySingleton<DioClient>(
-      () => DioClient(getIt<Dio>(), getIt<SharedPreferences>()),
+      () {
+        final client = DioClient(getIt<Dio>(), getIt<SharedPreferences>());
+        client.onUnauthenticated = () {
+          Future.microtask(() async {
+            if (getIt.isRegistered<AuthProvider>()) {
+              final authProvider = getIt<AuthProvider>();
+              if (authProvider.isAuthenticated) {
+                if (getIt.isRegistered<PatientProvider>()) {
+                  getIt<PatientProvider>().resetState();
+                }
+                if (getIt.isRegistered<CommunityProvider>()) {
+                  getIt<CommunityProvider>().resetState();
+                }
+                if (getIt.isRegistered<UserProvider>()) {
+                  getIt<UserProvider>().clearUser();
+                }
+                if (getIt.isRegistered<ChatViewModel>()) {
+                  getIt<ChatViewModel>().resetState();
+                }
+                if (getIt.isRegistered<ProfileViewModel>()) {
+                  getIt<ProfileViewModel>().resetState();
+                }
+                await authProvider.logout();
+                
+                if (globalNavigatorKey.currentContext != null) {
+                  ScaffoldMessenger.of(globalNavigatorKey.currentContext!).showSnackBar(
+                    const SnackBar(
+                      content: Text('انتهت الجلسة، يرجى تسجيل الدخول مرة أخرى'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+
+                globalNavigatorKey.currentState?.pushNamedAndRemoveUntil(
+                  RouteNames.login,
+                  (route) => false,
+                );
+              }
+            }
+          });
+        };
+        return client;
+      },
     );
 
     getIt.registerLazySingleton<AuthRemoteDataSource>(

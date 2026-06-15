@@ -120,7 +120,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      extendBodyBehindAppBar: false, // Since app bar is white and has shadow, no need to extend
+      extendBodyBehindAppBar:
+          false, // Since app bar is white and has shadow, no need to extend
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
@@ -139,7 +140,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               padding: EdgeInsets.zero,
               alignment: Alignment.center,
               onPressed: () => context.read<MainLayoutViewModel>().goToHome(),
-              icon: Icon(Icons.chevron_left_rounded, color: Theme.of(context).colorScheme.onSurface, size: 24),
+              icon: Icon(Icons.chevron_left_rounded,
+                  color: Theme.of(context).colorScheme.onSurface, size: 24),
             ),
           ),
         ),
@@ -151,7 +153,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 shape: BoxShape.circle,
-                border: Border.all(color: Theme.of(context).dividerColor, width: 2),
+                border:
+                    Border.all(color: Theme.of(context).dividerColor, width: 2),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.08),
@@ -252,7 +255,10 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                     height: 250,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.1),
                     ),
                   ),
                 ),
@@ -267,7 +273,10 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                     height: 350,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .secondary
+                          .withValues(alpha: 0.1),
                     ),
                   ),
                 ),
@@ -312,59 +321,11 @@ class _ChatbotScreenState extends State<ChatbotScreen>
             builder: (context, child) {
               return Transform.scale(
                 scale: _pulseAnimation.value,
-                child: Container(
-                  width: 140,
-                  height: 140,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: theme.colorScheme.primary
-                            .withValues(alpha: _glowAnimation.value * 0.5),
-                        blurRadius: 60,
-                        spreadRadius: 10,
-                      ),
-                      BoxShadow(
-                        color: const Color(0xFF3B82F6)
-                            .withValues(alpha: _glowAnimation.value * 0.3),
-                        blurRadius: 120,
-                        spreadRadius: 20,
-                      ),
-                    ],
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            colors: [
-                              theme.colorScheme.primary,
-                              const Color(0xFF2563EB),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: RadialGradient(
-                            colors: [
-                              Colors.white.withValues(alpha: 0.4),
-                              Colors.transparent,
-                            ],
-                            radius: 0.8,
-                            center: const Alignment(-0.3, -0.3),
-                          ),
-                        ),
-                      ),
-                      Image.asset('assets/images/ai_avatar.png',
-                          width: 80, height: 80, fit: BoxFit.contain),
-                    ],
-                  ),
+                child: Image.asset(
+                  'assets/images/ai_avatar.png',
+                  width: 180,
+                  height: 180,
+                  fit: BoxFit.contain,
                 ),
               );
             },
@@ -386,7 +347,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  l10n.aiWelcomeSubtitle,
+                  l10n.aiWelcomeSubtitle.replaceAll(r'\n', '\n'),
                   style: AppTextStyles.body.copyWith(
                     color: AppColors.mutedForeground,
                     height: 1.5,
@@ -464,27 +425,72 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: const Text('مسح المحادثة'),
-        content: const Text('هل أنت متأكد من مسح جميع الرسائل؟'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('إلغاء'),
-          ),
-          TextButton(
-            onPressed: () {
-              final authProvider = context.read<AuthProvider>();
-              final userId = authProvider.currentUser?.id ?? 0;
-              _viewModel.clearChatHistory(userId);
-              Navigator.pop(context);
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.destructive,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        titlePadding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+        contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+        title: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.destructive.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.delete_outline_rounded,
+                  color: AppColors.destructive, size: 32),
             ),
-            child: const Text('مسح'),
+            const SizedBox(height: 16),
+            Text('مسح المحادثة',
+                style: AppTextStyles.h2.copyWith(fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center),
+          ],
+        ),
+        content: Text(
+          'هل أنت متأكد من رغبتك في مسح جميع الرسائل بشكل نهائي؟\nلا يمكن التراجع عن هذا الإجراء.',
+          style: AppTextStyles.body.copyWith(color: AppColors.mutedForeground),
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text('إلغاء',
+                      style: AppTextStyles.body
+                          .copyWith(fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    final authProvider = context.read<AuthProvider>();
+                    final userId = authProvider.currentUser?.id ?? 0;
+                    _viewModel.clearChatHistory(userId);
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.destructive,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('مسح',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -500,9 +506,7 @@ class _Suggestion {
 
 const List<_Suggestion> _suggestions = [
   _Suggestion('🔍', 'علامات التوحد المبكرة'),
-  _Suggestion('🥗', 'نصائح التغذية'),
   _Suggestion('😤', 'التعامل مع نوبات الغضب'),
   _Suggestion('📊', 'تتبع تطور الطفل'),
   _Suggestion('💬', 'تمارين النطق'),
-  _Suggestion('🛌', 'تحسين النوم'),
 ];

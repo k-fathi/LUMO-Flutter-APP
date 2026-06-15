@@ -21,6 +21,7 @@ abstract class ProfileRemoteDataSource {
   });
   Future<List<UserModel>> getFollowers(int userId);
   Future<List<UserModel>> getFollowing(int userId);
+  Future<List<UserModel>> getUserNetwork();
   Future<void> toggleFollow(int userId);
 }
 
@@ -54,13 +55,29 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
 
   @override
   Future<List<UserModel>> getFollowing(int userId) async {
-    // If userId is provided, fetch for that user; otherwise defaults to current user
-    final response = await _dioClient.get(
-      ApiConstants.getMyFollowings,
-      queryParameters: userId > 0 ? {'user_id': userId} : null,
-    );
+    // The /user/followings API returns followings for the currently authenticated
+    // user only (based on the Bearer token). It does NOT accept a user_id param.
+    final response = await _dioClient.get(ApiConstants.getMyFollowings);
     final data = response.data as Map<String, dynamic>;
     final list = (data['followings'] ?? data['data'] ?? []) as List;
+    return list
+        .map((item) => _parseUser(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<List<UserModel>> getUserNetwork() async {
+    final response = await _dioClient.get(ApiConstants.getUserNetwork);
+    final responseData = response.data as Map<String, dynamic>;
+    // API returns: { "status": "success", "data": { "my_doctors": [...], "followers": [...], "following": [...] } }
+    final nestedData = responseData['data'];
+    List<dynamic> list = [];
+    if (nestedData is Map<String, dynamic>) {
+      // Primary: connected doctors
+      list = (nestedData['my_doctors'] ?? nestedData['doctors'] ?? nestedData['connected_doctors'] ?? []) as List;
+    } else if (nestedData is List) {
+      list = nestedData;
+    }
     return list
         .map((item) => _parseUser(item as Map<String, dynamic>))
         .toList();

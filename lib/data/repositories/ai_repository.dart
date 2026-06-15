@@ -527,7 +527,7 @@ class AIRepository {
 
   /// Clears all chat history for [userId] from local cache.
   Future<void> clearChatHistory(int userId) async {
-    await _localDataSource.remove('ai_history_$userId');
+    await _localDataSource.clearAiHistory(userId.toString());
     _startedSessions.removeWhere((key) => key.startsWith('${userId}_') || key == userId.toString());
   }
 

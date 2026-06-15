@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -13,7 +14,6 @@ import '../../../shared/providers/auth_provider.dart';
 import '../view_model/chat_view_model.dart';
 import 'chat_room_screen.dart';
 import '../../ai_helper/view/ai_chat_screen.dart';
-import '../../community/view_model/community_view_model.dart';
 import '../../../shared/widgets/avatar_widget.dart';
 import '../../../core/router/route_names.dart';
 
@@ -39,11 +39,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         context.read<PatientProvider>().fetchPatients();
       } else if (auth.currentUser is ParentModel) {
         final parent = auth.currentUser as ParentModel;
-        if (parent.connectedDoctorIds.isNotEmpty) {
-          context
-              .read<PatientProvider>()
-              .fetchDoctors(parent.connectedDoctorIds);
-        }
+        context.read<PatientProvider>().fetchParentConnectedDoctors(parent.id);
       }
     });
   }
@@ -82,8 +78,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         }
       }
     } else {
-      final parent = currentUser is ParentModel ? currentUser : null;
-      final connectedDoctorIds = parent?.connectedDoctorIds ?? [];
+      final connectedDoctorIds = connectedUsers.map((e) => e.id.toString()).toList();
 
       final doctorRooms = <ChatRoomModel>[];
       final otherRooms = <ChatRoomModel>[];
@@ -201,7 +196,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                 }
 
                 if (item is ChatRoomModel) {
-                  return _buildChatRoomTile(context, item, currentUser, theme);
+                  return _buildChatRoomTile(context, item, currentUser, theme, connectedUsers);
                 }
 
                 if (item is UserModel) {
@@ -279,64 +274,35 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   }
 
   Widget _buildChatRoomTile(BuildContext context, ChatRoomModel room,
-      UserModel currentUser, ThemeData theme) {
+      UserModel currentUser, ThemeData theme, List<UserModel> connectedUsers) {
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
-    final otherName = room.getOtherParticipantName(currentUser.id.toString());
-    final otherAvatar =
-        room.getOtherParticipantAvatar(currentUser.id.toString());
-
     final otherId = room.getOtherParticipantId(currentUser.id.toString());
+    
+    String otherName = room.getOtherParticipantName(currentUser.id.toString());
+    String? otherAvatar = room.getOtherParticipantAvatar(currentUser.id.toString());
+
+    if (otherName == 'مستخدم' || otherName.isEmpty || otherName == 'مستخدم غير معروف') {
+      try {
+        final match = connectedUsers.firstWhere((u) => u.id.toString() == otherId);
+        otherName = match.name;
+        if (otherAvatar == null || otherAvatar.isEmpty) {
+          otherAvatar = match.profileImage ?? match.avatarUrl;
+        }
+      } catch (e) {
+        // No match found
+      }
+    }
 
     return ListTile(
       contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: GestureDetector(
-        onTap: () {
-          final uid = int.tryParse(otherId);
-          if (uid != null && uid != 0) {
-            final fallbackUser = ParentModel(
-              id: uid,
-              name: otherName,
-              email: '',
-              childName: '',
-              childAge: 0,
-              avatarUrl: otherAvatar,
-            );
-            Navigator.pushNamed(
-              context,
-              RouteNames.profile,
-              arguments: {'userId': uid, 'user': fallbackUser},
-            );
-          }
-        },
-        child: AvatarWidget(
-          name: otherName,
-          imageUrl: otherAvatar,
-          size: 50,
-        ),
+      leading: AvatarWidget(
+        name: otherName,
+        imageUrl: otherAvatar,
+        size: 50,
       ),
-      title: GestureDetector(
-        onTap: () {
-          final uid = int.tryParse(otherId);
-          if (uid != null && uid != 0) {
-            final fallbackUser = ParentModel(
-              id: uid,
-              name: otherName,
-              email: '',
-              childName: '',
-              childAge: 0,
-              avatarUrl: otherAvatar,
-            );
-            Navigator.pushNamed(
-              context,
-              RouteNames.profile,
-              arguments: {'userId': uid, 'user': fallbackUser},
-            );
-          }
-        },
-        child: Text(otherName, style: AppTextStyles.label),
-      ),
+      title: Text(otherName, style: AppTextStyles.label),
       subtitle: Text(
-        room.lastMessage ?? (isAr ? 'إبدأ المحادثة الآن' : 'Start the conversation now'),
+        room.hasLastMessage ? room.lastMessage! : (isAr ? 'إبدأ المحادثة الآن' : 'Start the conversation now'),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
@@ -402,34 +368,12 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
     return ListTile(
       contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: GestureDetector(
-        onTap: () {
-          if (user.id != 0) {
-            Navigator.pushNamed(
-              context,
-              RouteNames.profile,
-              arguments: {'userId': user.id, 'user': user},
-            );
-          }
-        },
-        child: AvatarWidget(
-          name: user.name,
-          imageUrl: user.profileImage ?? user.avatarUrl,
-          size: 50,
-        ),
+      leading: AvatarWidget(
+        name: user.name,
+        imageUrl: user.profileImage ?? user.avatarUrl,
+        size: 50,
       ),
-      title: GestureDetector(
-        onTap: () {
-          if (user.id != 0) {
-            Navigator.pushNamed(
-              context,
-              RouteNames.profile,
-              arguments: {'userId': user.id, 'user': user},
-            );
-          }
-        },
-        child: Text(user.name, style: AppTextStyles.label),
-      ),
+      title: Text(user.name, style: AppTextStyles.label),
       subtitle: Text((isAr ? 'إبدأ المحادثة الآن' : 'Start the conversation now'),
           maxLines: 1, overflow: TextOverflow.ellipsis),
       onTap: () async {
@@ -517,14 +461,15 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       parentContext.read<PatientProvider>().fetchPatients();
     } else if (currentUser is ParentModel) {
       final parent = currentUser;
-      if (parent.connectedDoctorIds.isNotEmpty) {
-        parentContext.read<PatientProvider>().fetchDoctors(parent.connectedDoctorIds);
-      }
+      parentContext.read<PatientProvider>().fetchParentConnectedDoctors(parent.id);
     }
 
     // Variables declared OUTSIDE builder so they persist across setModalState rebuilds
     String searchQuery = "";
     int activeTab = 0; // 0: All, 1: Connected, 2: Following, 3: Recent
+    Timer? searchDebounce;
+    List<UserModel>? searchResults;
+    bool isSearching = false;
 
     showModalBottomSheet(
       context: parentContext,
@@ -584,15 +529,47 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: TextField(
-                        onChanged: (value) =>
-                            setModalState(() => searchQuery = value),
+                        onChanged: (value) {
+                          setModalState(() {
+                            searchQuery = value;
+                            if (value.isEmpty) {
+                              searchResults = null;
+                              isSearching = false;
+                            } else {
+                              isSearching = true;
+                            }
+                          });
+                          if (value.isNotEmpty) {
+                            searchDebounce?.cancel();
+                            searchDebounce = Timer(const Duration(milliseconds: 500), () async {
+                              try {
+                                final results = await parentContext.read<PatientProvider>().searchPatients(value);
+                                setModalState(() {
+                                  searchResults = results;
+                                  isSearching = false;
+                                });
+                              } catch (e) {
+                                setModalState(() {
+                                  searchResults = [];
+                                  isSearching = false;
+                                });
+                              }
+                            });
+                          }
+                        },
                         decoration: InputDecoration(
-                          hintText: (isAr ? "ابحث عن الاسم..." : "Search for the name..."),
+                          hintText: (isAr ? "ابحث عن دكتور عبر المنصة..." : "Search doctors across platform..."),
                           prefixIcon: Icon(Icons.search_rounded,
                               color: Colors.grey),
                           border: InputBorder.none,
                           contentPadding:
                               EdgeInsets.symmetric(vertical: 12),
+                          suffixIcon: isSearching 
+                              ? Container(
+                                  padding: const EdgeInsets.all(12),
+                                  width: 16, height: 16,
+                                  child: const CircularProgressIndicator(strokeWidth: 2))
+                              : null,
                         ),
                       ),
                     ),
@@ -639,7 +616,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                               name: otherName,
                               avatarUrl: otherAvatar,
                               email: '',
-                              role: UserRole.parent, // Placeholder role
+                              role: currentUser.role == UserRole.doctor ? UserRole.parent : UserRole.doctor,
                             );
                           }
                         }
@@ -648,6 +625,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                         // Filter by tab
                         List<UserModel> pool = [];
                         if (activeTab == 0) {
+                          // All: merge connected + recent
                           final Map<int, UserModel> allMap = {};
                           for (final u in connected) {
                             allMap[u.id] = u;
@@ -657,18 +635,36 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                           }
                           pool = allMap.values.toList();
                         } else if (activeTab == 1) {
-                          pool = connected;
+                          // Connected: for parents, include recent chat users too
+                          // since doctor-patient connections appear through chats
+                          if (currentUser.role != UserRole.doctor) {
+                            final Map<int, UserModel> connMap = {};
+                            for (final u in connected) {
+                              connMap[u.id] = u;
+                            }
+                            for (final u in recent) {
+                              connMap[u.id] = u;
+                            }
+                            pool = connMap.values.toList();
+                          } else {
+                            pool = connected;
+                          }
                         } else if (activeTab == 2) {
                           pool = recent;
                         }
 
                         // Filter by search
                         if (searchQuery.isNotEmpty) {
-                          pool = pool
+                          pool = searchResults ?? pool
                               .where((u) => u.name
                                   .toLowerCase()
                                   .contains(searchQuery.toLowerCase()))
                               .toList();
+                        }
+
+                        // Show loading spinner while fetching
+                        if (pool.isEmpty && patientProv.isLoading) {
+                          return const Center(child: CircularProgressIndicator());
                         }
 
                         if (pool.isEmpty) {
@@ -679,9 +675,13 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                 Icon(Icons.person_search_rounded,
                                     size: 64, color: theme.dividerColor),
                                 SizedBox(height: 16),
-                                Text((isAr ? "لا يوجد نتائج" : "No results"),
-                                    style:
-                                        TextStyle(color: theme.disabledColor)),
+                                Text(
+                                  searchQuery.isNotEmpty
+                                    ? (isAr ? 'لا يوجد نتائج لـ "$searchQuery"' : 'No results for "$searchQuery"')
+                                    : (isAr ? 'ابحث عن دكتور أو ابدأ محادثة' : 'Search for a doctor'),
+                                  style: TextStyle(color: theme.disabledColor),
+                                  textAlign: TextAlign.center,
+                                ),
                               ],
                             ),
                           );

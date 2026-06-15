@@ -19,7 +19,7 @@ class _SessionDetailPlaceholderScreenState
     extends State<SessionDetailPlaceholderScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  int _chartType = 0; // 0 = Bars, 1 = Pie
+  int _chartType = 0; // 0 = Pie, 1 = Bars
 
   // Fallback data when API data is not yet loaded or empty
   final SessionAnalysisModel _fallbackData = SessionAnalysisModel(
@@ -80,7 +80,6 @@ class _SessionDetailPlaceholderScreenState
           indicatorWeight: 3,
           labelStyle: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
           unselectedLabelStyle: AppTextStyles.body,
-          isScrollable: true,
           tabs: const [
             Tab(
               icon: Icon(Icons.analytics_outlined),
@@ -345,12 +344,12 @@ class _SessionDetailPlaceholderScreenState
               segments: const [
                 ButtonSegment(
                     value: 0,
-                    icon: Icon(Icons.bar_chart_rounded),
-                    label: Text('أشرطة')),
-                ButtonSegment(
-                    value: 1,
                     icon: Icon(Icons.pie_chart_rounded),
                     label: Text('دائري')),
+                ButtonSegment(
+                    value: 1,
+                    icon: Icon(Icons.bar_chart_rounded),
+                    label: Text('أشرطة')),
               ],
               selected: {_chartType},
               onSelectionChanged: (Set<int> newSelection) {
@@ -369,8 +368,8 @@ class _SessionDetailPlaceholderScreenState
             ),
           ),
           const SizedBox(height: 20),
-          if (_chartType == 0) _buildBarChart(),
-          if (_chartType == 1) _buildPieChart(),
+          if (_chartType == 0) _buildPieChart(),
+          if (_chartType == 1) _buildBarChart(),
         ],
       ),
     );
@@ -418,6 +417,32 @@ class _SessionDetailPlaceholderScreenState
 
   Widget _buildPieChart() {
     final emotions = _sessionData.emotionDistribution;
+    final bool hasEmotionData = emotions.any((e) => e.percentage > 0.0);
+
+    if (!hasEmotionData) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        child: SizedBox(
+          width: double.infinity,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(Icons.face_retouching_off_rounded, size: 64, color: Colors.grey.shade300),
+              const SizedBox(height: 16),
+              Text(
+                'لا توجد تعبيرات وجهية مسجلة لهذه الجلسة',
+                style: AppTextStyles.body.copyWith(
+                  color: Colors.grey.shade500,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     EmotionData? topEmotion;
     if (emotions.isNotEmpty) {
       topEmotion =
@@ -518,8 +543,10 @@ class _SessionDetailPlaceholderScreenState
 
   Widget _buildClinicalReportTab() {
     final emotions = _sessionData.emotionDistribution;
+    final bool hasEmotionData = emotions.any((e) => e.percentage > 0.0);
+
     EmotionData? topEmotion;
-    if (emotions.isNotEmpty) {
+    if (hasEmotionData) {
       topEmotion = emotions[0];
       for (final e in emotions) {
         if (e.percentage > topEmotion!.percentage) topEmotion = e;
@@ -557,7 +584,7 @@ class _SessionDetailPlaceholderScreenState
             : const Color(0xFFEF4444);
 
     // Emotion status
-    final emotionLabel = topEmotion?.label ?? 'غير محددة';
+    final emotionLabel = hasEmotionData ? (topEmotion?.label ?? 'غير محددة') : 'غير متوفرة';
     final emotionPct = ((topEmotion?.percentage ?? 0.0) * 100).toInt();
 
     // Voice status
@@ -632,9 +659,11 @@ class _SessionDetailPlaceholderScreenState
             title: 'الحالة المزاجية الغالبة',
             subtitle: 'Emotional Intelligence Model',
             trailing: _buildStatusChip(
-                emotionLabel, topEmotion?.color ?? const Color(0xFF22C55E)),
+                emotionLabel, hasEmotionData ? (topEmotion?.color ?? const Color(0xFF22C55E)) : Colors.grey),
             content: Text(
-              'الحالة المزاجية الغالبة: $emotionLabel بنسبة $emotionPct%.',
+              hasEmotionData 
+                 ? 'الحالة المزاجية الغالبة: $emotionLabel بنسبة $emotionPct%.'
+                 : 'لم يتم التقاط أي تعبيرات وجهية واضحة خلال هذه الجلسة لتقييم الحالة المزاجية.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     height: 1.7,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,

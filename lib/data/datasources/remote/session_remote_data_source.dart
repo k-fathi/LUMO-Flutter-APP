@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/network/api_constants.dart';
@@ -100,17 +101,25 @@ class SessionRemoteDataSourceImpl implements SessionRemoteDataSource {
         final firstSeg = segs.first;
         if (firstSeg is Map) {
           debugPrint('🔍 [SessionAPI] segment[0] keys: ${firstSeg.keys.toList()}');
-          final segAn = firstSeg['analytic'] ?? firstSeg['analytics'];
+          var segAn = firstSeg['analytic'] ?? firstSeg['analytics'];
+          if (segAn is String) {
+            try {
+              segAn = jsonDecode(segAn);
+            } catch (_) {}
+          }
+          if (segAn is List && segAn.isEmpty) {
+            segAn = <String, dynamic>{};
+          }
           if (segAn is Map) {
             debugPrint('🔍 [SessionAPI] segment[0].analytic keys: ${segAn.keys.toList()}');
             debugPrint('🔍 [SessionAPI] segment[0].emotions: ${segAn['emotions']}');
             debugPrint('🔍 [SessionAPI] segment[0].gaze: ${segAn['gaze']}');
-            debugPrint('🔍 [SessionAPI] segment[0].focus_score: ${segAn['focus_score']}');
+            debugPrint('🔍 [SessionAPI] segment[0].focus_score: ${segAn['focus_score'] ?? segAn['focused_percentage'] ?? segAn['focus_percentage']}');
             debugPrint('🔍 [SessionAPI] segment[0].speech_text: "${segAn['speech_text']}"');
             debugPrint('🔍 [SessionAPI] segment[0].story_trait: "${segAn['story_trait']}"');
             debugPrint('🔍 [SessionAPI] segment[0].is_correct: ${segAn['is_correct']}');
           } else {
-            debugPrint('🔍 [SessionAPI] segment[0] has NO analytic field');
+            debugPrint('🔍 [SessionAPI] segment[0] has NO analytic field (Type: ${segAn.runtimeType}, Value: $segAn)');
           }
         }
       }

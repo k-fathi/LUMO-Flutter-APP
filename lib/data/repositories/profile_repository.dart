@@ -247,6 +247,17 @@ class ProfileRepository {
     return [];
   }
 
+  Future<List<UserModel>> getUserNetwork() async {
+    if (_remoteDataSource != null) {
+      try {
+        return await _remoteDataSource.getUserNetwork();
+      } catch (e) {
+        debugPrint('REST getUserNetwork failed: $e');
+      }
+    }
+    return [];
+  }
+
   // ==================== DOCTOR CODE SYSTEM ====================
 
   Future<DoctorCodeModel> generateDoctorCode(

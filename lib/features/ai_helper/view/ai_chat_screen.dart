@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/custom_app_bar.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/providers/auth_provider.dart';
@@ -250,29 +251,65 @@ class _AIChatScreenState extends State<AIChatScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Text((isAr ? 'مسح المحادثة' : 'Clear chat')),
-        content: Text((isAr ? 'هل أنت متأكد من مسح جميع الرسائل؟' : 'Are you sure you want to delete all messages?')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text((isAr ? 'إلغاء' : 'Cancel')),
-          ),
-          TextButton(
-            onPressed: () {
-              // ✅ إصلاح: تحقق من userId قبل المسح
-              final userId = context.read<AuthProvider>().currentUser?.id;
-              if (userId != null) {
-                _viewModel.clearChatHistory(userId);
-              }
-              Navigator.pop(ctx);
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.destructive,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        titlePadding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+        contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+        title: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.destructive.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.delete_outline_rounded, color: AppColors.destructive, size: 32),
             ),
-            child: Text((isAr ? 'مسح' : 'Delete')),
+            const SizedBox(height: 16),
+            Text((isAr ? 'مسح المحادثة' : 'Clear chat'), style: AppTextStyles.h2.copyWith(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+          ],
+        ),
+        content: Text(
+          (isAr ? 'هل أنت متأكد من رغبتك في مسح جميع الرسائل بشكل نهائي؟\nلا يمكن التراجع عن هذا الإجراء.' : 'Are you sure you want to permanently delete all messages?\nThis action cannot be undone.'),
+          style: AppTextStyles.body.copyWith(color: AppColors.mutedForeground),
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text((isAr ? 'إلغاء' : 'Cancel'), style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    final userId = context.read<AuthProvider>().currentUser?.id;
+                    if (userId != null) {
+                      _viewModel.clearChatHistory(userId);
+                    }
+                    Navigator.pop(ctx);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.destructive,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text((isAr ? 'مسح' : 'Delete'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
           ),
         ],
       ),

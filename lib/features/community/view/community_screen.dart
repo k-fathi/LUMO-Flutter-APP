@@ -176,12 +176,18 @@ class _CommunityFeedWrapper extends StatelessWidget {
               }
 
               if (posts.isEmpty) {
+                final isFollowingAnyone = viewModel.followingCount > 0;
+                
                 return SliverFillRemaining(
                   hasScrollBody: false,
                   child: EmptyState(
                     icon: isExplore ? Icons.article_outlined : Icons.people_outline_rounded,
-                    title: isExplore ? 'لا توجد منشورات بعد' : 'لا تتابع أحداً بعد',
-                    message: isExplore ? 'كن أول من ينشر في المجتمع' : 'تابع بعض المستخدمين لرؤية منشوراتهم هنا',
+                    title: isExplore 
+                        ? 'لا توجد منشورات بعد' 
+                        : (isFollowingAnyone ? 'لا توجد منشورات' : 'لا تتابع أحداً بعد'),
+                    message: isExplore 
+                        ? 'كن أول من ينشر في المجتمع' 
+                        : (isFollowingAnyone ? 'الأشخاص الذين تتابعهم لم ينشروا شيئاً بعد' : 'تابع بعض المستخدمين لرؤية منشوراتهم هنا'),
                   ),
                 );
               }

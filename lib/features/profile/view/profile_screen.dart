@@ -12,8 +12,10 @@ import '../../../shared/widgets/avatar_widget.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/models/doctor_model.dart';
 import '../../../shared/providers/notification_provider.dart';
+import '../../../core/enums/user_role.dart';
 import '../view_model/profile_view_model.dart';
 import '../../chat/view_model/chat_view_model.dart';
+import '../../../shared/providers/patient_provider.dart';
 import '../../../core/services/connectivity_service.dart';
 import '../../../shared/widgets/no_internet_widget.dart';
 
@@ -67,6 +69,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final authProvider = context.watch<AuthProvider>();
     final communityViewModel = context.watch<CommunityViewModel>();
     final profileViewModel = context.watch<ProfileViewModel>();
+    final patientProv = context.watch<PatientProvider>();
     final currentUser = authProvider.currentUser;
 
     final targetUserId = widget.userId ?? widget.user?.id;
@@ -78,6 +81,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         isMyProfile ? currentUser : (profileViewModel.user ?? widget.user);
     final isDoctor = user?.role.name == 'doctor';
     final doctorUser = isMyProfile && currentUser is DoctorModel ? currentUser : null;
+    
+    final isConnectedDoctor = currentUser?.role == UserRole.parent && 
+                              isDoctor && 
+                              targetUserId != null &&
+                              patientProv.doctors.any((d) => d.id == targetUserId);
+
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
@@ -182,6 +191,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     followers: followersShow,
                     following: followingShow,
                     isMyProfile: isMyProfile,
+                    onDisconnect: isConnectedDoctor ? () async {
+                      // The API takes the PATIENT's id (current user), not the doctor's id
+                      final patientId = currentUser?.id;
+                      if (patientId == null) return;
+                      try {
+                        await patientProv.disconnectPatient(patientId);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('تم إلغاء الارتباط بنجاح'), backgroundColor: Colors.green),
+                          );
+                          Navigator.pop(context);
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('فشل إلغاء الارتباط: $e'), backgroundColor: Colors.red),
+                          );
+                        }
+                      }
+                    } : null,
                     isFollowing: targetUserId != null &&
                         communityViewModel.isFollowing(targetUserId),
                     onToggleFollow: () async {
@@ -264,7 +293,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       if (targetUserId == null) return;
                       try {
                         final chatViewModel = context.read<ChatViewModel>();
-                        final chatRoomId = await chatViewModel.startChat(targetUserId);
+                        final chatRoomId = await chatViewModel.startChat(
+                          targetUserId,
+                          receiverName: user?.name ?? '',
+                          receiverAvatar: user?.avatarUrl,
+                        );
                         if (!context.mounted) return;
                         Navigator.pushNamed(
                           context,
@@ -509,6 +542,7 @@ class _ProfileHeader extends StatelessWidget {
   final VoidCallback onEditProfile;
   final VoidCallback onSettings;
   final VoidCallback onSignOut;
+  final VoidCallback? onDisconnect;
 
   const _ProfileHeader({
     required this.userId,
@@ -525,6 +559,7 @@ class _ProfileHeader extends StatelessWidget {
     required this.onEditProfile,
     required this.onSettings,
     required this.onSignOut,
+    this.onDisconnect,
   });
 
   @override
@@ -573,6 +608,33 @@ class _ProfileHeader extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.logout_rounded, color: Colors.red),
                   onPressed: onSignOut,
+                )
+              else if (onDisconnect != null)
+                IconButton(
+                  icon: const Icon(Icons.person_remove_rounded, color: Colors.red),
+                  tooltip: 'إلغاء الارتباط',
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (c) => AlertDialog(
+                        title: const Text('إلغاء الارتباط'),
+                        content: const Text('هل أنت متأكد من رغبتك في إنهاء الارتباط بهذا الطبيب؟ لن تتمكن من إرسال رسائل إليه إلا بعد إضافة جديدة.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(c),
+                            child: const Text('إلغاء'),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(c);
+                              onDisconnect!();
+                            },
+                            child: const Text('تأكيد', style: TextStyle(color: Colors.red)),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 )
               else
                 const SizedBox(width: 48),

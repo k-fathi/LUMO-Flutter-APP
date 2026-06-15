@@ -16,6 +16,8 @@ import 'features/profile/view_model/profile_view_model.dart';
 import 'core/services/connectivity_service.dart';
 import 'features/session/view/floating_timer_overlay.dart';
 
+final GlobalKey<NavigatorState> globalNavigatorKey = GlobalKey<NavigatorState>();
+
 class LumoAIApp extends StatefulWidget {
   const LumoAIApp({super.key});
 
@@ -43,6 +45,7 @@ class _LumoAIAppState extends State<LumoAIApp> {
     return Consumer2<ThemeProvider, LocaleProvider>(
       builder: (context, themeProvider, localeProvider, _) {
         return MaterialApp(
+          navigatorKey: globalNavigatorKey,
           debugShowCheckedModeBanner: false,
           title: 'Lumo AI',
 

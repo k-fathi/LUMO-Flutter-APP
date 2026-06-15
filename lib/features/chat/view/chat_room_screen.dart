@@ -13,7 +13,8 @@ import 'message_bubble.dart';
 import 'chat_input_widget.dart';
 import '../widgets/typing_indicator.dart';
 import '../../../core/router/route_names.dart';
-
+import '../../../data/models/user_model.dart';
+import '../../../core/enums/user_role.dart';
 class ChatRoomScreen extends StatefulWidget {
   final String chatRoomId;
   final String otherUserName;
@@ -49,20 +50,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   }
 
   Future<void> _initChat() async {
-    // ✅ تجنب إعادة auth لو Firebase بالفعل authenticated
+    // Authenticate Firebase if available — on unsupported platforms this is a no-op
     if (!_viewModel.isFirebaseAuthenticated) {
-      final authenticated = await _viewModel.authenticateFirebase();
-      if (!authenticated || !mounted) {
-        if (mounted && _viewModel.errorMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('خطأ في الاتصال بخادم المحادثة: ${_viewModel.errorMessage}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-        return;
-      }
+      await _viewModel.authenticateFirebase();
+      if (!mounted) return;
     }
     await _viewModel.loadMessages(widget.chatRoomId);
     _scrollToBottom();
@@ -137,11 +128,20 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   }
 
   void _navigateToProfile() {
-    if (widget.otherUserId != null) {
+    final uid = int.tryParse(widget.otherUserId ?? '');
+    if (uid != null && uid != 0) {
+      // Provide a fallback user so ProfileScreen can load even if the API fails
+      final fallbackUser = UserModel(
+        id: uid,
+        name: widget.otherUserName,
+        email: '',
+        role: UserRole.parent, // Fallback role
+        avatarUrl: widget.otherUserAvatar,
+      );
       Navigator.pushNamed(
         context,
         RouteNames.profile,
-        arguments: {'userId': int.tryParse(widget.otherUserId!)},
+        arguments: {'userId': uid, 'user': fallbackUser},
       );
     }
   }

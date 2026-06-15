@@ -147,11 +147,12 @@ class CommunityViewModel extends ChangeNotifier {
     try {
       await _loadMyPostsInternal(page: 1);
       
+      await _loadFollowingIdsInternal(); // Must happen before following feed
+      
       await Future.wait([
         _loadHomeFeedInternal(page: 1),
         _loadExploreFeedInternal(page: 1),
         _loadFollowingFeedInternal(page: 1),
-        _loadFollowingIdsInternal(),
       ]);
     } catch (e) {
       if (rethrowError) rethrow;

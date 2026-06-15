@@ -6,6 +6,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../data/models/parent_model.dart';
 import '../../../data/models/session_analysis_model.dart';
 import '../../../shared/providers/auth_provider.dart';
+import '../../../shared/providers/patient_provider.dart';
+import '../../../data/models/user_model.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../session/view_model/session_view_model.dart';
 import 'session_detail_placeholder_screen.dart';
@@ -18,7 +20,6 @@ class ParentAnalysisScreen extends StatefulWidget {
 }
 
 class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
-  String _selectedFilter = 'الكل';
 
   @override
   void initState() {
@@ -32,7 +33,11 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
     final authProvider = context.read<AuthProvider>();
     final currentUser = authProvider.currentUser;
     if (currentUser != null) {
-      await context.read<SessionViewModel>().loadMySessions();
+      await Future.wait([
+        context.read<SessionViewModel>().loadMySessions(),
+        if (currentUser is ParentModel)
+          context.read<PatientProvider>().fetchParentConnectedDoctors(currentUser.id),
+      ]);
     }
   }
 
@@ -43,34 +48,16 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
     return datePart.isEmpty ? dateToFormat : datePart;
   }
 
-  Widget _buildStatusChip(SessionAnalysisModel session) {
-    final isComplete = session.isComplete;
-    final backgroundColor = isComplete
-        ? AppColors.success.withValues(alpha: 0.12)
-        : AppColors.primary.withValues(alpha: 0.12);
-    final foregroundColor = isComplete ? AppColors.success : AppColors.primary;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        isComplete ? 'مكتملة' : 'قيد الانتظار',
-        style: TextStyle(
-          color: foregroundColor,
-          fontWeight: FontWeight.bold,
-          fontFamily: 'Cairo',
-          fontSize: 12,
-        ),
-      ),
-    );
-  }
 
   Widget _buildChildHeader(ParentModel parent) {
     final theme = Theme.of(context);
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final hasImage = parent.childPhotoUrl != null && parent.childPhotoUrl!.isNotEmpty;
+    
+    // Fetch doctor info if available
+    final patientProvider = context.watch<PatientProvider>();
+    final doctor = patientProvider.doctors.isNotEmpty ? patientProvider.doctors.first : null;
+    final hasDoctorImage = doctor?.avatarUrl != null && doctor!.avatarUrl!.isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
@@ -90,58 +77,141 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 3),
-              image: hasImage
-                  ? DecorationImage(
-                      image: NetworkImage(parent.childPhotoUrl!),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
-              color: hasImage ? null : Colors.white.withValues(alpha: 0.2),
-            ),
-            child: hasImage
-                ? null
-                : const Icon(Icons.face_retouching_natural_rounded,
-                    color: Colors.white, size: 40),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  parent.childName.isNotEmpty ? parent.childName : 'الطفل',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Cairo',
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            // ── Child Side ──
+            Expanded(
+              child: Row(
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                      image: hasImage
+                          ? DecorationImage(
+                              image: NetworkImage(parent.childPhotoUrl!),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                      color: hasImage ? null : Colors.white.withValues(alpha: 0.2),
+                    ),
+                    child: hasImage
+                        ? null
+                        : const Icon(Icons.face_retouching_natural_rounded,
+                            color: Colors.white, size: 30),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Row(
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          parent.childName.isNotEmpty ? parent.childName : (isAr ? 'الطفل' : 'Child'),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Cairo',
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.cake_rounded, color: Colors.white70, size: 14),
+                            const SizedBox(width: 4),
+                            Text(
+                              parent.childAgeText,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: Colors.white70,
+                                fontFamily: 'Cairo',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // ── Vertical Divider ──
+            if (doctor != null) ...[
+              const VerticalDivider(
+                color: Colors.white24,
+                thickness: 1,
+                width: 24,
+                indent: 4,
+                endIndent: 4,
+              ),
+              
+              // ── Doctor Side ──
+              Expanded(
+                child: Row(
                   children: [
-                    const Icon(Icons.cake_rounded, color: Colors.white70, size: 16),
-                    const SizedBox(width: 4),
-                    Text(
-                      parent.childAgeText,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.white70,
-                        fontFamily: 'Cairo',
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                        image: hasDoctorImage
+                            ? DecorationImage(
+                                image: NetworkImage(doctor.avatarUrl!),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
+                        color: hasDoctorImage ? null : Colors.white.withValues(alpha: 0.2),
+                      ),
+                      child: hasDoctorImage
+                          ? null
+                          : const Icon(Icons.medical_services_rounded,
+                              color: Colors.white, size: 30),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            doctor.name.isNotEmpty ? doctor.name : (isAr ? 'الطبيب المعالج' : 'Doctor'),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Cairo',
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              const Icon(Icons.verified_user_rounded, color: Colors.white70, size: 14),
+                              const SizedBox(width: 4),
+                              Text(
+                                (isAr ? 'الطبيب المعالج' : 'Doctor'),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: Colors.white70,
+                                  fontFamily: 'Cairo',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

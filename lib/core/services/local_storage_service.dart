@@ -201,6 +201,10 @@ class LocalStorageService {
     return null;
   }
 
+  Future<void> clearAiHistory(String userId) async {
+    await _prefs.remove('ai_history_$userId');
+  }
+
   // ==================== RECENT SEARCHES ====================
 
   Future<void> saveRecentSearch(String query) async {

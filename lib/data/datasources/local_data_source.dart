@@ -176,6 +176,10 @@ class LocalDataSource {
     return _localStorage.getAiHistory(userId);
   }
 
+  Future<void> clearAiHistory(String userId) async {
+    await _localStorage.clearAiHistory(userId);
+  }
+
   // ==================== DOCTOR CODE ====================
 
   Future<void> saveDoctorCode(String code) async {

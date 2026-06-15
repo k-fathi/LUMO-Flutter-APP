@@ -12,6 +12,9 @@ class FirebaseAuthService {
     }
   }
 
+  // Whether Firebase Auth is available on this platform
+  bool get isAvailable => _auth != null;
+
   // Get current user
   User? get currentUser => _auth?.currentUser;
 

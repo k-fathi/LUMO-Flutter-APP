@@ -755,7 +755,7 @@ class _InlineSessionDetails extends StatefulWidget {
 class _InlineSessionDetailsState extends State<_InlineSessionDetails>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  int _chartType = 0; // 0 = Bars, 1 = Pie
+  int _chartType = 0; // 0 = Pie, 1 = Bars
 
   // Fallback data when API data is not yet loaded or empty
   final SessionAnalysisModel _fallbackData = SessionAnalysisModel(
@@ -1008,12 +1008,12 @@ class _InlineSessionDetailsState extends State<_InlineSessionDetails>
               segments: const [
                 ButtonSegment(
                     value: 0,
-                    icon: Icon(Icons.bar_chart_rounded),
-                    label: Text('أشرطة')),
-                ButtonSegment(
-                    value: 1,
                     icon: Icon(Icons.pie_chart_rounded),
                     label: Text('دائري')),
+                ButtonSegment(
+                    value: 1,
+                    icon: Icon(Icons.bar_chart_rounded),
+                    label: Text('أشرطة')),
               ],
               selected: {_chartType},
               onSelectionChanged: (Set<int> newSelection) {
@@ -1031,8 +1031,8 @@ class _InlineSessionDetailsState extends State<_InlineSessionDetails>
             ),
           ),
           const SizedBox(height: 20),
-          if (_chartType == 0) _buildBarChart(),
-          if (_chartType == 1) _buildPieChart(),
+          if (_chartType == 0) _buildPieChart(),
+          if (_chartType == 1) _buildBarChart(),
         ],
       ),
     );
@@ -1080,6 +1080,32 @@ class _InlineSessionDetailsState extends State<_InlineSessionDetails>
 
   Widget _buildPieChart() {
     final emotions = _sessionData.emotionDistribution;
+    final bool hasEmotionData = emotions.any((e) => e.percentage > 0.0);
+
+    if (!hasEmotionData) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        child: SizedBox(
+          width: double.infinity,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(Icons.face_retouching_off_rounded, size: 64, color: Colors.grey.shade300),
+              const SizedBox(height: 16),
+              Text(
+                'لا توجد تعبيرات وجهية مسجلة لهذه الجلسة',
+                style: AppTextStyles.body.copyWith(
+                  color: Colors.grey.shade500,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     EmotionData? topEmotion;
     if (emotions.isNotEmpty) {
       topEmotion =

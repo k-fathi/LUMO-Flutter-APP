@@ -7,6 +7,8 @@ import 'api_exception.dart';
 class DioClient {
   final Dio _dio;
   final SharedPreferences _prefs;
+  
+  VoidCallback? onUnauthenticated;
 
   DioClient(this._dio, this._prefs) {
     _setupDio();
@@ -43,6 +45,10 @@ class DioClient {
           debugPrint('❌ [DioClient] ERROR PATH: ${e.requestOptions.path}');
           debugPrint('❌ [DioClient] ERROR STATUS: ${e.response?.statusCode}');
           debugPrint('❌ [DioClient] ERROR DATA: ${e.response?.data}');
+
+          if (e.response?.statusCode == 401) {
+            onUnauthenticated?.call();
+          }
 
           if (e.response != null) {
             final data = e.response!.data;

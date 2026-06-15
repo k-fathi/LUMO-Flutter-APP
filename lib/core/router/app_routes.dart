@@ -36,7 +36,6 @@ import 'route_transitions.dart';
 
 import '../../core/di/dependency_injection.dart';
 import '../../features/home/view_model/home_view_model.dart';
-import '../../features/chat/view_model/chat_view_model.dart';
 import '../../features/ai_helper/view_model/ai_view_model.dart';
 import '../../features/analysis/view_model/analysis_view_model.dart';
 import '../../features/analysis/view_model/image_analysis_view_model.dart';
@@ -134,19 +133,16 @@ class AppRoutes {
         final args =
             (settings.arguments as Map?)?.cast<String, dynamic>() ?? {};
         return RouteTransitions.slideRight(
-          ChangeNotifierProvider(
-            create: (_) => getIt<ChatViewModel>(),
-            child: ChatRoomScreen(
-              chatRoomId:
-                  (args['chatRoomId'] ?? args['chatId'] ?? 'unknown_room')
-                      .toString(),
-              otherUserName:
-                  (args['otherUserName'] ?? args['contactName'] ?? 'مستخدم')
-                      .toString(),
-              otherUserAvatar: args['otherUserAvatar'] as String?,
-              otherUserId:
-                  (args['otherUserId'] ?? args['contactId'])?.toString(),
-            ),
+          ChatRoomScreen(
+            chatRoomId:
+                (args['chatRoomId'] ?? args['chatId'] ?? 'unknown_room')
+                    .toString(),
+            otherUserName:
+                (args['otherUserName'] ?? args['contactName'] ?? 'مستخدم')
+                    .toString(),
+            otherUserAvatar: args['otherUserAvatar'] as String?,
+            otherUserId:
+                (args['otherUserId'] ?? args['contactId'])?.toString(),
           ),
         );
 

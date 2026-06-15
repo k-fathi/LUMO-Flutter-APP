@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import '../../core/enums/user_role.dart';
 import '../../data/datasources/local_data_source.dart';
 import '../../data/repositories/patient_repository.dart';
 import '../../data/repositories/profile_repository.dart';
 import '../../data/models/user_model.dart';
+import '../../data/models/parent_model.dart';
 import '../../data/models/connection_request_model.dart';
 
 class PatientProvider with ChangeNotifier {
@@ -40,6 +42,71 @@ class PatientProvider with ChangeNotifier {
       _patients = cachedPatients.map((e) => UserModel.fromJson(e)).toList();
     }
     notifyListeners();
+  }
+
+  Future<void> fetchParentConnectedDoctors(int parentId) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final Map<int, UserModel> doctorMap = {};
+
+      // Source 1: network API (doctor + social follows)
+      try {
+        final networkList = await _profileRepository.getUserNetwork();
+        for (final u in networkList) {
+          if (u.role == UserRole.doctor) {
+            doctorMap[u.id] = u;
+          }
+        }
+        debugPrint('🔍 fetchParentConnectedDoctors: ${doctorMap.length} doctors from network');
+      } catch (e) {
+        debugPrint('🔍 network fetch failed: $e');
+      }
+
+      // Source 2: fetch doctors from connectedDoctorIds stored in the ParentModel
+      // (We fetch a fresh profile to ensure we have the latest accepted connections)
+      try {
+        List<dynamic> connIds = [];
+        try {
+          final freshProfile = await _profileRepository.getUserProfile(parentId);
+          if (freshProfile is ParentModel) {
+            connIds = freshProfile.connectedDoctorIds;
+            // Update local cache with fresh data
+            await _localDataSource.saveCurrentUser(freshProfile.toJson());
+          }
+        } catch (e) {
+          debugPrint('🔍 fresh profile fetch failed, falling back to cache: $e');
+          final cachedUser = _localDataSource.getCurrentUser();
+          if (cachedUser != null) {
+            connIds = (cachedUser['connected_doctor_ids'] as List<dynamic>?) ?? [];
+          }
+        }
+
+        for (final idStr in connIds) {
+          final id = int.tryParse(idStr.toString());
+          if (id != null && !doctorMap.containsKey(id)) {
+            final doctor = await _profileRepository.getUserProfile(id);
+            if (doctor != null) {
+              doctorMap[id] = doctor;
+            }
+          }
+        }
+        debugPrint('🔍 fetchParentConnectedDoctors: ${doctorMap.length} total after connectedDoctorIds');
+      } catch (e) {
+        debugPrint('🔍 connectedDoctorIds fetch failed: $e');
+      }
+
+      _doctors = doctorMap.values.toList();
+      debugPrint('🔍 fetchParentConnectedDoctors: final ${_doctors.length} doctors');
+    } catch (e) {
+      debugPrint('❌ fetchParentConnectedDoctors error: $e');
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> fetchDoctors(List<String> doctorIds) async {
