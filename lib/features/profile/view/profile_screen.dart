@@ -80,12 +80,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user =
         isMyProfile ? currentUser : (profileViewModel.user ?? widget.user);
     final isDoctor = user?.role.name == 'doctor';
+    final isCurrentUserParent = currentUser?.role == UserRole.parent;
+    final isTargetParent = user?.role == UserRole.parent;
     final doctorUser = isMyProfile && currentUser is DoctorModel ? currentUser : null;
     
     final isConnectedDoctor = currentUser?.role == UserRole.parent && 
                               isDoctor && 
                               targetUserId != null &&
                               patientProv.doctors.any((d) => d.id == targetUserId);
+
+    // Hide message button when both users are parents
+    final showMessageButton = !(isCurrentUserParent && isTargetParent);
 
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
@@ -191,6 +196,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     followers: followersShow,
                     following: followingShow,
                     isMyProfile: isMyProfile,
+                    showMessageButton: showMessageButton,
                     onDisconnect: isConnectedDoctor ? () async {
                       // The API takes the PATIENT's id (current user), not the doctor's id
                       final patientId = currentUser?.id;
@@ -548,6 +554,7 @@ class _ProfileHeader extends StatelessWidget {
   final int following;
   final bool isMyProfile;
   final bool isFollowing;
+  final bool showMessageButton;
   final VoidCallback onToggleFollow;
   final VoidCallback onMessageTap;
   final VoidCallback onEditProfile;
@@ -565,6 +572,7 @@ class _ProfileHeader extends StatelessWidget {
     required this.following,
     required this.isMyProfile,
     required this.isFollowing,
+    this.showMessageButton = true,
     required this.onToggleFollow,
     required this.onMessageTap,
     required this.onEditProfile,
@@ -720,18 +728,20 @@ class _ProfileHeader extends StatelessWidget {
                     child: Text(isFollowing ? 'متابع' : l10n.follow),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: onMessageTap,
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      side: const BorderSide(color: AppColors.primary),
+                if (showMessageButton) ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: onMessageTap,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        side: const BorderSide(color: AppColors.primary),
+                      ),
+                      child: Text(l10n.message),
                     ),
-                    child: Text(l10n.message),
                   ),
-                ),
+                ],
               ],
             ),
         ],

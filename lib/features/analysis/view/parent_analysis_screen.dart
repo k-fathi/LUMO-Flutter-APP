@@ -7,10 +7,11 @@ import '../../../data/models/parent_model.dart';
 import '../../../data/models/session_analysis_model.dart';
 import '../../../shared/providers/auth_provider.dart';
 import '../../../shared/providers/patient_provider.dart';
-import '../../../data/models/user_model.dart';
+
 import '../../../shared/widgets/empty_state.dart';
 import '../../session/view_model/session_view_model.dart';
 import 'session_detail_placeholder_screen.dart';
+
 
 class ParentAnalysisScreen extends StatefulWidget {
   const ParentAnalysisScreen({super.key});
@@ -20,7 +21,6 @@ class ParentAnalysisScreen extends StatefulWidget {
 }
 
 class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
-
   @override
   void initState() {
     super.initState();
@@ -36,7 +36,9 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
       await Future.wait([
         context.read<SessionViewModel>().loadMySessions(),
         if (currentUser is ParentModel)
-          context.read<PatientProvider>().fetchParentConnectedDoctors(currentUser.id),
+          context
+              .read<PatientProvider>()
+              .fetchParentConnectedDoctors(currentUser.id),
       ]);
     }
   }
@@ -54,16 +56,19 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
     return datePart.isEmpty ? dateToFormat : datePart;
   }
 
-
   Widget _buildChildHeader(ParentModel parent) {
     final theme = Theme.of(context);
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
-    final hasImage = parent.childPhotoUrl != null && parent.childPhotoUrl!.isNotEmpty;
-    
+    final hasImage =
+        parent.avatarUrl != null && parent.avatarUrl!.isNotEmpty;
+
     // Fetch doctor info if available
     final patientProvider = context.watch<PatientProvider>();
-    final doctor = patientProvider.doctors.isNotEmpty ? patientProvider.doctors.first : null;
-    final hasDoctorImage = doctor?.avatarUrl != null && doctor!.avatarUrl!.isNotEmpty;
+    final doctor = patientProvider.doctors.isNotEmpty
+        ? patientProvider.doctors.first
+        : null;
+    final hasDoctorImage =
+        doctor?.avatarUrl != null && doctor!.avatarUrl!.isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
@@ -98,11 +103,13 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
                       border: Border.all(color: Colors.white, width: 2),
                       image: hasImage
                           ? DecorationImage(
-                              image: NetworkImage(_resolveImageUrl(parent.childPhotoUrl!)),
+                              image: NetworkImage(
+                                  _resolveImageUrl(parent.avatarUrl!)),
                               fit: BoxFit.cover,
                             )
                           : null,
-                      color: hasImage ? null : Colors.white.withValues(alpha: 0.2),
+                      color:
+                          hasImage ? null : Colors.white.withValues(alpha: 0.2),
                     ),
                     child: hasImage
                         ? null
@@ -116,7 +123,9 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          parent.childName.isNotEmpty ? parent.childName : (isAr ? 'الطفل' : 'Child'),
+                          parent.childName.isNotEmpty
+                              ? parent.childName
+                              : (isAr ? 'الطفل' : 'Child'),
                           style: theme.textTheme.titleMedium?.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -128,7 +137,8 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            const Icon(Icons.cake_rounded, color: Colors.white70, size: 14),
+                            const Icon(Icons.cake_rounded,
+                                color: Colors.white70, size: 14),
                             const SizedBox(width: 4),
                             Text(
                               parent.childAgeText,
@@ -145,7 +155,7 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
                 ],
               ),
             ),
-            
+
             // ── Vertical Divider ──
             if (doctor != null) ...[
               const VerticalDivider(
@@ -155,7 +165,7 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
                 indent: 4,
                 endIndent: 4,
               ),
-              
+
               // ── Doctor Side ──
               Expanded(
                 child: Row(
@@ -168,11 +178,14 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
                         border: Border.all(color: Colors.white, width: 2),
                         image: hasDoctorImage
                             ? DecorationImage(
-                                image: NetworkImage(_resolveImageUrl(doctor.avatarUrl!)),
+                                image: NetworkImage(
+                                    _resolveImageUrl(doctor.avatarUrl!)),
                                 fit: BoxFit.cover,
                               )
                             : null,
-                        color: hasDoctorImage ? null : Colors.white.withValues(alpha: 0.2),
+                        color: hasDoctorImage
+                            ? null
+                            : Colors.white.withValues(alpha: 0.2),
                       ),
                       child: hasDoctorImage
                           ? null
@@ -186,7 +199,9 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            doctor.name.isNotEmpty ? doctor.name : (isAr ? 'الطبيب المعالج' : 'Doctor'),
+                            doctor.name.isNotEmpty
+                                ? doctor.name
+                                : (isAr ? 'الطبيب المعالج' : 'Doctor'),
                             style: theme.textTheme.titleMedium?.copyWith(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
@@ -198,7 +213,8 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              const Icon(Icons.verified_user_rounded, color: Colors.white70, size: 14),
+                              const Icon(Icons.verified_user_rounded,
+                                  color: Colors.white70, size: 14),
                               const SizedBox(width: 4),
                               Text(
                                 (isAr ? 'الطبيب المعالج' : 'Doctor'),
@@ -222,7 +238,8 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
     );
   }
 
-  Widget _buildKpiRow(List<SessionAnalysisModel> completedSessions, List<SessionAnalysisModel> allSessions) {
+  Widget _buildKpiRow(List<SessionAnalysisModel> completedSessions,
+      List<SessionAnalysisModel> allSessions) {
     double avgFocus = 0;
     if (completedSessions.isNotEmpty) {
       final focusSum = completedSessions.fold<double>(0, (sum, s) {
@@ -307,14 +324,16 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
     );
   }
 
-  Widget _buildFocusTrendChart(List<SessionAnalysisModel> completedSessions, List<SessionAnalysisModel> allSessions) {
-    final validSessions = allSessions.where((s) => s.isComplete).toList().reversed.toList();
+  Widget _buildFocusTrendChart(List<SessionAnalysisModel> completedSessions,
+      List<SessionAnalysisModel> allSessions) {
+    final validSessions =
+        allSessions.where((s) => s.isComplete).toList().reversed.toList();
     final chartSessions = validSessions.length > 10
         ? validSessions.skip(validSessions.length - 10).toList()
         : validSessions;
 
     Widget content;
-    
+
     if (chartSessions.isEmpty) {
       content = const SizedBox(
         height: 180,
@@ -328,7 +347,8 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
     } else {
       final spots = chartSessions.asMap().entries.map((entry) {
         final session = entry.value;
-        final focusPct = (session.averageFocus ?? session.focusedPercentage) * 100;
+        final focusPct =
+            (session.averageFocus ?? session.focusedPercentage) * 100;
         return FlSpot((entry.key + 1).toDouble(), focusPct.clamp(0, 100));
       }).toList();
 
@@ -363,7 +383,8 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
                   interval: 1,
                   getTitlesWidget: (value, meta) {
                     final idx = value.toInt() - 1;
-                    if (idx < 0 || idx >= chartSessions.length) return const SizedBox.shrink();
+                    if (idx < 0 || idx >= chartSessions.length)
+                      return const SizedBox.shrink();
                     final session = chartSessions[idx];
                     final globalIndex = allSessions.indexOf(session);
                     final displayIndex = allSessions.length - globalIndex;
@@ -371,7 +392,8 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
                       padding: const EdgeInsets.only(top: 6),
                       child: Text(
                         '#$displayIndex',
-                        style: const TextStyle(fontSize: 10, color: Colors.grey),
+                        style:
+                            const TextStyle(fontSize: 10, color: Colors.grey),
                       ),
                     );
                   },
@@ -388,8 +410,10 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
                   ),
                 ),
               ),
-              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              topTitles:
+                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles:
+                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
             ),
             borderData: FlBorderData(show: false),
             lineBarsData: [
@@ -401,7 +425,8 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
                 barWidth: 3,
                 dotData: FlDotData(
                   show: true,
-                  getDotPainter: (spot, percent, bar, index) => FlDotCirclePainter(
+                  getDotPainter: (spot, percent, bar, index) =>
+                      FlDotCirclePainter(
                     radius: 4,
                     color: Theme.of(context).colorScheme.surface,
                     strokeWidth: 2,
@@ -439,7 +464,8 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.trending_up_rounded, color: AppColors.primary, size: 22),
+              Icon(Icons.trending_up_rounded,
+                  color: AppColors.primary, size: 22),
               const SizedBox(width: 8),
               const Text(
                 'تطور التركيز عبر الجلسات',
@@ -468,9 +494,12 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'تحليلات الطفل',
-          style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+        title: Text(
+          parent != null && parent.childName.isNotEmpty
+              ? 'أداء ${parent.childName} في الجلسات'
+              : 'أداء الطفل',
+          style:
+              const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
         ),
         backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
@@ -496,14 +525,16 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: _loadData,
-                    child: const Text('إعادة المحاولة', style: TextStyle(fontFamily: 'Cairo')),
+                    child: const Text('إعادة المحاولة',
+                        style: TextStyle(fontFamily: 'Cairo')),
                   ),
                 ],
               ),
             );
           }
 
-          final completedSessions = allSessions.where((s) => s.isComplete).toList();
+          final completedSessions =
+              allSessions.where((s) => s.isComplete).toList();
 
           if (completedSessions.isEmpty) {
             return const EmptyState(
@@ -520,10 +551,10 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
                 if (parent != null) _buildChildHeader(parent),
-                
+
                 _buildKpiRow(completedSessions, allSessions),
                 const SizedBox(height: 16),
-                
+
                 _buildFocusTrendChart(completedSessions, allSessions),
 
                 const SizedBox(height: 16),
@@ -541,87 +572,91 @@ class _ParentAnalysisScreenState extends State<ParentAnalysisScreen> {
 
                 // Session List
                 ...completedSessions.asMap().entries.map((entry) {
-                    final session = entry.value;
-                    final globalIndex = allSessions.indexOf(session);
-                    final displayIndex = allSessions.length - globalIndex;
-                    
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Card(
-                        elevation: 0,
-                        color: theme.colorScheme.surface,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(color: Colors.grey.shade200),
+                  final session = entry.value;
+                  final globalIndex = allSessions.indexOf(session);
+                  final displayIndex = allSessions.length - globalIndex;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Card(
+                      elevation: 0,
+                      color: theme.colorScheme.surface,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: Colors.grey.shade200),
+                      ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
                         ),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
+                        title: Text(
+                          'جلسة #$displayIndex',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Cairo',
+                            fontSize: 16,
                           ),
-                          title: Text(
-                            'جلسة #$displayIndex',
-                            style: const TextStyle(
+                        ),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Row(
+                            children: [
+                              Icon(Icons.calendar_today_outlined,
+                                  size: 14,
+                                  color: theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.6)),
+                              const SizedBox(width: 4),
+                              Text(
+                                _formatSessionDate(session),
+                                style: TextStyle(
+                                  color: theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.6),
+                                  fontSize: 13,
+                                  fontFamily: 'Cairo',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.success.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text(
+                            'مكتملة',
+                            style: TextStyle(
+                              color: AppColors.success,
                               fontWeight: FontWeight.bold,
                               fontFamily: 'Cairo',
-                              fontSize: 16,
+                              fontSize: 12,
                             ),
                           ),
-                          subtitle: Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Row(
-                              children: [
-                                Icon(Icons.calendar_today_outlined,
-                                    size: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _formatSessionDate(session),
-                                  style: TextStyle(
-                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                                    fontSize: 13,
-                                    fontFamily: 'Cairo',
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          trailing: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AppColors.success.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Text(
-                              'مكتملة',
-                              style: TextStyle(
-                                color: AppColors.success,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Cairo',
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                          onTap: () async {
-                            final sessionId = int.tryParse(session.id);
-                            if (sessionId != null) {
-                              await viewModel.loadSessionDetails(sessionId);
-                            }
-                            if (!context.mounted) return;
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ChangeNotifierProvider.value(
-                                  value: viewModel,
-                                  child: SessionDetailPlaceholderScreen(
-                                      displayIndex: displayIndex),
-                                ),
-                              ),
-                            );
-                          },
                         ),
+                        onTap: () async {
+                          final sessionId = int.tryParse(session.id);
+                          if (sessionId != null) {
+                            await viewModel.loadSessionDetails(sessionId);
+                          }
+                          if (!context.mounted) return;
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ChangeNotifierProvider.value(
+                                value: viewModel,
+                                child: SessionDetailPlaceholderScreen(
+                                    displayIndex: displayIndex),
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  }),
+                    ),
+                  );
+                }),
               ],
             ),
           );
