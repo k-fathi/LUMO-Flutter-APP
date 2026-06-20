@@ -46,7 +46,10 @@ class AuthResponse {
     return AuthResponse(
       status: statusValue,
       message: json['msg']?.toString() ?? json['message']?.toString() ?? '',
-      token: data?['token']?.toString(),
+      token: json['token']?.toString() ??
+          data?['token']?.toString() ??
+          json['access_token']?.toString() ??
+          data?['access_token']?.toString(),
       user: parsedUser,
     );
   }

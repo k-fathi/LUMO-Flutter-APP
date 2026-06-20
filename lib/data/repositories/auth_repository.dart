@@ -87,6 +87,9 @@ class AuthRepository {
 
   Future<MessageResponse?> logout() async {
     try {
+      if (!isLoggedIn) {
+        return null;
+      }
       final response = await _remoteDataSource.logout();
       return response;
     } catch (e) {

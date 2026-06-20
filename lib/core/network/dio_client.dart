@@ -42,12 +42,31 @@ class DioClient {
         onError: (DioException e, handler) {
           ApiException? apiException;
 
-          debugPrint('❌ [DioClient] ERROR PATH: ${e.requestOptions.path}');
-          debugPrint('❌ [DioClient] ERROR STATUS: ${e.response?.statusCode}');
-          debugPrint('❌ [DioClient] ERROR DATA: ${e.response?.data}');
+          final requestHeaders = e.requestOptions.headers;
+          final hasAuthHeader = requestHeaders.containsKey('Authorization') && 
+                                requestHeaders['Authorization'] != null;
+                                
+          final authHeaderStr = requestHeaders['Authorization']?.toString();
+          final tokenPreview = authHeaderStr != null && authHeaderStr.length > 20 
+              ? '${authHeaderStr.substring(0, 20)}...' 
+              : authHeaderStr;
+
+          debugPrint('\n================= DIO 401 ERROR LOG =================');
+          debugPrint('⏰ TIME: ${DateTime.now()}');
+          debugPrint('❌ PATH: ${e.requestOptions.path}');
+          debugPrint('🔑 TOKEN (PREVIEW): $tokenPreview');
+          debugPrint('⚠️ STATUS: ${e.response?.statusCode}');
+          debugPrint('📦 RESPONSE BODY: ${e.response?.data}');
+          debugPrint('======================================================\n');
 
           if (e.response?.statusCode == 401) {
-            onUnauthenticated?.call();
+            // Defense in depth: only auto-logout if we ACTUALLY sent a token.
+            // If we didn't send a token, it's an app-state/sync issue, not an expired session.
+            if (hasAuthHeader) {
+              onUnauthenticated?.call();
+            } else {
+              debugPrint('⚠️ [DioClient] Received 401 but NO auth header was sent. Ignoring global logout to prevent loops.');
+            }
           }
 
           if (e.response != null) {
