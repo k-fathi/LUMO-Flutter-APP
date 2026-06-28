@@ -23,6 +23,9 @@ class EmotionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Fix: Prevent Division by Zero (NaN / Infinity) causing UI crashes
+    final safePercentage = (percentage.isNaN || percentage.isInfinite) ? 0.0 : percentage;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -58,7 +61,7 @@ class EmotionBar extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child: LinearProgressIndicator(
-                value: percentage,
+                value: safePercentage,
                 minHeight: 10,
                 backgroundColor: color.withValues(alpha: 0.08),
                 valueColor: AlwaysStoppedAnimation<Color>(color),
@@ -71,7 +74,7 @@ class EmotionBar extends StatelessWidget {
           SizedBox(
             width: 42,
             child: Text(
-              '${(percentage * 100).toInt()}%',
+              '${(safePercentage * 100).toInt()}%',
               style: AppTextStyles.label.copyWith(
                 fontWeight: FontWeight.w700,
                 color: color,

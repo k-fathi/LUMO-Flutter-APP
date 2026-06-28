@@ -16,6 +16,7 @@ import 'session_detail_placeholder_screen.dart';
 
 // EmotionData & SessionAnalysisModel are imported from
 // '../../../data/models/session_analysis_model.dart'
+import '../view_model/analysis_view_model.dart';
 
 class DoctorPatientDetail extends StatefulWidget {
   final int parentId;
@@ -58,6 +59,13 @@ class _DoctorPatientDetailState extends State<DoctorPatientDetail> {
   Future<void> _loadPatientSessions() async {
     final sessionViewModel = context.read<SessionViewModel>();
     await sessionViewModel.loadPatientSessions(widget.parentId);
+
+    // Refresh AnalysisViewModel as requested to prevent "Fake Refresh" bug
+    if (mounted) {
+      try {
+        await context.read<AnalysisViewModel>().loadParentAnalyses(widget.parentId);
+      } catch (_) {}
+    }
 
     if (!mounted || sessionViewModel.errorMessage == null) return;
 

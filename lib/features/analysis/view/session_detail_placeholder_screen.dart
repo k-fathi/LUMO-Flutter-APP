@@ -381,6 +381,7 @@ class _SessionDetailPlaceholderScreenState
   Widget _buildBarChart() {
     return Column(
       children: _sessionData.emotionDistribution.map((e) {
+        final safePercentage = (e.percentage.isNaN || e.percentage.isInfinite) ? 0.0 : e.percentage;
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: Row(
@@ -396,7 +397,7 @@ class _SessionDetailPlaceholderScreenState
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: LinearProgressIndicator(
-                    value: e.percentage,
+                    value: safePercentage,
                     backgroundColor: e.color.withValues(alpha: 0.1),
                     color: e.color,
                     minHeight: 12,
@@ -406,7 +407,7 @@ class _SessionDetailPlaceholderScreenState
               const SizedBox(width: 8),
               SizedBox(
                 width: 40,
-                child: Text('${(e.percentage * 100).toInt()}%',
+                child: Text('${(safePercentage * 100).toInt()}%',
                     style: AppTextStyles.caption
                         .copyWith(fontWeight: FontWeight.bold),
                     textAlign: TextAlign.end),
