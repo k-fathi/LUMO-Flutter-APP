@@ -40,6 +40,7 @@ class _LoginScreenState extends State<LoginScreen> with FormValidationMixin {
   }
 
   Future<void> _handleLogin() async {
+    if (_isLoading) return;
     if (!validateForm()) return;
 
     setState(() => _isLoading = true);

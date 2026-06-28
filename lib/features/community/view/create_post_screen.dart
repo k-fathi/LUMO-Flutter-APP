@@ -43,12 +43,15 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   }
 
   Future<void> _handleSubmit() async {
+    final viewModel = context.read<CommunityViewModel>();
+    if (viewModel.isLoading) return;
+
     final content = _contentController.text.trim();
     if (content.isEmpty) return;
 
     final authProvider = context.read<AuthProvider>();
     final user = authProvider.currentUser;
-    final viewModel = context.read<CommunityViewModel>();
+    
     final success = await viewModel.createPost(
       content: content,
       imagePath: _selectedImage?.path,
