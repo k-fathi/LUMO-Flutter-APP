@@ -55,6 +55,14 @@ class PatientRepository {
     }
   }
 
+  Future<List<ConnectionRequestModel>> getSentRequests() async {
+    try {
+      return await _remoteDataSource.getSentRequests();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<Map<String, dynamic>> getPatientInsights(String patientId) async {
     try {
       return await _remoteDataSource.getPatientInsights(patientId);

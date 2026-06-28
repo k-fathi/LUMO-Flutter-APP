@@ -290,6 +290,23 @@ class ChatViewModel extends ChangeNotifier {
     
     _safeNotifyListeners();
 
+    // 🚀 NEW: Fetch from API to ensure we have messages on Linux without Firebase
+    final room = _chatRooms.firstWhere((r) => r.id == chatRoomId, orElse: () => ChatRoomModel(id: chatRoomId, participantIds: [], participantNames: {}, participantAvatars: {}, createdAt: DateTime.now(), updatedAt: DateTime.now()));
+    final receiverIdStr = room.getOtherParticipantId(_userId?.toString() ?? '');
+    final receiverId = int.tryParse(receiverIdStr);
+    
+    _chatRepository.getChatHistoryFromApi(chatRoomId, receiverId).then((history) {
+      if (history.isNotEmpty && _currentChatRoomId == chatRoomId) {
+        final existingIds = _messages.map((m) => m.id).toSet();
+        final newMessages = history.where((m) => !existingIds.contains(m.id)).toList();
+        if (newMessages.isNotEmpty) {
+          _messages.addAll(newMessages);
+          _messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+          _safeNotifyListeners();
+        }
+      }
+    });
+
     try {
       await _roomSubscription?.cancel();
       _roomSubscription = _chatRepository.streamChatRoom(chatRoomId).listen(

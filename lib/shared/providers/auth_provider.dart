@@ -214,13 +214,23 @@ class AuthProvider extends ChangeNotifier {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       final notification = message.notification;
       if (notification != null) {
+        final title = notification.title ?? 'إشعار جديد';
+        final body = notification.body ?? '';
+        final type = message.data['type']?.toString();
+
+        // Show system notification (status bar)
         getIt<NotificationService>().showNotification(
           id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          title: notification.title ?? 'إشعار جديد',
-          body: notification.body ?? '',
+          title: title,
+          body: body,
         );
-        // Refresh notification list silently
-        getIt<NotificationProvider>().fetchNotifications();
+
+        // Show in-app banner + refresh list
+        getIt<NotificationProvider>().handleForegroundFcmMessage(
+          title: title,
+          body: body,
+          type: type,
+        );
       }
     });
   }

@@ -5,7 +5,7 @@ import '../../models/message_model.dart';
 import '../../models/chat_room_model.dart';
 
 abstract class ChatRemoteDataSource {
-  Future<List<MessageModel>> getChatHistory();
+  Future<List<MessageModel>> getChatHistory({int? receiverId, String? chatRoomId});
   Future<String> askAiConsultation(String question);
   Future<String> getFirebaseToken();
   Future<List<dynamic>> getMyChats();
@@ -23,10 +23,24 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
   ChatRemoteDataSourceImpl(this._dioClient);
 
   @override
-  Future<List<MessageModel>> getChatHistory() async {
-    final response = await _dioClient.get(ApiConstants.getChatHistory);
-    final List<dynamic> data = response.data['history'];
-    return data.map((json) => MessageModel.fromJson(json)).toList();
+  Future<List<MessageModel>> getChatHistory({int? receiverId, String? chatRoomId}) async {
+    final queryParams = <String, dynamic>{};
+    if (receiverId != null) queryParams['receiver_id'] = receiverId;
+    if (chatRoomId != null) queryParams['chat_room_id'] = chatRoomId;
+
+    try {
+      final response = await _dioClient.get(ApiConstants.getChatHistory, queryParameters: queryParams);
+      List<dynamic> data = [];
+      if (response.data is Map) {
+        data = response.data['history'] ?? response.data['data'] ?? response.data['messages'] ?? [];
+      } else if (response.data is List) {
+        data = response.data;
+      }
+      return data.map((json) => MessageModel.fromJson(json)).toList();
+    } catch (e) {
+      debugPrint('REST history error: $e');
+      return [];
+    }
   }
 
   @override
@@ -53,9 +67,11 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
     final data = response.data;
     if (data == null) return [];
     if (data is Map) {
-      final chats = data['chats'];
+      // API returns { "data": [...] } — try 'data' key first, then 'chats' as fallback
+      final chats = data['data'] ?? data['chats'];
       if (chats == null) return [];
-      return chats as List<dynamic>;
+      if (chats is List) return chats;
+      return [];
     }
     if (data is List) return data;
     return [];
@@ -71,8 +87,20 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
 
     debugPrint('🔍 startChat raw response: ${response.data}');
 
-    // API returns { "message": "...", "chat": { "id": 1, "user_one": 2, "user_two": 1, ... } }
-    final chatJson = Map<String, dynamic>.from(response.data['chat']);
+    // Handle different possible API wrapper formats
+    Map<String, dynamic> chatJson;
+    final data = response.data;
+    if (data is Map<String, dynamic>) {
+      if (data.containsKey('chat') && data['chat'] is Map) {
+        chatJson = Map<String, dynamic>.from(data['chat']);
+      } else if (data.containsKey('data') && data['data'] is Map) {
+        chatJson = Map<String, dynamic>.from(data['data']);
+      } else {
+        chatJson = data;
+      }
+    } else {
+      throw Exception('Unexpected response format from startChat API');
+    }
 
     debugPrint('🔍 chatJson extracted: $chatJson');
     debugPrint('✅ chatRoomId from API: ${chatJson['id']}');

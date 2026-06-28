@@ -662,6 +662,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                               .toList();
                         }
 
+                        // ✅ Prevent parent-to-parent communication
+                        if (currentUser.role == UserRole.parent) {
+                          pool = pool.where((u) => u.role != UserRole.parent).toList();
+                        }
+
                         // Show loading spinner while fetching
                         if (pool.isEmpty && patientProv.isLoading) {
                           return const Center(child: CircularProgressIndicator());

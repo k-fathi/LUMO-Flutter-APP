@@ -101,17 +101,7 @@ class _SignupScreenState extends State<SignupScreen> with FormValidationMixin {
     if (!validateForm()) return;
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
 
-    if (_selectedRole.isParent && _childImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text((isAr
-              ? 'الرجاء إرفاق صورة الطفل (إجباري)'
-              : 'Please attach a photo of the child (mandatory)')),
-          backgroundColor: AppColors.destructive,
-        ),
-      );
-      return;
-    }
+
 
     setState(() => _isLoading = true);
 
@@ -143,36 +133,7 @@ class _SignupScreenState extends State<SignupScreen> with FormValidationMixin {
       if (!mounted) return;
 
       if (success) {
-        // ── Case 1: Backend returned token + user directly ──
-        if (authProvider.isAuthenticated && authProvider.currentUser != null) {
-          if (!mounted) return;
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            RouteNames.mainLayout,
-            (route) => false,
-          );
-          return;
-        }
-
-        // ── Case 2: Try auto-login with the same credentials ──
-        final loginSuccess = await authProvider.login(
-          phone: _phoneController.text.trim(),
-          password: _passwordController.text,
-        );
-
-        if (!mounted) return;
-
-        if (loginSuccess && authProvider.currentUser != null) {
-          // Auto-login succeeded → go to main app
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            RouteNames.mainLayout,
-            (route) => false,
-          );
-          return;
-        }
-
-        // ── Case 3: Auto-login failed (OTP required) → send to OTP screen ──
+        // Force navigate to OTP verification screen always
         Navigator.pushNamed(
           context,
           RouteNames.otpVerification,
@@ -410,8 +371,8 @@ class _SignupScreenState extends State<SignupScreen> with FormValidationMixin {
                     onTap: () => _pickImage(isChild: true),
                     label: (isAr ? 'صورة الطفل' : 'the child picture'),
                     hint: (isAr
-                        ? 'أضف صورة الطفل (إجباري)'
-                        : 'Add child\'s photo (mandatory)'),
+                        ? 'أضف صورة الطفل'
+                        : 'Add child\'s photo'),
                     prefixIcon: Icons.child_care_outlined,
                   ),
                   SizedBox(height: 20),

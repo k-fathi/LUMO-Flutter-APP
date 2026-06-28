@@ -43,15 +43,23 @@ class ChatRoomModel {
   factory ChatRoomModel.fromJson(Map<String, dynamic> json) {
     // Handle API format: user_one/user_two vs standard participant_ids
     List<String> participantIds;
+    final userOneRaw = json['user_one'];
+    final userTwoRaw = json['user_two'];
+    
+    // Check if user_one/user_two are full objects (from API /chat/my-chats)
+    // or just IDs (from /chat/start or Firebase)
+    final bool userOneIsObject = userOneRaw is Map;
+    final bool userTwoIsObject = userTwoRaw is Map;
+
     if (json['participant_ids'] != null) {
       participantIds = (json['participant_ids'] as List<dynamic>)
           .map((e) => e.toString())
           .toList();
-    } else if (json['user_one'] != null && json['user_two'] != null) {
-      participantIds = [
-        json['user_one'].toString(),
-        json['user_two'].toString(),
-      ];
+    } else if (userOneRaw != null && userTwoRaw != null) {
+      // Extract ID from object or use raw value
+      final idOne = userOneIsObject ? userOneRaw['id'].toString() : userOneRaw.toString();
+      final idTwo = userTwoIsObject ? userTwoRaw['id'].toString() : userTwoRaw.toString();
+      participantIds = [idOne, idTwo];
     } else {
       participantIds = [];
     }
@@ -63,30 +71,48 @@ class ChatRoomModel {
       lastMessageTimestamp = _parseDateTime(rawTime);
     }
     
-    // ✅ Ensure participantNames والـ participantAvatars بتحتوي على entries للـ participant_ids
-    // حتى لو الـ API ما أرجعها null, عشان نتجنب "مستخدم" في الـ UI
+    // ✅ Extract participantNames and participantAvatars
     Map<String, String> participantNames = {};
+    Map<String, String?> participantAvatars = {};
+
+    // Source 1: explicit participant_names / participant_avatars maps (from Firebase/cache)
     if (json['participant_names'] is Map) {
       participantNames = Map<String, String>.from(
         (json['participant_names'] as Map).map(
-          (k, v) => MapEntry(k.toString(), (v?.toString() ?? '').isEmpty ? 'مستخدم' : v.toString()),
+          (k, v) => MapEntry(k.toString(), (v?.toString() ?? '').isEmpty ? '' : v.toString()),
         ),
       );
     }
-    // تأكد إن كل participant_id عنده entry بـ participantNames
-    for (final id in participantIds) {
-      if (!participantNames.containsKey(id) || (participantNames[id]?.isEmpty ?? true)) {
-        participantNames[id] = 'مستخدم';
-      }
-    }
-
-    Map<String, String?> participantAvatars = {};
     if (json['participant_avatars'] is Map) {
       participantAvatars = Map<String, String?>.from(
         (json['participant_avatars'] as Map).map(
           (k, v) => MapEntry(k.toString(), v?.toString()),
         ),
       );
+    }
+
+    // Source 2: extract from user_one / user_two full objects (from Laravel API)
+    // These take priority because they come directly from the database
+    if (userOneIsObject) {
+      final id = userOneRaw['id'].toString();
+      final name = userOneRaw['name']?.toString();
+      final avatar = userOneRaw['profile_image']?.toString() ?? userOneRaw['avatar_url']?.toString() ?? userOneRaw['avatar']?.toString();
+      if (name != null && name.isNotEmpty) participantNames[id] = name;
+      if (avatar != null && avatar.isNotEmpty) participantAvatars[id] = avatar;
+    }
+    if (userTwoIsObject) {
+      final id = userTwoRaw['id'].toString();
+      final name = userTwoRaw['name']?.toString();
+      final avatar = userTwoRaw['profile_image']?.toString() ?? userTwoRaw['avatar_url']?.toString() ?? userTwoRaw['avatar']?.toString();
+      if (name != null && name.isNotEmpty) participantNames[id] = name;
+      if (avatar != null && avatar.isNotEmpty) participantAvatars[id] = avatar;
+    }
+
+    // Fallback: ensure every participant has a name entry
+    for (final id in participantIds) {
+      if (!participantNames.containsKey(id) || (participantNames[id]?.isEmpty ?? true)) {
+        participantNames[id] = 'مستخدم';
+      }
     }
 
     return ChatRoomModel(
@@ -185,15 +211,15 @@ class ChatRoomModel {
         'مستخدم غير معروف';
   }
 
-  /// استخرج صورة المستخدم التاني مع fallbacks متعددة
+  /// استخرج صورة المستخدم التاني — بدون fallback للـ current user عشان منعرضش صورة غلط
   String? getOtherParticipantAvatar(String currentUserId) {
     final otherId = participantIds.firstWhere(
       (id) => !_matchesUserId(id, currentUserId),
       orElse: () => participantIds.isNotEmpty ? participantIds.first : '',
     );
     
-    final fallbackId = participantIds.isNotEmpty ? participantIds.first : '';
-    return participantAvatars[otherId] ?? participantAvatars[fallbackId];
+    // Only return the OTHER user's avatar, never fallback to current user's avatar
+    return participantAvatars[otherId];
   }
 
   int getUnreadCount(String userId) {

@@ -15,6 +15,7 @@ class PatientProvider with ChangeNotifier {
   List<UserModel> _patients = [];
   List<UserModel> _doctors = [];
   List<ConnectionRequestModel> _joinRequests = [];
+  List<ConnectionRequestModel> _sentRequests = [];
   bool _isLoading = false;
   String? _error;
 
@@ -30,6 +31,8 @@ class PatientProvider with ChangeNotifier {
   List<UserModel> get patients => _patients;
   List<UserModel> get doctors => _doctors;
   List<ConnectionRequestModel> get joinRequests => _joinRequests;
+  /// Requests the current doctor sent (includes pending, accepted, rejected)
+  List<ConnectionRequestModel> get sentRequests => _sentRequests;
   bool get isLoading => _isLoading;
   String? get error => _error;
   int get totalPatients => _patients.length;
@@ -159,11 +162,28 @@ class PatientProvider with ChangeNotifier {
   Future<void> fetchRequests() async {
     _setLoading(true);
     try {
+      // Fetch pending incoming requests (parent POV) / all requests (doctor POV)
       final requests = await _patientRepository.getPendingRequests();
       _joinRequests = requests;
       _error = null;
     } catch (e) {
       _error = e.toString();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Fetches all requests sent BY the doctor (pending, accepted, rejected).
+  Future<void> fetchSentRequests() async {
+    _setLoading(true);
+    try {
+      final requests = await _patientRepository.getSentRequests();
+      _sentRequests = requests;
+      _error = null;
+    } catch (e) {
+      // Silently fail — not all backends support this endpoint
+      debugPrint('fetchSentRequests failed: $e');
+      _sentRequests = [];
     } finally {
       _setLoading(false);
     }
@@ -247,6 +267,7 @@ class PatientProvider with ChangeNotifier {
   void resetState() {
     _patients = [];
     _joinRequests = [];
+    _sentRequests = [];
     _isLoading = false;
     _error = null;
     notifyListeners();

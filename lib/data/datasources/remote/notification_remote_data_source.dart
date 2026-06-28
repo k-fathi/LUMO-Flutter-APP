@@ -18,7 +18,18 @@ class NotificationRemoteDataSourceImpl implements NotificationRemoteDataSource {
     // Based on Postman, it returns { "notifications": [...] } or { "data": [...] }
     final data = response.data;
     if (data is Map<String, dynamic>) {
-      return data['notifications'] ?? data['data'] ?? [];
+      var listData = data['notifications'] ?? data['data'];
+      
+      // Handle Laravel pagination format: { "data": { "current_page": 1, "data": [...] } }
+      if (listData is Map<String, dynamic> && listData.containsKey('data')) {
+        listData = listData['data'];
+      }
+      
+      if (listData is List) {
+        return listData;
+      }
+    } else if (data is List) {
+      return data;
     }
     return [];
   }

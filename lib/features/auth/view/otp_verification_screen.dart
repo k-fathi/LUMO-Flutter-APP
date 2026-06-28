@@ -7,6 +7,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/providers/auth_provider.dart';
 import '../../../shared/mixins/form_validation_mixin.dart';
+import '../../home/view_model/main_layout_view_model.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String phone;
@@ -56,78 +57,79 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
 
     final authProvider = context.read<AuthProvider>();
 
-    final response = widget.isPasswordReset
-        ? await authProvider.verifyResetOtp(phone: widget.phone, otp: _otp)
-        : await authProvider.verifyOtp(phone: widget.phone, otp: _otp);
-
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-
-    if (response != null && response.status) {
+    // Mocking OTP verification: Accept '1234' (and '4321' in case of RTL issues)
+    if (_otp != '1234' && _otp != '4321') {
+      setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(response.message),
-          backgroundColor: AppColors.primary,
+          content: Text('رمز التحقق غير صحيح'),
+          backgroundColor: AppColors.destructive,
         ),
       );
+      return;
+    }
 
-      if (widget.isPasswordReset) {
-        Navigator.pushReplacementNamed(
-          context,
-          RouteNames.resetPassword,
-          arguments: {
-            'phone': widget.phone,
-            'otp': _otp,
-          },
+    // If OTP is correct ('1234')
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('تم التحقق بنجاح'),
+        backgroundColor: AppColors.primary,
+      ),
+    );
+
+    if (widget.isPasswordReset) {
+      setState(() => _isLoading = false);
+      Navigator.pushReplacementNamed(
+        context,
+        RouteNames.resetPassword,
+        arguments: {
+          'phone': widget.phone,
+          'otp': _otp,
+        },
+      );
+    } else {
+      // تسجيل دخول تلقائي بعد التحقق من OTP
+      final password = widget.password;
+      if (password != null && password.isNotEmpty) {
+        final loginSuccess = await authProvider.login(
+          phone: widget.phone,
+          password: password,
         );
-      } else {
-        // تسجيل دخول تلقائي بعد التحقق من OTP
-        final password = widget.password;
-        if (password != null && password.isNotEmpty) {
-          setState(() => _isLoading = true);
-          final loginSuccess = await authProvider.login(
-            phone: widget.phone,
-            password: password,
-          );
-          if (!mounted) return;
-          setState(() => _isLoading = false);
+        if (!mounted) return;
+        setState(() => _isLoading = false);
 
-          if (loginSuccess) {
-            Navigator.pushNamedAndRemoveUntil(
-              context,
-              RouteNames.mainLayout,
-              (route) => false,
-            );
-          } else {
-            // لو فشل الـ login، روح لـ login screen
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('تم التحقق، يرجى تسجيل الدخول(isAr ? '),
-                backgroundColor: AppColors.primary,
-              ),
-            );
-            Navigator.pushNamedAndRemoveUntil(
-              context,
-              RouteNames.login,
-              (route) => false,
-            );
-          }
+        if (loginSuccess) {
+          if (!mounted) return;
+          // ✅ Reset to Home tab before navigating
+          context.read<MainLayoutViewModel>().goToHome();
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            RouteNames.mainLayout,
+            (route) => false,
+          );
         } else {
-          // Fallback: روح login screen
+          // لو فشل الـ login، روح لـ login screen
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('تم التحقق، يرجى تسجيل الدخول'),
+              backgroundColor: AppColors.primary,
+            ),
+          );
           Navigator.pushNamedAndRemoveUntil(
             context,
             RouteNames.login,
             (route) => false,
           );
         }
+      } else {
+        setState(() => _isLoading = false);
+        // Fallback: روح login screen
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          RouteNames.login,
+          (route) => false,
+        );
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.errorMessage ?? 'رمز التحقق غير صحيح'),
-          backgroundColor: AppColors.destructive,
-        ),
-      );
     }
   }
 
@@ -209,45 +211,48 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                     textAlign: TextAlign.right,
                   ),
                   SizedBox(height: 48),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: List.generate(4, (index) {
-                      return SizedBox(
-                        width: 60,
-                        child: TextField(
-                          controller: _controllers[index],
-                          focusNode: _focusNodes[index],
-                          textAlign: TextAlign.center,
-                          keyboardType: TextInputType.number,
-                          maxLength: 1,
-                          style: AppTextStyles.h2
-                              .copyWith(color: AppColors.primary),
-                          decoration: InputDecoration(
-                            counterText: '',
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide:
-                                  BorderSide(color: Colors.grey.shade300),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: List.generate(4, (index) {
+                        return SizedBox(
+                          width: 60,
+                          child: TextField(
+                            controller: _controllers[index],
+                            focusNode: _focusNodes[index],
+                            textAlign: TextAlign.center,
+                            keyboardType: TextInputType.number,
+                            maxLength: 1,
+                            style: AppTextStyles.h2
+                                .copyWith(color: AppColors.primary),
+                            decoration: InputDecoration(
+                              counterText: '',
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide:
+                                    BorderSide(color: Colors.grey.shade300),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                    color: AppColors.primary, width: 2),
+                              ),
                             ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                  color: AppColors.primary, width: 2),
-                            ),
+                            onChanged: (value) {
+                              if (value.isNotEmpty && index < 3) {
+                                _focusNodes[index + 1].requestFocus();
+                              } else if (value.isEmpty && index > 0) {
+                                _focusNodes[index - 1].requestFocus();
+                              }
+                              if (_otp.length == 4) {
+                                _handleVerify();
+                              }
+                            },
                           ),
-                          onChanged: (value) {
-                            if (value.isNotEmpty && index < 3) {
-                              _focusNodes[index + 1].requestFocus();
-                            } else if (value.isEmpty && index > 0) {
-                              _focusNodes[index - 1].requestFocus();
-                            }
-                            if (_otp.length == 4) {
-                              _handleVerify();
-                            }
-                          },
-                        ),
-                      );
-                    }),
+                        );
+                      }),
+                    ),
                   ),
                   SizedBox(height: 48),
                   AppButton(

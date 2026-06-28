@@ -72,6 +72,7 @@ class ApiConstants {
   static const String getPatientInsights = '/doctor/patients/{id}/insights';
   static const String patientRequest = '/doctor/patient-request';
   static const String getPendingRequests = '/doctor/patient/requests';
+  static const String getSentRequests = '/doctor/patient/requests/sent';
   static const String acceptRequest = '/doctor/patient/request/{id}/accept';
   static const String rejectRequest = '/doctor/patient/request/{id}/reject';
   static const String disconnectPatient = '/doctor/patient/{id}/delete';

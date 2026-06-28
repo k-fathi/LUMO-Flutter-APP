@@ -8,6 +8,7 @@ import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/providers/auth_provider.dart';
 import '../../../shared/mixins/form_validation_mixin.dart';
+import '../../home/view_model/main_layout_view_model.dart';
 
 /// Login Screen
 ///
@@ -56,31 +57,15 @@ class _LoginScreenState extends State<LoginScreen> with FormValidationMixin {
     setState(() => _isLoading = false);
 
     if (success) {
-      // ✅ Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text((isAr ? 'تم تسجيل الدخول بنجاح' : 'Login Successful')),
-          backgroundColor: Colors.green,
-        ),
+      // ✅ Navigate to Home (MainLayout) — clear entire nav stack
+      if (!mounted) return;
+      // Reset MainLayoutViewModel to index 0 (Home tab)
+      context.read<MainLayoutViewModel>().goToHome();
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        RouteNames.mainLayout,
+        (route) => false,
       );
-
-      // If login was successful but user is null, it means OTP is required (unverified account)
-      if (authProvider.currentUser == null) {
-        Navigator.pushNamed(
-          context,
-          RouteNames.otpVerification,
-          arguments: {
-            'phone': _phoneController.text.trim(),
-            'isPasswordReset': false,
-          },
-        );
-      } else {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          RouteNames.mainLayout,
-          (route) => false,
-        );
-      }
     } else {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

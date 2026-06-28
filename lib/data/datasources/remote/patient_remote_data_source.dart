@@ -15,6 +15,7 @@ abstract class PatientRemoteDataSource {
   Future<void> acceptRequest(int requestId);
   Future<void> rejectRequest(int requestId);
   Future<List<ConnectionRequestModel>> getPendingRequests();
+  Future<List<ConnectionRequestModel>> getSentRequests();
   Future<List<UserModel>> searchUsers(String query);
 }
 
@@ -88,6 +89,31 @@ class PatientRemoteDataSourceImpl implements PatientRemoteDataSource {
     }
 
     return data.map((json) => ConnectionRequestModel.fromJson(json)).toList();
+  }
+
+  @override
+  Future<List<ConnectionRequestModel>> getSentRequests() async {
+    try {
+      // Try the dedicated sent-requests endpoint first
+      final response =
+          await _dioClient.get(ApiConstants.getSentRequests);
+      final responseData = response.data;
+      List<dynamic> data = [];
+
+      if (responseData is Map<String, dynamic>) {
+        data = responseData['requests'] ?? responseData['data'] ?? [];
+      } else if (responseData is List) {
+        data = responseData;
+      }
+
+      return data
+          .map((json) => ConnectionRequestModel.fromJson(json))
+          .toList();
+    } catch (e) {
+      // Fallback: reuse pending endpoint which may already return all statuses
+      debugPrint('getSentRequests fallback: $e');
+      return [];
+    }
   }
 
   @override

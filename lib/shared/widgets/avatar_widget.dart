@@ -119,17 +119,6 @@ class AvatarWidget extends StatelessWidget {
   }
 
   Widget _buildPlaceholder(BuildContext context) {
-    if (name != null && name!.trim().isNotEmpty) {
-      // Using DiceBear 'fun-emoji' API with forced smiling/respectful mouths
-      final defaultAvatarUrl =
-          'https://api.dicebear.com/8.x/fun-emoji/png?seed=${Uri.encodeComponent(name!)}&mouths=smile,wideSmile,cute,kissHeart';
-      return CachedNetworkImage(
-        imageUrl: defaultAvatarUrl,
-        fit: BoxFit.cover,
-        placeholder: (context, url) => _buildIconPlaceholder(context),
-        errorWidget: (context, url, error) => _buildIconPlaceholder(context),
-      );
-    }
     return _buildIconPlaceholder(context);
   }
 

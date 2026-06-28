@@ -76,6 +76,27 @@ class ChatRepository {
     return [];
   }
 
+  Future<List<MessageModel>> getChatHistoryFromApi(String chatRoomId, [int? receiverId]) async {
+    try {
+      final messages = await _chatRemoteDataSource.getChatHistory(chatRoomId: chatRoomId, receiverId: receiverId);
+      if (messages.isNotEmpty) {
+        final cachedMessages = getCachedMessages(chatRoomId);
+        final existingIds = cachedMessages.map((m) => m.id).toSet();
+        
+        final newMessages = messages.where((m) => !existingIds.contains(m.id)).toList();
+        if (newMessages.isNotEmpty) {
+          cachedMessages.addAll(newMessages);
+          cachedMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+          await _localDataSource.cacheMessages(chatRoomId, cachedMessages.map((m) => m.toJson()).toList());
+        }
+      }
+      return messages;
+    } catch (e) {
+      debugPrint("API History fetch failed: $e");
+      return [];
+    }
+  }
+
   Future<ChatRoomModel?> getChatRoom(String chatRoomId) async {
     final chatRoomData = await _firebaseDataSource.getChatRoom(chatRoomId);
     return chatRoomData != null ? ChatRoomModel.fromJson(chatRoomData) : null;

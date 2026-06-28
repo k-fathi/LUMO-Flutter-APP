@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../../../core/router/route_names.dart';
 import '../../../shared/providers/auth_provider.dart';
 import '../../../shared/widgets/loading_indicator.dart';
+import '../../../core/di/dependency_injection.dart';
+import '../../home/view_model/main_layout_view_model.dart';
 
 /// Auth Wrapper
 ///
@@ -29,6 +31,8 @@ class AuthWrapper extends StatelessWidget {
         // Navigate based on auth state
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (authProvider.isAuthenticated) {
+            // ✅ Reset to Home tab
+            getIt<MainLayoutViewModel>().goToHome();
             // User is logged in
             Navigator.pushReplacementNamed(context, RouteNames.mainLayout);
           } else {

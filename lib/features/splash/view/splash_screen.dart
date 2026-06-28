@@ -6,6 +6,7 @@ import '../../../core/router/route_names.dart';
 import '../../../shared/providers/auth_provider.dart';
 import '../../../data/datasources/local_data_source.dart';
 import '../../../core/di/dependency_injection.dart';
+import '../../home/view_model/main_layout_view_model.dart';
 
 /// Splash Screen - Enhanced Entry Point
 ///
@@ -79,6 +80,8 @@ class _SplashScreenState extends State<SplashScreen>
     await authProvider.init();
 
     if (authProvider.isAuthenticated) {
+      // ✅ Ensure Home tab is selected on fresh app launch
+      getIt<MainLayoutViewModel>().goToHome();
       _navigateTo(RouteNames.mainLayout);
     } else {
       _navigateTo(RouteNames.login);
