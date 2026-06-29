@@ -5,6 +5,10 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../../data/models/auth/auth_models.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/repositories/auth_repository.dart';
+import '../../../core/di/dependency_injection.dart';
+import '../../community/view_model/community_view_model.dart';
+import '../../chat/view_model/chat_view_model.dart';
+import '../../analysis/view_model/analysis_view_model.dart';
 
 /// Auth ViewModel
 ///
@@ -115,6 +119,21 @@ class AuthViewModel extends ChangeNotifier {
       await _authRepository.logout();
     } catch (_) {}
     _currentUser = null;
+
+    try {
+      if (getIt.isRegistered<CommunityViewModel>()) {
+        getIt<CommunityViewModel>().clearData();
+      }
+      if (getIt.isRegistered<ChatViewModel>()) {
+        getIt<ChatViewModel>().clearData();
+      }
+      if (getIt.isRegistered<AnalysisViewModel>()) {
+        getIt<AnalysisViewModel>().clearData();
+      }
+    } catch (e) {
+      debugPrint('Error clearing ViewModels data: $e');
+    }
+
     notifyListeners();
   }
 

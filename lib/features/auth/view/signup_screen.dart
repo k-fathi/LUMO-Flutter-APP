@@ -57,6 +57,13 @@ class _SignupScreenState extends State<SignupScreen> with FormValidationMixin {
   void initState() {
     super.initState();
     _selectedRole = widget.selectedRole ?? UserRole.parent;
+    _passwordController.addListener(_onPasswordChanged);
+  }
+
+  void _onPasswordChanged() {
+    if (_confirmPasswordController.text.isNotEmpty) {
+      setState(() {});
+    }
   }
 
   @override
@@ -254,6 +261,7 @@ class _SignupScreenState extends State<SignupScreen> with FormValidationMixin {
           padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
           child: Form(
             key: formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -336,6 +344,19 @@ class _SignupScreenState extends State<SignupScreen> with FormValidationMixin {
                   prefixIcon: Icons.lock_outline,
                   obscureText: true,
                   validator: validatePassword,
+                ),
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Text(
+                    isAr
+                        ? 'يجب أن لا تقل كلمة المرور عن 8 أحرف وتحتوي على حرف ورقم واحد على الأقل.'
+                        : 'Password must be at least 8 characters long and contain at least one letter and one number.',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: Theme.of(context).hintColor,
+                      fontSize: 12,
+                    ),
+                  ),
                 ),
                 SizedBox(height: 20),
                 AppTextField(

@@ -28,7 +28,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
   }
 
   Future<void> _handleSendCode() async {
-    if (_phoneController.text.trim().isEmpty) return;
+    if (!validateForm()) return;
 
     setState(() => _isLoading = true);
 
@@ -84,10 +84,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
           ),
         ),
         child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
+          child: Form(
+            key: formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
                 padding: EdgeInsets.fromLTRB(24, 48, 24, 32),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -128,19 +131,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                       AppTextField(
                         controller: _phoneController,
                         label: (isAr ? 'رقم الهاتف' : 'Phone'),
-                        hint: '+966 50 123 4567',
+                        hint: '01012345678',
                         prefixIcon: Icons.phone_outlined,
                         keyboardType: TextInputType.phone,
+                        validator: validatePhone,
                       ),
                       SizedBox(height: 24),
 
                       AppButton(
                         text:
                             _isLoading ? (isAr ? 'جاري الإرسال...' : 'Sending...') : (isAr ? 'إرسال رمز التحقق' : 'Send OTP'),
-                        onPressed:
-                            _phoneController.text.trim().isEmpty && !_isLoading
-                                ? null
-                                : _handleSendCode,
+                        onPressed: _isLoading ? null : _handleSendCode,
                         isLoading: _isLoading,
                       ),
 
@@ -167,7 +168,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                   ),
                 ),
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

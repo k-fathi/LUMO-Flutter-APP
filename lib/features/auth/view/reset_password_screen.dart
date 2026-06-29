@@ -30,6 +30,18 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    _passwordController.addListener(_onPasswordChanged);
+  }
+
+  void _onPasswordChanged() {
+    if (_confirmPasswordController.text.isNotEmpty) {
+      setState(() {});
+    }
+  }
+
+  @override
   void dispose() {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -106,6 +118,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Form(
                 key: formKey,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -148,22 +161,29 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
                       obscureText: true,
                       validator: validatePassword,
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 4),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Text(
+                        'يجب أن لا تقل كلمة المرور عن 8 أحرف وتحتوي على حرف ورقم واحد على الأقل.',
+                        style: TextStyle(
+                          color: Color(0xFF64748B),
+                          fontSize: 12,
+                        ),
+                        textAlign: TextAlign.right,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                     AppTextField(
                       controller: _confirmPasswordController,
                       label: 'تأكيد كلمة المرور',
                       hint: 'أعد إدخال كلمة المرور',
                       prefixIcon: Icons.lock_clock_outlined,
                       obscureText: true,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'يرجى تأكيد كلمة المرور';
-                        }
-                        if (value != _passwordController.text) {
-                          return 'كلمات المرور غير متطابقة';
-                        }
-                        return null;
-                      },
+                      validator: (value) => validateConfirmPassword(
+                        value,
+                        _passwordController.text,
+                      ),
                     ),
                     const SizedBox(height: 48),
                     AppButton(

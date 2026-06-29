@@ -541,6 +541,8 @@ class ChatViewModel extends ChangeNotifier {
     }
   }
 
+  void clearData() => resetState();
+
   void resetState() {
     _typingTimer?.cancel();
     _currentlyTyping = false;

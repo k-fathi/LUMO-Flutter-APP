@@ -3,15 +3,17 @@ class Validators {
 
   // Email validation
   static String? email(String? value) {
-    if (value == null || value.isEmpty) {
+    if (value == null || value.trim().isEmpty) {
       return 'البريد الإلكتروني مطلوب';
     }
+
+    final trimmedValue = value.trim();
 
     final emailRegex = RegExp(
       r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
     );
 
-    if (!emailRegex.hasMatch(value)) {
+    if (!emailRegex.hasMatch(trimmedValue)) {
       return 'البريد الإلكتروني غير صالح';
     }
 
@@ -25,7 +27,7 @@ class Validators {
     }
 
     if (value.length < 8) {
-      return 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
+      return 'كلمة المرور يجب أن لا تقل عن 8 أحرف';
     }
 
     if (value.length > 128) {
@@ -52,7 +54,7 @@ class Validators {
     }
 
     if (value != password) {
-      return 'كلمات المرور غير متطابقة';
+      return 'كلمتا المرور غير متطابقتين';
     }
 
     return null;
@@ -60,15 +62,17 @@ class Validators {
 
   // Name validation
   static String? name(String? value) {
-    if (value == null || value.isEmpty) {
+    if (value == null || value.trim().isEmpty) {
       return 'الاسم مطلوب';
     }
 
-    if (value.length < 2) {
+    final trimmed = value.trim();
+
+    if (trimmed.length < 2) {
       return 'الاسم قصير جداً';
     }
 
-    if (value.length > 50) {
+    if (trimmed.length > 50) {
       return 'الاسم طويل جداً';
     }
 
@@ -77,16 +81,17 @@ class Validators {
 
   // Phone validation
   static String? phone(String? value) {
-    if (value == null || value.isEmpty) {
+    if (value == null || value.trim().isEmpty) {
       return 'رقم الهاتف مطلوب';
     }
 
-    // Remove spaces and dashes
-    final cleaned = value.replaceAll(RegExp(r'[\s-]'), '');
+    final trimmed = value.trim();
 
-    // Check if it contains only digits and optional leading +
-    if (!RegExp(r'^\+?[\d]{10,}$').hasMatch(cleaned)) {
-      return 'رقم الهاتف غير صالح';
+    // Check Egyptian mobile regex
+    final phoneRegex = RegExp(r'^01[0125][0-9]{8}$');
+
+    if (!phoneRegex.hasMatch(trimmed)) {
+      return 'رقم الهاتف غير صالح، يجب أن يكون رقم موبايل مصري صحيح (مثال: 01012345678)';
     }
 
     return null;
@@ -154,15 +159,17 @@ class Validators {
 
   // Doctor code validation
   static String? doctorCode(String? value) {
-    if (value == null || value.isEmpty) {
+    if (value == null || value.trim().isEmpty) {
       return 'كود الطبيب مطلوب';
     }
 
-    if (value.length < 6) {
+    final trimmed = value.trim();
+
+    if (trimmed.length < 6) {
       return 'كود الطبيب غير صالح';
     }
 
-    if (!value.toUpperCase().startsWith('DOC')) {
+    if (!trimmed.toUpperCase().startsWith('DOC')) {
       return 'كود الطبيب غير صالح';
     }
 
@@ -171,19 +178,21 @@ class Validators {
 
   // Child name validation
   static String? childName(String? value) {
-    if (value == null || value.isEmpty) {
+    if (value == null || value.trim().isEmpty) {
       return 'اسم الطفل مطلوب';
     }
 
-    if (value.trim().contains(' ')) {
+    final trimmed = value.trim();
+
+    if (trimmed.contains(' ')) {
       return 'اسم الطفل يجب أن يكون كلمة واحدة فقط';
     }
 
-    if (value.length < 2) {
+    if (trimmed.length < 2) {
       return 'اسم الطفل قصير جداً';
     }
 
-    if (value.length > 50) {
+    if (trimmed.length > 50) {
       return 'اسم الطفل طويل جداً';
     }
 
@@ -192,11 +201,12 @@ class Validators {
 
   // Age validation
   static String? age(String? value) {
-    if (value == null || value.isEmpty) {
+    if (value == null || value.trim().isEmpty) {
       return 'العمر مطلوب';
     }
 
-    final age = int.tryParse(value);
+    final trimmed = value.trim();
+    final age = int.tryParse(trimmed);
     if (age == null) {
       return 'العمر يجب أن يكون رقماً';
     }
@@ -210,11 +220,13 @@ class Validators {
 
   // Specialization validation (for doctors)
   static String? specialization(String? value) {
-    if (value == null || value.isEmpty) {
+    if (value == null || value.trim().isEmpty) {
       return 'التخصص مطلوب';
     }
 
-    if (value.length < 3) {
+    final trimmed = value.trim();
+
+    if (trimmed.length < 3) {
       return 'التخصص قصير جداً';
     }
 
@@ -223,11 +235,13 @@ class Validators {
 
   // License number validation (for doctors)
   static String? licenseNumber(String? value) {
-    if (value == null || value.isEmpty) {
+    if (value == null || value.trim().isEmpty) {
       return 'رقم الترخيص مطلوب';
     }
 
-    if (value.length < 5) {
+    final trimmed = value.trim();
+
+    if (trimmed.length < 5) {
       return 'رقم الترخيص غير صالح';
     }
 

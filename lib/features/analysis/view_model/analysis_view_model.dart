@@ -146,6 +146,8 @@ class AnalysisViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clearData() => resetState();
+
   void resetState() {
     _analyses = [];
     _isLoading = false;

@@ -16,6 +16,8 @@ class SessionViewModel extends ChangeNotifier {
   int _currentPartIndex = 0;
   int _secondsRemainingInPart = 0;
   Timer? _timer;
+  DateTime? _partStartTime;
+  int _initialSecondsRemaining = 0;
 
   bool get isActive => _isActive;
   List<SessionPart> get parts => _parts;
@@ -316,18 +318,26 @@ class SessionViewModel extends ChangeNotifier {
 
   void _startTimer() {
     _timer?.cancel();
+    _partStartTime = DateTime.now();
+    _initialSecondsRemaining = _secondsRemainingInPart;
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_secondsRemainingInPart > 0) {
-        _secondsRemainingInPart--;
-        notifyListeners();
-      } else {
-        // Move to next part
-        if (_currentPartIndex < _parts.length - 1) {
-          _currentPartIndex++;
-          _secondsRemainingInPart = _parts[_currentPartIndex].durationMinutes * 60;
+      if (_partStartTime != null) {
+        final elapsed = DateTime.now().difference(_partStartTime!).inSeconds;
+        _secondsRemainingInPart = _initialSecondsRemaining - elapsed;
+        
+        if (_secondsRemainingInPart > 0) {
           notifyListeners();
         } else {
-          endCurrentSession(); // All parts completed
+          // Move to next part
+          if (_currentPartIndex < _parts.length - 1) {
+            _currentPartIndex++;
+            _secondsRemainingInPart = _parts[_currentPartIndex].durationMinutes * 60;
+            _partStartTime = DateTime.now();
+            _initialSecondsRemaining = _secondsRemainingInPart;
+            notifyListeners();
+          } else {
+            endCurrentSession(); // All parts completed
+          }
         }
       }
     });
@@ -336,6 +346,7 @@ class SessionViewModel extends ChangeNotifier {
   void _stopTimer() {
     _timer?.cancel();
     _timer = null;
+    _partStartTime = null;
   }
 
   void _finalizeSession() {

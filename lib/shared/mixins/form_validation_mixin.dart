@@ -27,7 +27,7 @@ mixin FormValidationMixin {
 
   // Phone validation
   String? validatePhone(String? value, {bool required = true}) {
-    if (value == null || value.isEmpty) {
+    if (value == null || value.trim().isEmpty) {
       return required ? 'رقم الهاتف مطلوب' : null;
     }
     return Validators.phone(value);

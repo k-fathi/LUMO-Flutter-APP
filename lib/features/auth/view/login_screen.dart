@@ -95,6 +95,7 @@ class _LoginScreenState extends State<LoginScreen> with FormValidationMixin {
           padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 48.0),
           child: Form(
             key: formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

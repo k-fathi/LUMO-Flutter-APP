@@ -29,7 +29,7 @@ class CommunityViewModel extends ChangeNotifier {
   List<int> _explorePostIds = [];
   List<int> _followingPostIds = [];
   List<int> _myPostIds = [];
-  final Set<int> _togglingLikeIds = {};
+  final Map<int, bool> _isLiking = {};
   final Set<int> _togglingCommentLikeIds = {};
   final Set<int> _togglingFollowUserIds = {};
   List<CommentModel> _comments = [];
@@ -75,7 +75,7 @@ class CommunityViewModel extends ChangeNotifier {
     _explorePostIds = [];
     _followingPostIds = [];
     _myPostIds = [];
-    _togglingLikeIds.clear();
+    _isLiking.clear();
     _comments = [];
     _searchResults = [];
     _followedUserIds = [];
@@ -90,6 +90,8 @@ class CommunityViewModel extends ChangeNotifier {
     _currentUserId = null;
     _safeNotify();
   }
+
+  void clearData() => resetState();
 
   PostModel? findPostById(int id) => _postsMap[id];
   
@@ -436,14 +438,14 @@ class CommunityViewModel extends ChangeNotifier {
   }
 
   Future<String?> toggleLike(int postId) async {
-    if (_togglingLikeIds.contains(postId)) return null;
+    if (_isLiking[postId] == true) return null;
     final post = findPostById(postId);
     if (post == null) return null;
 
     final currentUserId = _currentUserId;
     if (currentUserId == null) return null;
 
-    _togglingLikeIds.add(postId);
+    _isLiking[postId] = true;
     final isLiked = post.isLikedBy(currentUserId);
     
     final updatedLikedByIds = List<int>.from(post.likedByUserIds);
@@ -479,7 +481,7 @@ class CommunityViewModel extends ChangeNotifier {
       _safeNotify();
       return errorMsg;
     } finally {
-      _togglingLikeIds.remove(postId);
+      _isLiking[postId] = false;
       _safeNotify();
     }
   }
