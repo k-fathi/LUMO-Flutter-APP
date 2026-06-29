@@ -30,6 +30,8 @@ class CommunityViewModel extends ChangeNotifier {
   List<int> _followingPostIds = [];
   List<int> _myPostIds = [];
   final Set<int> _togglingLikeIds = {};
+  final Set<int> _togglingCommentLikeIds = {};
+  final Set<int> _togglingFollowUserIds = {};
   List<CommentModel> _comments = [];
   List<UserModel> _searchResults = [];
   List<int> _followedUserIds = [];
@@ -523,12 +525,16 @@ class CommunityViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> toggleCommentLike(int commentId, {int? currentUserId}) async {
+  Future<String?> toggleCommentLike(int commentId, {int? currentUserId}) async {
+    if (_togglingCommentLikeIds.contains(commentId)) return null;
+    
     final index = _comments.indexWhere((c) => c.id == commentId);
-    if (index == -1) return;
+    if (index == -1) return null;
 
     final comment = _comments[index];
     final isLiked = comment.isLikedBy(currentUserId);
+    
+    _togglingCommentLikeIds.add(commentId);
     
     // Optimistic Update
     final newLikesCount = isLiked ? comment.likesCount - 1 : comment.likesCount + 1;
@@ -555,9 +561,22 @@ class CommunityViewModel extends ChangeNotifier {
 
     try {
       await _repository.toggleCommentLike(commentId);
+      return null;
     } catch (e) {
-      _errorMessage = 'فشل التفاعل مع التعليق: ${e.toString()}';
       _comments[index] = comment; // Revert
+      final errorStr = e.toString().toLowerCase();
+      String errorMsg = 'لم يتم تسجيل الإعجاب، تأكد من الاتصال';
+      if (errorStr.contains('socketexception') ||
+          errorStr.contains('connection') ||
+          errorStr.contains('network') ||
+          errorStr.contains('timeout')) {
+        errorMsg = 'لم يتم تسجيل الإعجاب، تأكد من الاتصال';
+      }
+      _errorMessage = errorMsg;
+      _safeNotify();
+      return errorMsg;
+    } finally {
+      _togglingCommentLikeIds.remove(commentId);
       _safeNotify();
     }
   }
@@ -579,11 +598,13 @@ class CommunityViewModel extends ChangeNotifier {
   }
 
   // Social
-  Future<void> toggleFollow(int userId, {int? currentUserId, Function(bool isNowFollowing)? onFollowingCountChanged}) async {
+  Future<String?> toggleFollow(int userId, {int? currentUserId, Function(bool isNowFollowing)? onFollowingCountChanged}) async {
     // Cannot follow self
-    if (userId == _currentUserId || userId == currentUserId) return;
+    if (userId == _currentUserId || userId == currentUserId) return null;
+    if (_togglingFollowUserIds.contains(userId)) return null;
 
     final wasFollowing = _followedUserIds.contains(userId);
+    _togglingFollowUserIds.add(userId);
 
     // 1. Optimistic UI Update
     if (wasFollowing) {
@@ -612,6 +633,7 @@ class CommunityViewModel extends ChangeNotifier {
           _safeNotify();
         } catch (_) {}
       });
+      return null;
     } catch (e) {
       // 4. Rollback
       if (wasFollowing) {
@@ -620,7 +642,17 @@ class CommunityViewModel extends ChangeNotifier {
         _followedUserIds.remove(userId);
       }
       onFollowingCountChanged?.call(wasFollowing);
-      _errorMessage = 'فشل تحديث المتابعة';
+      
+      final errorStr = e.toString().toLowerCase();
+      String errorMsg = 'فشل تحديث المتابعة';
+      if (errorStr.contains('socketexception') || errorStr.contains('network') || errorStr.contains('timeout')) {
+        errorMsg = 'لا يوجد اتصال بالإنترنت، يرجى التحقق من اتصالك';
+      }
+      _errorMessage = errorMsg;
+      _safeNotify();
+      return errorMsg;
+    } finally {
+      _togglingFollowUserIds.remove(userId);
       _safeNotify();
     }
   }

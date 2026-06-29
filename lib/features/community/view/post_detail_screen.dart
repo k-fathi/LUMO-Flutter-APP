@@ -343,8 +343,17 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                color: post.isLikedBy(currentUserId)
                                    ? const Color(0xFFEF4444)
                                    : const Color(0xFF64748B),
-                               onTap: () =>
-                                   viewModel.toggleLike(post.id),
+                               onTap: () async {
+                                 final error = await viewModel.toggleLike(post.id);
+                                 if (error != null && context.mounted) {
+                                   ScaffoldMessenger.of(context).showSnackBar(
+                                     SnackBar(
+                                       content: Text(error),
+                                       backgroundColor: Colors.red,
+                                     ),
+                                   );
+                                 }
+                               },
                             ),
                             const SizedBox(width: 24),
                             _buildActionButton(
@@ -466,7 +475,17 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                 children: [
                                                   const SizedBox(width: 8),
                                                   GestureDetector(
-                                                    onTap: () => viewModel.toggleCommentLike(comment.id, currentUserId: currentUserId),
+                                                    onTap: () async {
+                                                      final error = await viewModel.toggleCommentLike(comment.id, currentUserId: currentUserId);
+                                                      if (error != null && context.mounted) {
+                                                        ScaffoldMessenger.of(context).showSnackBar(
+                                                          SnackBar(
+                                                            content: Text(error),
+                                                            backgroundColor: Colors.red,
+                                                          ),
+                                                        );
+                                                      }
+                                                    },
                                                     child: Text(
                                                       'إعجاب',
                                                       style: TextStyle(
