@@ -168,7 +168,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
         height: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFFE3F2FD), Colors.white],
+            colors: Theme.of(context).brightness == Brightness.dark
+                ? [Theme.of(context).scaffoldBackgroundColor, Theme.of(context).scaffoldBackgroundColor]
+                : [Color(0xFFE3F2FD), Colors.white],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -176,23 +178,23 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
         child: SafeArea(
           child: SingleChildScrollView(
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  SizedBox(height: 48),
+                  const SizedBox(height: 16),
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
                     child: Align(
-                      alignment: Alignment.centerRight,
-                      child: Icon(
+                      alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
+                      child: const Icon(
                         Icons.arrow_back_ios_rounded,
                         size: 24,
                         color: AppColors.primary,
                       ),
                     ),
                   ),
-                  SizedBox(height: 24),
+                  const SizedBox(height: 16),
                   Text(
                     (isAr ? 'رمز التحقق' : 'Verification Code'),
                     style: AppTextStyles.h1.copyWith(
@@ -200,17 +202,19 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                       fontSize: 30,
                       fontWeight: FontWeight.w500,
                     ),
-                    textAlign: TextAlign.right,
+                    textAlign: isAr ? TextAlign.right : TextAlign.left,
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
-                    'لقد أرسلنا رمز التحقق المكون من 4 أرقام إلى رقم الهاتف ${widget.phone}',
+                    isAr
+                        ? 'لقد أرسلنا رمز التحقق المكون من 4 أرقام إلى ${widget.phone}'
+                        : 'We sent a 4-digit verification code to ${widget.phone}',
                     style: AppTextStyles.body.copyWith(
                       color: Theme.of(context).hintColor,
                     ),
-                    textAlign: TextAlign.right,
+                    textAlign: isAr ? TextAlign.right : TextAlign.left,
                   ),
-                  SizedBox(height: 48),
+                  const SizedBox(height: 24),
                   Directionality(
                     textDirection: TextDirection.ltr,
                     child: Row(

@@ -258,28 +258,26 @@ class _SignupScreenState extends State<SignupScreen> with FormValidationMixin {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
           child: Form(
             key: formKey,
             autovalidateMode: AutovalidateMode.onUserInteraction,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SizedBox(height: 20),
-
                 // Header with Logo
                 Center(
                   child: Hero(
                     tag: 'app_logo',
                     child: Image.asset(
                       'assets/images/app_logo.png',
-                      width: 300,
-                      height: 300,
+                      width: MediaQuery.sizeOf(context).height * 0.18,
+                      height: MediaQuery.sizeOf(context).height * 0.18,
                       fit: BoxFit.contain,
                     ),
                   ),
                 ),
-                SizedBox(height: 24),
+                const SizedBox(height: 16),
 
                 Text(
                   (isAr ? 'إنشاء حساب' : 'Create account'),
@@ -288,7 +286,7 @@ class _SignupScreenState extends State<SignupScreen> with FormValidationMixin {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
                   'التسجيل ك${_selectedRole.isDoctor ? (isAr ? "طبيب" : "DOCTOR") : (isAr ? "مستخدم" : "Users")}',
                   style: AppTextStyles.body.copyWith(
@@ -296,7 +294,7 @@ class _SignupScreenState extends State<SignupScreen> with FormValidationMixin {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                SizedBox(height: 32),
+                SizedBox(height: MediaQuery.sizeOf(context).height * 0.02),
 
                 // Common fields
                 AppTextField(

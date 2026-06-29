@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
+
 
 /// String extensions
 extension StringExtensions on String {
@@ -165,8 +167,12 @@ extension DateTimeExtensions on DateTime {
   }
 }
 
+
 /// BuildContext extensions
 extension BuildContextExtensions on BuildContext {
+  /// Get l10n
+  AppLocalizations get l10n => AppLocalizations.of(this)!;
+
   /// Get MediaQuery
   MediaQueryData get mediaQuery => MediaQuery.of(this);
 

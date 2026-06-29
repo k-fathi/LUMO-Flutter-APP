@@ -320,5 +320,10 @@
   "sessionHistory": "سجل الجلسات",
   "allSessions": "كل الجلسات",
   "overview": "نظرة عامة",
-  "clinicLocation": "موقع العيادة"
+  "clinicLocation": "موقع العيادة",
+  "enterYourEmailToResetPassword": "أدخل بريدك الإلكتروني وسنرسل لك رمز التحقق",
+  "emailSentVerification": "سيتم إرسال رمز التحقق إلى بريدك الإلكتروني. قد يستغرق الأمر بضع دقائق.",
+  "enterYourEmail": "أدخل بريدك الإلكتروني",
+  "sending": "جاري الإرسال...",
+  "sendVerificationCode": "إرسال رمز التحقق"
 }

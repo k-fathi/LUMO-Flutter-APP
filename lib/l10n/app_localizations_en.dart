@@ -853,4 +853,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clinicLocation => 'Clinic Location';
+
+  @override
+  String get enterYourEmailToResetPassword => 'Enter your email address and we\'ll send you a verification code';
+
+  @override
+  String get emailSentVerification => 'A verification code will be sent to your email address. It may take a few minutes.';
+
+  @override
+  String get enterYourEmail => 'Enter your email';
+
+  @override
+  String get sending => 'Sending...';
+
+  @override
+  String get sendVerificationCode => 'Send Verification Code';
 }

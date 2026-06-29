@@ -248,39 +248,19 @@ class NotificationProvider extends ChangeNotifier {
     required String body,
     String? type,
   }) {
-    // Determine icon & color based on notification type
-    IconData icon = Icons.notifications_active_rounded;
-    Color color = AppColors.primary;
-
     final t = (type ?? '').toLowerCase();
-    final bodyLower = body.toLowerCase();
-    
-    // Allow like and comment notifications only if from a doctor
-    if (t.contains('like') || t.contains('comment')) {
-      final titleLower = title.toLowerCase();
-      final isDoctor = titleLower.contains('د.') || titleLower.contains('dr');
-      if (!isDoctor) {
-        return;
-      }
-      icon = Icons.chat_bubble_rounded;
-      color = Colors.blueAccent;
-    } else if (t.contains('connection') || t.contains('request')) {
-      icon = Icons.person_add_rounded;
-      color = const Color(0xFF10B981);
-    } else if (t.contains('message')) {
-      icon = Icons.message_rounded;
-      color = Colors.deepPurpleAccent;
-    } else if (t.contains('analysis')) {
-      icon = Icons.analytics_rounded;
-      if (bodyLower.contains('تراجع') || bodyLower.contains('تدخل') || bodyLower.contains('انحدار') || bodyLower.contains('طوارئ') || bodyLower.contains('خطر')) {
-        color = Colors.redAccent;
-        icon = Icons.warning_rounded;
-      } else if (bodyLower.contains('تحسن') || bodyLower.contains('ممتاز') || bodyLower.contains('جيد')) {
-        color = const Color(0xFF10B981);
-      } else {
-        color = Colors.orangeAccent;
-      }
+
+    // Only allow connection requests, approvals, or rejections
+    final isConnectionNotification = t.contains('connection') || t.contains('request');
+    if (!isConnectionNotification) {
+      // Refresh notification list silently without showing banner
+      fetchNotifications();
+      return;
     }
+
+    // Determine icon & color based on notification type
+    IconData icon = Icons.person_add_rounded;
+    Color color = const Color(0xFF10B981);
 
     // Show in-app banner
     showInAppNotification(title: title, body: body, icon: icon, color: color);

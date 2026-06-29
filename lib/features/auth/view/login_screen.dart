@@ -92,28 +92,26 @@ class _LoginScreenState extends State<LoginScreen> with FormValidationMixin {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 48.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
           child: Form(
             key: formKey,
             autovalidateMode: AutovalidateMode.onUserInteraction,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SizedBox(height: 40),
-
                 // Logo
                 Center(
                   child: Hero(
                     tag: 'app_logo',
                     child: Image.asset(
                       'assets/images/app_logo.png',
-                      width: 300,
-                      height: 300,
+                      width: MediaQuery.sizeOf(context).height * 0.20,
+                      height: MediaQuery.sizeOf(context).height * 0.20,
                       fit: BoxFit.contain,
                     ),
                   ),
                 ),
-                SizedBox(height: 24),
+                const SizedBox(height: 16),
 
                 Text(
                   (isAr ? 'مرحباً بعودتك' : '- Hey.'),
@@ -122,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> with FormValidationMixin {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
                   (isAr ? 'سجل الدخول لمتابعة رحلتك الصحية' : 'Log in to continue your wellness journey'),
                   style: AppTextStyles.body.copyWith(
@@ -130,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> with FormValidationMixin {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                SizedBox(height: 48),
+                SizedBox(height: MediaQuery.sizeOf(context).height * 0.03),
 
                 // Phone field
                 AppTextField(

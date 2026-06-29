@@ -853,4 +853,19 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get clinicLocation => 'موقع العيادة';
+
+  @override
+  String get enterYourEmailToResetPassword => 'أدخل بريدك الإلكتروني وسنرسل لك رمز التحقق';
+
+  @override
+  String get emailSentVerification => 'سيتم إرسال رمز التحقق إلى بريدك الإلكتروني. قد يستغرق الأمر بضع دقائق.';
+
+  @override
+  String get enterYourEmail => 'أدخل بريدك الإلكتروني';
+
+  @override
+  String get sending => 'جاري الإرسال...';
+
+  @override
+  String get sendVerificationCode => 'إرسال رمز التحقق';
 }

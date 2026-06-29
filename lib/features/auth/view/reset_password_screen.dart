@@ -51,10 +51,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
   Future<void> _handleReset() async {
     if (!validateForm()) return;
 
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+
     if (_passwordController.text != _confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('كلمات المرور غير متطابقة'),
+        SnackBar(
+          content: Text(isAr ? 'كلمات المرور غير متطابقة' : 'Passwords do not match'),
           backgroundColor: AppColors.destructive,
         ),
       );
@@ -92,7 +94,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content:
-              Text(authProvider.errorMessage ?? 'فشل إعادة تعيين كلمة المرور'),
+              Text(authProvider.errorMessage ?? (isAr ? 'فشل إعادة تعيين كلمة المرور' : 'Failed to reset password')),
           backgroundColor: AppColors.destructive,
         ),
       );
@@ -101,13 +103,18 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFFE3F2FD), Colors.white],
+            colors: isDark
+                ? [Theme.of(context).scaffoldBackgroundColor, Theme.of(context).scaffoldBackgroundColor]
+                : [Color(0xFFE3F2FD), Colors.white],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -122,62 +129,64 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 16),
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
-                      child: const Align(
-                        alignment: Alignment.centerRight,
+                      child: Align(
+                        alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
                         child: Icon(
-                          Icons.arrow_forward,
+                          isAr ? Icons.arrow_forward : Icons.arrow_back,
                           size: 24,
-                          color: Color(0xFF2196F3),
+                          color: const Color(0xFF2196F3),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
                     Text(
-                      'كلمة مرور جديدة',
+                      isAr ? 'كلمة مرور جديدة' : 'New Password',
                       style: AppTextStyles.h1.copyWith(
-                        color: const Color(0xFF1A1F36),
+                        color: Theme.of(context).textTheme.displayLarge?.color,
                         fontSize: 30,
                         fontWeight: FontWeight.w500,
                       ),
-                      textAlign: TextAlign.right,
+                      textAlign: isAr ? TextAlign.right : TextAlign.left,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'يرجى إدخال كلمة المرور الجديدة وتأكيدها',
+                      isAr ? 'يرجى إدخال كلمة المرور الجديدة وتأكيدها' : 'Please enter and confirm your new password',
                       style: AppTextStyles.body.copyWith(
-                        color: const Color(0xFF64748B),
+                        color: Theme.of(context).hintColor,
                       ),
-                      textAlign: TextAlign.right,
+                      textAlign: isAr ? TextAlign.right : TextAlign.left,
                     ),
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 24),
                     AppTextField(
                       controller: _passwordController,
-                      label: 'كلمة المرور الجديدة',
-                      hint: 'أدخل كلمة المرور',
+                      label: isAr ? 'كلمة المرور الجديدة' : 'New Password',
+                      hint: isAr ? 'أدخل كلمة المرور' : 'Enter password',
                       prefixIcon: Icons.lock_outline,
                       obscureText: true,
                       validator: validatePassword,
                     ),
                     const SizedBox(height: 4),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8.0),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
                       child: Text(
-                        'يجب أن لا تقل كلمة المرور عن 8 أحرف وتحتوي على حرف ورقم واحد على الأقل.',
+                        isAr
+                            ? 'يجب أن لا تقل كلمة المرور عن 8 أحرف وتحتوي على حرف ورقم واحد على الأقل.'
+                            : 'Password must be at least 8 characters long and contain at least one letter and one number.',
                         style: TextStyle(
-                          color: Color(0xFF64748B),
+                          color: Theme.of(context).hintColor,
                           fontSize: 12,
                         ),
-                        textAlign: TextAlign.right,
+                        textAlign: isAr ? TextAlign.right : TextAlign.left,
                       ),
                     ),
                     const SizedBox(height: 20),
                     AppTextField(
                       controller: _confirmPasswordController,
-                      label: 'تأكيد كلمة المرور',
-                      hint: 'أعد إدخال كلمة المرور',
+                      label: isAr ? 'تأكيد كلمة المرور' : 'Confirm Password',
+                      hint: isAr ? 'أعد إدخال كلمة المرور' : 'Re-enter password',
                       prefixIcon: Icons.lock_clock_outlined,
                       obscureText: true,
                       validator: (value) => validateConfirmPassword(
@@ -185,9 +194,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
                         _passwordController.text,
                       ),
                     ),
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 32),
                     AppButton(
-                      text: 'حفظ',
+                      text: isAr ? 'حفظ' : 'Save',
                       onPressed: _handleReset,
                       isLoading: _isLoading,
                     ),

@@ -78,8 +78,8 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                   },
                   child: Image.asset(
                     'assets/images/app_logo.png', // App logo
-                    width: 300,
-                    height: 300,
+                    width: MediaQuery.sizeOf(context).height * 0.22,
+                    height: MediaQuery.sizeOf(context).height * 0.22,
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) => const Icon(
                         Icons.smart_toy,
@@ -145,7 +145,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                   ),
                   textAlign: TextAlign.center,
                 ),
-                SizedBox(height: 48),
+                SizedBox(height: MediaQuery.sizeOf(context).height * 0.03),
 
                 // Role Cards
                 _RoleCard(

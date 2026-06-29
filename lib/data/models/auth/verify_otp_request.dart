@@ -10,6 +10,7 @@ class VerifyOtpRequest {
   Map<String, dynamic> toJson() {
     return {
       'phone': phone,
+      'email': phone,
       'otp': otp,
     };
   }

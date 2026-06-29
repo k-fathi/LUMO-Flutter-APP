@@ -1738,6 +1738,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Clinic Location'**
   String get clinicLocation;
+
+  /// No description provided for @enterYourEmailToResetPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email address and we\'ll send you a verification code'**
+  String get enterYourEmailToResetPassword;
+
+  /// No description provided for @emailSentVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'A verification code will be sent to your email address. It may take a few minutes.'**
+  String get emailSentVerification;
+
+  /// No description provided for @enterYourEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email'**
+  String get enterYourEmail;
+
+  /// No description provided for @sending.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending...'**
+  String get sending;
+
+  /// No description provided for @sendVerificationCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Verification Code'**
+  String get sendVerificationCode;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

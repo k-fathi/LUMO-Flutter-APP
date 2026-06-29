@@ -340,5 +340,10 @@
   "sessionHistory": "Session History",
   "allSessions": "All Sessions",
   "overview": "Overview",
-  "clinicLocation": "Clinic Location"
+  "clinicLocation": "Clinic Location",
+  "enterYourEmailToResetPassword": "Enter your email address and we'll send you a verification code",
+  "emailSentVerification": "A verification code will be sent to your email address. It may take a few minutes.",
+  "enterYourEmail": "Enter your email",
+  "sending": "Sending...",
+  "sendVerificationCode": "Send Verification Code"
 }

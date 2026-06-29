@@ -218,19 +218,27 @@ class AuthProvider extends ChangeNotifier {
         final body = notification.body ?? '';
         final type = message.data['type']?.toString();
 
-        // Show system notification (status bar)
-        getIt<NotificationService>().showNotification(
-          id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          title: title,
-          body: body,
-        );
+        final t = (type ?? '').toLowerCase();
+        final isConnectionNotification = t.contains('connection') || t.contains('request');
 
-        // Show in-app banner + refresh list
-        getIt<NotificationProvider>().handleForegroundFcmMessage(
-          title: title,
-          body: body,
-          type: type,
-        );
+        if (isConnectionNotification) {
+          // Show system notification (status bar)
+          getIt<NotificationService>().showNotification(
+            id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+            title: title,
+            body: body,
+          );
+
+          // Show in-app banner + refresh list
+          getIt<NotificationProvider>().handleForegroundFcmMessage(
+            title: title,
+            body: body,
+            type: type,
+          );
+        } else {
+          // Refresh notification list silently without showing notification/banner
+          getIt<NotificationProvider>().fetchNotifications();
+        }
       }
     });
   }
@@ -415,12 +423,12 @@ class AuthProvider extends ChangeNotifier {
   //  Forgot / Reset Password
   // ─────────────────────────────────────────────
 
-  Future<MessageResponse?> forgotPassword({required String phone}) async {
+  Future<MessageResponse?> forgotPassword({required String email}) async {
     _setLoading(true);
     _errorMessage = null;
     try {
       final response = await _authRepository.forgotPassword(
-        ForgotPasswordRequest(phone: phone),
+        ForgotPasswordRequest(email: email),
       );
       return response;
     } catch (e) {

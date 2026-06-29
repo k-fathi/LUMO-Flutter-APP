@@ -14,6 +14,7 @@ class ResetPasswordRequest {
   Map<String, dynamic> toJson() {
     return {
       'phone': phone,
+      'email': phone,
       'password': password,
       'password_confirmation': passwordConfirmation,
       'otp': otp,
