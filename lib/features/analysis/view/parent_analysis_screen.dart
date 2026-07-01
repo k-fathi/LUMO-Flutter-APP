@@ -6,7 +6,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../data/models/parent_model.dart';
 import '../../../data/models/session_analysis_model.dart';
 import '../../../shared/widgets/avatar_widget.dart';
-import '../view_model/analysis_view_model.dart';
 import '../../../shared/providers/patient_provider.dart';
 
 import '../../../shared/providers/auth_provider.dart';
