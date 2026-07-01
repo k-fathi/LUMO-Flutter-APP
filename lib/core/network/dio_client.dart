@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../app.dart';
+import '../router/route_names.dart';
 import 'api_constants.dart';
 import 'api_exception.dart';
 
@@ -63,8 +66,19 @@ class DioClient {
             // Defense in depth: only auto-logout if we ACTUALLY sent a token.
             // If we didn't send a token, it's an app-state/sync issue, not an expired session.
             if (hasAuthHeader) {
-              _prefs.remove('auth_token');
-              onUnauthenticated?.call();
+              final currentContext = globalNavigatorKey.currentContext;
+              bool isAlreadyOnLogin = false;
+              
+              if (currentContext != null) {
+                isAlreadyOnLogin = ModalRoute.of(currentContext)?.settings.name == RouteNames.login;
+              }
+
+              if (!isAlreadyOnLogin) {
+                _prefs.remove('auth_token');
+                onUnauthenticated?.call();
+              } else {
+                debugPrint('⚠️ [DioClient] Received 401 but already on login screen. Ignoring to prevent multiple snackbars.');
+              }
             } else {
               debugPrint('⚠️ [DioClient] Received 401 but NO auth header was sent. Ignoring global logout to prevent loops.');
             }
