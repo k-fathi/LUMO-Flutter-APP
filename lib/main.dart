@@ -25,6 +25,13 @@ import 'features/home/view_model/main_layout_view_model.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'core/utils/debug_logger.dart';
 import 'core/services/connectivity_service.dart';
+import 'core/services/notification_service.dart';
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  debugPrint("Handling a background message: ${message.messageId}");
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -96,15 +103,23 @@ Future<void> main() async {
 
   // ── Handle notification tap when app was terminated ──
   if (Firebase.apps.isNotEmpty) {
+    // Register background handler
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
     FirebaseMessaging.instance.getInitialMessage().then((message) {
       if (message != null) {
         debugPrint('App opened from terminated via notification: ${message.data}');
+        // Delay navigation slightly to ensure the Navigator is fully mounted
+        Future.delayed(const Duration(milliseconds: 800), () {
+          NotificationService.handleRemoteMessage(message);
+        });
       }
     });
 
     // ── Handle notification tap when app was in background ──
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
       debugPrint('App opened from background via notification: ${message.data}');
+      NotificationService.handleRemoteMessage(message);
     });
   }
 

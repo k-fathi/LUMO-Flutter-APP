@@ -23,6 +23,7 @@ abstract class AuthRemoteDataSource {
   });
   Future<MessageResponse> logout();
   Future<void> updateFcmToken(String token);
+  Future<void> removeFcmToken();
 }
 
 // ─────────────────────────────────────────────
@@ -158,6 +159,14 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     await _dioClient.post(
       ApiConstants.firebaseToken,
       data: {'fcm_token': token},
+    );
+  }
+
+  @override
+  Future<void> removeFcmToken() async {
+    await _dioClient.post(
+      ApiConstants.firebaseToken,
+      data: {'fcm_token': null},
     );
   }
 }

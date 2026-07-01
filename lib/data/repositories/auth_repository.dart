@@ -1,4 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 
 import '../datasources/remote/auth_remote_data_source.dart';
 import '../models/auth/auth_models.dart';
@@ -90,6 +92,21 @@ class AuthRepository {
       if (!isLoggedIn) {
         return null;
       }
+
+      // 1. Remove FCM token from the Backend DB
+      try {
+        await _remoteDataSource.removeFcmToken();
+      } catch (e) {
+        debugPrint('Failed to remove FCM token from backend during logout: $e');
+      }
+
+      // 2. Delete FCM token locally
+      try {
+        await FirebaseMessaging.instance.deleteToken();
+      } catch (e) {
+        debugPrint('Failed to delete FCM token locally during logout: $e');
+      }
+
       final response = await _remoteDataSource.logout();
       return response;
     } catch (e) {

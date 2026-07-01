@@ -1,10 +1,12 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../di/dependency_injection.dart';
 import '../../data/repositories/auth_repository.dart';
+import '../../app.dart';
+import '../router/route_names.dart';
 
 class NotificationService {
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
@@ -102,8 +104,55 @@ class NotificationService {
 
   void _onNotificationTapped(NotificationResponse response) {
     final payload = response.payload;
-    if (payload != null) {
-      // Navigate to specific screen based on payload
+    if (payload != null && payload.contains(':')) {
+      final parts = payload.split(':');
+      if (parts.length >= 2) {
+        handleNavigation(parts[0], parts[1]);
+      }
+    }
+  }
+
+  static void handleRemoteMessage(RemoteMessage message) {
+    if (message.data.containsKey('type') && message.data.containsKey('id')) {
+      handleNavigation(message.data['type'], message.data['id'].toString());
+    } else if (message.data.containsKey('payload')) {
+      final payload = message.data['payload'].toString();
+      if (payload.contains(':')) {
+        final parts = payload.split(':');
+        if (parts.length >= 2) {
+          handleNavigation(parts[0], parts[1]);
+        }
+      }
+    }
+  }
+
+  static void handleNavigation(String type, String id) {
+    final context = globalNavigatorKey.currentContext;
+    if (context != null) {
+      switch (type) {
+        case 'chat':
+          Navigator.pushNamed(context, RouteNames.chatRoom, arguments: {
+            'chatRoomId': id,
+          });
+          break;
+        case 'post':
+          final postId = int.tryParse(id);
+          if (postId != null) {
+            Navigator.pushNamed(context, RouteNames.postDetail, arguments: postId);
+          }
+          break;
+        case 'profile':
+          final userId = int.tryParse(id);
+          if (userId != null) {
+            Navigator.pushNamed(context, RouteNames.profile, arguments: {
+              'userId': userId,
+            });
+          }
+          break;
+        // Additional types like 'connection_request' or 'analysis' can be added here
+      }
+    } else {
+      debugPrint('Global Navigator context is null. Cannot navigate to $type:$id');
     }
   }
 
