@@ -1,4 +1,10 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+import '../di/dependency_injection.dart';
+import '../../data/repositories/auth_repository.dart';
 
 class NotificationService {
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
@@ -27,6 +33,71 @@ class NotificationService {
       settings: initializationSettings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
+
+    // Initialize FCM setup
+    await setupFcm();
+  }
+
+  Future<void> setupFcm() async {
+    if (Firebase.apps.isEmpty) {
+      debugPrint('FCM setup skipped: Firebase not initialized.');
+      return;
+    }
+
+    // 1. Request permissions (essential for iOS and Android 13+)
+    await requestPermissions();
+
+    // 2. Fetch and send the initial token to the backend
+    try {
+      final String? token = await FirebaseMessaging.instance.getToken();
+      if (token != null) {
+        debugPrint('FCM Token generated: $token');
+        await _sendTokenToServer(token);
+      }
+    } catch (e) {
+      debugPrint('Error getting initial FCM token: $e');
+    }
+
+    // 3. Monitor token changes and send the new token to backend
+    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+      debugPrint('FCM Token refreshed: $newToken');
+      _sendTokenToServer(newToken);
+    }).onError((error) {
+      debugPrint('Error onTokenRefresh: $error');
+    });
+
+    // 4. Listen for foreground notifications
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      debugPrint('FCM Foreground Message Received: ${message.messageId}');
+      
+      // Extract notification details
+      final notification = message.notification;
+      final android = message.notification?.android;
+
+      if (notification != null && android != null) {
+        // Show an elegant Local Notification using flutter_local_notifications
+        showNotification(
+          id: notification.hashCode,
+          title: notification.title ?? 'إشعار جديد',
+          body: notification.body ?? '',
+          payload: message.data.toString(),
+        );
+      }
+    });
+  }
+
+  Future<void> _sendTokenToServer(String token) async {
+    try {
+      if (getIt.isRegistered<AuthRepository>()) {
+        final authRepo = getIt<AuthRepository>();
+        if (authRepo.isLoggedIn) {
+          await authRepo.updateFcmToken(token);
+          debugPrint('FCM token successfully sent to Laravel backend.');
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to send FCM token to backend: $e');
+    }
   }
 
   void _onNotificationTapped(NotificationResponse response) {
@@ -92,9 +163,10 @@ class NotificationService {
     return await _flutterLocalNotificationsPlugin.pendingNotificationRequests();
   }
 
-  // Request permissions (iOS)
+  // Request permissions (FCM & Local)
   Future<bool> requestPermissions() async {
-    final result = await _flutterLocalNotificationsPlugin
+    // 1. Local Notifications permissions for iOS
+    await _flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<
             IOSFlutterLocalNotificationsPlugin>()
         ?.requestPermissions(
@@ -102,7 +174,21 @@ class NotificationService {
           badge: true,
           sound: true,
         );
-    return result ?? false;
+
+    // 2. FCM permissions for iOS & Android 13+
+    if (Firebase.apps.isNotEmpty) {
+      final settings = await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        announcement: false,
+        badge: true,
+        carPlay: false,
+        criticalAlert: false,
+        provisional: false,
+        sound: true,
+      );
+      return settings.authorizationStatus == AuthorizationStatus.authorized;
+    }
+    return false;
   }
 
   // Predefined notification types

@@ -366,13 +366,36 @@ class ChatViewModel extends ChangeNotifier {
              return;
           }
 
-          final existingMessages = _messages.where((m) => 
-               !messagesList.any((streamMsg) => streamMsg.id == m.id)
-          ).toList();
+          // --- Deduplication Logic (Optimistic UI Bug Fix) ---
+          final List<MessageModel> retainedLocalMessages = [];
           
+          for (final localMsg in _messages) {
+            // 1. If the exact same ID exists in stream, discard local (stream replaces it)
+            if (messagesList.any((streamMsg) => streamMsg.id == localMsg.id)) {
+              continue;
+            }
+            
+            // 2. If it's an optimistic local message, check if a similar message arrived in the stream
+            if (localMsg.status == MessageStatus.sending || localMsg.status == MessageStatus.failed || localMsg.id.startsWith('local_')) {
+              final isDuplicate = messagesList.any((streamMsg) => 
+                streamMsg.senderId == localMsg.senderId &&
+                streamMsg.content == localMsg.content &&
+                streamMsg.timestamp.difference(localMsg.timestamp).inSeconds.abs() < 60
+              );
+              
+              if (isDuplicate) {
+                // The message has successfully arrived from Firebase, so we discard the local one.
+                continue; 
+              }
+            }
+            
+            // Otherwise, keep the local message
+            retainedLocalMessages.add(localMsg);
+          }
+
           _messages.clear();
           _messages.addAll(messagesList);
-          _messages.addAll(existingMessages);
+          _messages.addAll(retainedLocalMessages);
           // Ascending: oldest -> newest (UI shows newest at bottom)
           _messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
           _isLoading = false;
@@ -424,7 +447,7 @@ class ChatViewModel extends ChangeNotifier {
     _errorMessage = null;
 
     // Optimistic UI Update: Add the message immediately
-    final tempId = DateTime.now().millisecondsSinceEpoch.toString();
+    final tempId = 'local_${DateTime.now().millisecondsSinceEpoch}';
     final tempMessage = MessageModel(
       id: tempId,
       chatRoomId: chatRoomId,
